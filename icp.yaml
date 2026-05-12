@@ -1,0 +1,52 @@
+canisters:
+  - name: listing
+    recipe:
+      type: "@dfinity/motoko@v4.0.0"
+      configuration:
+        main: backend/listing/main.mo
+        args: "--actor-idl did/"
+
+  - name: agent
+    recipe:
+      type: "@dfinity/motoko@v4.0.0"
+      configuration:
+        main: backend/agent/main.mo
+        args: "--actor-idl did/"
+
+  - name: fee
+    recipe:
+      type: "@dfinity/motoko@v4.0.0"
+      configuration:
+        main: backend/fee/main.mo
+        args: "--actor-idl did/"
+
+  # Frontend asset canister — dist/ is built by deploy.sh before icp deploy frontend
+  - name: frontend
+    recipe:
+      type: "@dfinity/asset-canister@v2.1.0"
+      configuration:
+        dir: frontend/dist
+
+networks:
+  - name: local
+    mode: managed
+    ii: true
+    gateway:
+      bind: 127.0.0.1
+      port: 4943
+
+  - name: testnet
+    mode: connected
+    url: https://ic0.app
+
+  # ic is a reserved built-in network in icp-cli — do not redeclare it
+
+environments:
+  - name: local
+    network: local
+
+  - name: testnet
+    network: testnet
+
+  - name: ic
+    network: ic

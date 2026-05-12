@@ -1,0 +1,33 @@
+# ICP / dfx
+.dfx/
+.icp/
+.mops/_tmp/
+canister_ids.json.local
+
+# Node
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# Build artifacts
+*.wasm
+*.wat
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/settings.json
+.idea/
+
+# Test output
+coverage/
+coverage-report/
+playwright-report/
+test-results/

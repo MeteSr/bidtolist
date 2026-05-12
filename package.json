@@ -1,0 +1,32 @@
+{
+  "name": "bidtolist",
+  "version": "0.1.0",
+  "description": "Blind-bid realtor marketplace — homeowners post, agents compete, platform earns on win",
+  "private": true,
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "deploy": "bash scripts/deploy.sh",
+    "start": "icp network start -d",
+    "stop": "icp network stop",
+    "test": "npm run test:unit",
+    "test:unit": "cd frontend && npm run test:unit",
+    "test:canister": "bash scripts/test-backend.sh",
+    "frontend": "cd frontend && npm run dev",
+    "status": "bash scripts/status.sh"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.44.0",
+    "typescript": "^5.3.3"
+  },
+  "overrides": {
+    "@dfinity/agent": "2.1.3",
+    "@dfinity/auth-client": "2.1.3",
+    "@dfinity/candid": "2.1.3",
+    "@dfinity/identity": "2.1.3",
+    "@dfinity/principal": "2.1.3",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  }
+}

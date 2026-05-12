@@ -1,0 +1,112 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
+import { createBidRequest } from "../services/listing";
+
+const S = {
+  ink: "#0E0E0C", paper: "#F4F1EB", rule: "#C8C3B8", rust: "#C94C2E",
+  inkLight: "#7A7268", serif: "'Playfair Display', Georgia, serif",
+  mono: "'IBM Plex Mono', monospace", sans: "'IBM Plex Sans', sans-serif",
+};
+
+export default function PostListingPage() {
+  const navigate = useNavigate();
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    address: "", city: "", county: "Volusia", zipCode: "",
+    targetListDate: "", desiredSalePrice: "", notes: "", bidDeadlineDays: "7",
+  });
+
+  function set(k: string, v: string) { setForm(f => ({ ...f, [k]: v })); }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const deadline = Date.now() + parseInt(form.bidDeadlineDays) * 24 * 60 * 60 * 1000;
+      const result = await createBidRequest({
+        address: form.address, city: form.city, county: form.county, zipCode: form.zipCode,
+        targetListDate: new Date(form.targetListDate).getTime(),
+        desiredSalePrice: form.desiredSalePrice ? parseInt(form.desiredSalePrice) * 100 : undefined,
+        notes: form.notes, bidDeadline: deadline,
+      }) as any;
+      if ("err" in result) { toast.error(JSON.stringify(result.err)); return; }
+      toast.success("Listing posted! Agents can now submit proposals.");
+      navigate("/my-bids");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const field = (label: string, key: string, type = "text", placeholder = "") => (
+    <div style={{ marginBottom: 24 }}>
+      <label style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, display: "block", marginBottom: 6 }}>{label}</label>
+      <input type={type} value={(form as any)[key]} placeholder={placeholder}
+        onChange={e => set(key, e.target.value)}
+        style={{ border: `1px solid ${S.rule}`, padding: "10px 12px", width: "100%", fontFamily: S.sans, fontSize: "0.95rem", background: "white" }} />
+    </div>
+  );
+
+  return (
+    <div style={{ background: S.paper, minHeight: "100vh" }}>
+      <nav style={{ borderBottom: `1px solid ${S.rule}`, padding: "16px 40px" }}>
+        <a href="/" style={{ fontFamily: S.serif, fontSize: "1.1rem", fontWeight: 900, color: S.rust, textDecoration: "none" }}>BidtoList</a>
+      </nav>
+      <div style={{ maxWidth: 600, margin: "0 auto", padding: "60px 40px" }}>
+        <h1 style={{ fontFamily: S.serif, fontSize: "2rem", fontWeight: 900, marginBottom: 8 }}>Post Your Listing</h1>
+        <p style={{ fontFamily: S.sans, color: S.inkLight, marginBottom: 40 }}>Agents will submit blind proposals until your deadline.</p>
+
+        <form onSubmit={handleSubmit}>
+          {field("Street Address", "address", "text", "123 Main St")}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
+            <div>
+              <label style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, display: "block", marginBottom: 6 }}>City</label>
+              <input value={form.city} onChange={e => set("city", e.target.value)} placeholder="Daytona Beach"
+                style={{ border: `1px solid ${S.rule}`, padding: "10px 12px", width: "100%", fontFamily: S.sans }} />
+            </div>
+            <div>
+              <label style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, display: "block", marginBottom: 6 }}>Zip Code</label>
+              <input value={form.zipCode} onChange={e => set("zipCode", e.target.value)} placeholder="32118"
+                style={{ border: `1px solid ${S.rule}`, padding: "10px 12px", width: "100%", fontFamily: S.sans }} />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 24 }}>
+            <label style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, display: "block", marginBottom: 6 }}>County</label>
+            <select value={form.county} onChange={e => set("county", e.target.value)}
+              style={{ border: `1px solid ${S.rule}`, padding: "10px 12px", width: "100%", fontFamily: S.sans }}>
+              <option value="Volusia">Volusia County</option>
+              <option value="Flagler">Flagler County</option>
+            </select>
+          </div>
+
+          {field("Target List Date", "targetListDate", "date")}
+          {field("Desired Sale Price (optional)", "desiredSalePrice", "number", "350000")}
+
+          <div style={{ marginBottom: 24 }}>
+            <label style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, display: "block", marginBottom: 6 }}>Notes for Agents</label>
+            <textarea value={form.notes} onChange={e => set("notes", e.target.value)} rows={4} placeholder="Any details about the property, preferred services, timeline, etc."
+              style={{ border: `1px solid ${S.rule}`, padding: "10px 12px", width: "100%", fontFamily: S.sans, resize: "vertical" }} />
+          </div>
+
+          <div style={{ marginBottom: 40 }}>
+            <label style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, display: "block", marginBottom: 6 }}>Bid Deadline (days from now)</label>
+            <select value={form.bidDeadlineDays} onChange={e => set("bidDeadlineDays", e.target.value)}
+              style={{ border: `1px solid ${S.rule}`, padding: "10px 12px", width: "100%", fontFamily: S.sans }}>
+              <option value="3">3 days</option>
+              <option value="5">5 days</option>
+              <option value="7">7 days (recommended)</option>
+              <option value="10">10 days</option>
+              <option value="14">14 days</option>
+            </select>
+          </div>
+
+          <button type="submit" disabled={saving}
+            style={{ background: S.rust, border: `1px solid ${S.rust}`, color: S.paper, fontFamily: S.mono, fontSize: "0.75rem", letterSpacing: "0.08em", textTransform: "uppercase", padding: "14px 32px", cursor: "pointer", width: "100%" }}>
+            {saving ? "Posting..." : "Post Listing — Free"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
