@@ -14,9 +14,8 @@ NETWORK=${NETWORK:-local}
 PASS=0
 FAIL=0
 
-# Verify replica is reachable
-if ! icp network status 2>/dev/null | grep -q "Running\|running\|up" && \
-   ! icp canister status listing -e "$NETWORK" 2>/dev/null | grep -q "Running\|running"; then
+# Verify replica is reachable — use ping, not canister status (which triggers inspect).
+if ! icp network ping "$NETWORK" >/dev/null 2>&1; then
   echo "❌  No running replica found. Run: make start && make deploy"
   exit 1
 fi
@@ -33,12 +32,14 @@ echo "============================================"
 echo "  BidtoList Backend Smoke Tests ($NETWORK)"
 echo "============================================"
 
+# $1 canister  $2 display label  $3 method  $4 candid args
 run_test() {
   local canister="$1"
   local desc="$2"
-  local call="$3"
+  local method="$3"
+  local args="$4"
   printf "  %-30s" "$desc"
-  if result=$(icp canister call "$canister" $call -e "$NETWORK" 2>&1); then
+  if result=$(icp canister call "$canister" "$method" "$args" -e "$NETWORK" 2>&1); then
     echo "✓"
     PASS=$((PASS + 1))
   else
@@ -52,15 +53,15 @@ for canister in "${CANISTERS[@]}"; do
   echo "── $canister ──────────────────────────────"
   case "$canister" in
     listing)
-      run_test listing "metrics()"               "metrics '()'"
-      run_test listing "getOpenBidRequests()"    "getOpenBidRequests '()'"
+      run_test listing "metrics()"            "metrics"            "()"
+      run_test listing "getOpenBidRequests()" "getOpenBidRequests" "()"
       ;;
     agent)
-      run_test agent   "metrics()"               "metrics '()'"
-      run_test agent   "getAllProfiles()"         "getAllProfiles '()'"
+      run_test agent "metrics()"              "metrics"            "()"
+      run_test agent "getAllProfiles()"        "getAllProfiles"      "()"
       ;;
     fee)
-      run_test fee     "metrics()"               "metrics '()'"
+      run_test fee   "metrics()"              "metrics"            "()"
       ;;
     *)
       echo "  Unknown canister: $canister"
