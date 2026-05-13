@@ -8,18 +8,30 @@ const S = {
   mono: "'IBM Plex Mono', monospace", sans: "'IBM Plex Sans', sans-serif",
 };
 
+function formatCountdown(deadlineMs: number): string {
+  const ms = deadlineMs - Date.now();
+  if (ms <= 0) return "Bidding closed";
+  const hours = Math.floor(ms / (1000 * 60 * 60));
+  if (hours < 48) return `Closes in ${hours}h`;
+  const days = Math.floor(hours / 24);
+  const rem = hours % 24;
+  return rem > 0 ? `Closes in ${days}d ${rem}h` : `Closes in ${days}d`;
+}
+
 function statusLabel(status: any): string {
-  if (status?.Open)      return "Open";
-  if (status?.Awarded)   return "Awarded";
-  if (status?.Cancelled) return "Cancelled";
+  if (!status) return "Unknown";
+  if ("Open" in status)      return "Open";
+  if ("Awarded" in status)   return "Awarded";
+  if ("Cancelled" in status) return "Cancelled";
   return "Unknown";
 }
 
 function proposalStatusLabel(status: any): string {
-  if (status?.Accepted) return "Accepted";
-  if (status?.Rejected) return "Rejected";
-  if (status?.Pending)  return "Pending";
-  if (status?.Withdrawn) return "Withdrawn";
+  if (!status) return "Unknown";
+  if ("Accepted" in status) return "Accepted";
+  if ("Rejected" in status) return "Rejected";
+  if ("Pending" in status)  return "Pending";
+  if ("Withdrawn" in status) return "Withdrawn";
   return "Unknown";
 }
 
@@ -79,10 +91,10 @@ export default function MyBidsPage() {
                 <div>
                   <p style={{ fontFamily: S.serif, fontSize: "1.05rem", fontWeight: 700, marginBottom: 4 }}>{req.address}</p>
                   <p style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.08em", color: S.inkLight }}>
-                    {req.county} · Deadline: {new Date(deadline).toLocaleDateString()} · {statusLabel(req.status)}
+                    {req.county} · {formatCountdown(deadline)} · {statusLabel(req.status)}
                   </p>
                 </div>
-                {req.status?.Open && (
+                {req.status && "Open" in req.status && (
                   <button onClick={() => isOpen ? setExpanded(null) : loadProposals(req.id)}
                     style={{ background: "transparent", border: `1px solid ${S.ink}`, color: S.ink, fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", padding: "8px 16px", cursor: "pointer" }}>
                     {revealed ? (isOpen ? "Hide" : `View ${props.length || ""} Proposals`) : "Sealed"}
@@ -109,7 +121,7 @@ export default function MyBidsPage() {
                         </span>
                       </div>
                       <p style={{ fontFamily: S.sans, fontSize: "0.85rem", color: S.inkLight, marginBottom: 12 }}>{p.cmaSummary}</p>
-                      {p.status?.Pending && (
+                      {p.status && "Pending" in p.status && (
                         <button onClick={() => handleAccept(p.id)} disabled={accepting === p.id}
                           style={{ background: S.rust, border: `1px solid ${S.rust}`, color: S.paper, fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", padding: "8px 20px", cursor: "pointer" }}>
                           {accepting === p.id ? "Accepting..." : "Accept This Agent"}

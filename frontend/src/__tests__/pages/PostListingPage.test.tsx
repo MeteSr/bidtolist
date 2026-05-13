@@ -133,12 +133,14 @@ describe("PostListingPage — form submission", () => {
     expect(options).toContain("Flagler");
   });
 
-  it("has bid deadline options for 3, 5, 7, 10, 14 days", async () => {
+  it("has bid deadline options with minimum 48 hours", async () => {
     renderPage();
     await waitFor(() => screen.getByLabelText(/bid deadline/i));
     const select = screen.getByLabelText(/bid deadline/i) as HTMLSelectElement;
     const values = Array.from(select.options).map(o => o.value);
-    expect(values).toEqual(expect.arrayContaining(["3", "5", "7", "10", "14"]));
+    const hours = values.map(Number);
+    expect(Math.min(...hours)).toBeGreaterThanOrEqual(48);
+    expect(values).toEqual(expect.arrayContaining(["48", "72", "168"]));
   });
 
   it("calls createBidRequest and navigates on success", async () => {

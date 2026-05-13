@@ -12,6 +12,16 @@ const S = {
 
 const MAX_PROPOSALS = 10;
 
+function formatCountdown(deadlineNs: bigint): string {
+  const ms = Number(deadlineNs) / 1_000_000 - Date.now();
+  if (ms <= 0) return "Bidding closed";
+  const hours = Math.floor(ms / (1000 * 60 * 60));
+  if (hours < 48) return `Closes in ${hours}h`;
+  const days = Math.floor(hours / 24);
+  const rem = hours % 24;
+  return rem > 0 ? `Closes in ${days}d ${rem}h` : `Closes in ${days}d`;
+}
+
 export default function BrowseListingsPage() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -83,7 +93,7 @@ export default function BrowseListingsPage() {
                 </p>
                 <p style={{ fontFamily: S.mono, fontSize: "0.65rem", color: S.inkLight, letterSpacing: "0.06em" }}>
                   {req.desiredSalePrice?.length > 0 ? `Target: $${(Number(req.desiredSalePrice[0]) / 100).toLocaleString()} · ` : ""}
-                  Deadline: {new Date(deadline).toLocaleDateString()} ({daysLeft}d left) · {count} / {MAX_PROPOSALS} bids
+                  {formatCountdown(req.bidDeadline)} · {count} / {MAX_PROPOSALS} bids
                 </p>
                 {req.notes && (
                   <p style={{ fontFamily: S.sans, fontSize: "0.85rem", color: S.inkLight, marginTop: 8, maxWidth: 480 }}>

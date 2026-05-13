@@ -17,7 +17,7 @@ export default function PostListingPage() {
   const [verifiedState, setVerifiedState] = useState<"loading" | "verified" | "unverified">("loading");
   const [form, setForm] = useState({
     address: "", city: "", county: "Volusia", zipCode: "",
-    targetListDate: "", desiredSalePrice: "", notes: "", bidDeadlineDays: "7",
+    targetListDate: "", desiredSalePrice: "", notes: "", bidDeadlineHours: "168",
   });
 
   useEffect(() => {
@@ -33,7 +33,7 @@ export default function PostListingPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      const deadline = Date.now() + parseInt(form.bidDeadlineDays) * 24 * 60 * 60 * 1000;
+      const deadline = Date.now() + parseInt(form.bidDeadlineHours) * 60 * 60 * 1000;
       const result = await createBidRequest({
         address: form.address, city: form.city, county: form.county, zipCode: form.zipCode,
         targetListDate: new Date(form.targetListDate).getTime(),
@@ -128,14 +128,15 @@ export default function PostListingPage() {
           </div>
 
           <div style={{ marginBottom: 40 }}>
-            <label htmlFor="field-deadline" style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, display: "block", marginBottom: 6 }}>Bid Deadline (days from now)</label>
-            <select id="field-deadline" value={form.bidDeadlineDays} onChange={e => set("bidDeadlineDays", e.target.value)}
+            <label htmlFor="field-deadline" style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, display: "block", marginBottom: 6 }}>Bid Deadline (minimum 48 hours)</label>
+            <select id="field-deadline" value={form.bidDeadlineHours} onChange={e => set("bidDeadlineHours", e.target.value)}
               style={{ border: `1px solid ${S.rule}`, padding: "10px 12px", width: "100%", fontFamily: S.sans }}>
-              <option value="3">3 days</option>
-              <option value="5">5 days</option>
-              <option value="7">7 days (recommended)</option>
-              <option value="10">10 days</option>
-              <option value="14">14 days</option>
+              <option value="48">48 hours (2 days)</option>
+              <option value="72">72 hours (3 days)</option>
+              <option value="120">120 hours (5 days)</option>
+              <option value="168">168 hours (7 days — recommended)</option>
+              <option value="240">240 hours (10 days)</option>
+              <option value="336">336 hours (14 days)</option>
             </select>
           </div>
 

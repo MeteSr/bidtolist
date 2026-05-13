@@ -8,18 +8,20 @@ const S = {
 };
 
 function statusColor(status: any): string {
-  if (status?.Accepted)  return "#2E7D32";
-  if (status?.Rejected)  return "#7A7268";
-  if (status?.Pending)   return "#C94C2E";
-  if (status?.Withdrawn) return "#7A7268";
+  if (!status) return "#7A7268";
+  if ("Accepted" in status)  return "#2E7D32";
+  if ("Rejected" in status)  return "#7A7268";
+  if ("Pending" in status)   return "#C94C2E";
+  if ("Withdrawn" in status) return "#7A7268";
   return "#7A7268";
 }
 
 function statusLabel(status: any): string {
-  if (status?.Accepted)  return "Accepted — Fee Due";
-  if (status?.Rejected)  return "Not Selected";
-  if (status?.Pending)   return "Pending";
-  if (status?.Withdrawn) return "Withdrawn";
+  if (!status) return "Unknown";
+  if ("Accepted" in status)  return "Accepted — Fee Due";
+  if ("Rejected" in status)  return "Not Selected";
+  if ("Pending" in status)   return "Pending";
+  if ("Withdrawn" in status) return "Withdrawn";
   return "Unknown";
 }
 
@@ -30,9 +32,9 @@ export default function AgentDashboardPage() {
     getMyProposals().then(setProposals).catch(console.error);
   }, []);
 
-  const accepted  = proposals.filter((p: any) => p.status?.Accepted);
-  const pending   = proposals.filter((p: any) => p.status?.Pending);
-  const closed    = proposals.filter((p: any) => p.status?.Rejected || p.status?.Withdrawn);
+  const accepted  = proposals.filter((p: any) => p.status && "Accepted" in p.status);
+  const pending   = proposals.filter((p: any) => p.status && "Pending" in p.status);
+  const closed    = proposals.filter((p: any) => p.status && ("Rejected" in p.status || "Withdrawn" in p.status));
 
   return (
     <div style={{ background: S.paper, minHeight: "100vh" }}>
