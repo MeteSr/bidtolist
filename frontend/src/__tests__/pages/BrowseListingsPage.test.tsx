@@ -102,6 +102,12 @@ describe("BrowseListingsPage — listings display", () => {
     // Full street address should NOT appear
     expect(screen.queryByText(/123 main/i)).not.toBeInTheDocument();
   });
+
+  it("shows deadline countdown on each listing card", async () => {
+    renderPage();
+    await waitFor(() => screen.getByText(/daytona beach/i));
+    expect(screen.getAllByText(/closes in/i).length).toBeGreaterThanOrEqual(1);
+  });
 });
 
 describe("BrowseListingsPage — county filter", () => {

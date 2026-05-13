@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getOpenBidRequests, type BidRequestSummary } from "../services/listing";
 import { getMyAgentProfile } from "../services/agent";
 import { useAuth } from "../contexts/AuthContext";
+import { useBreakpoint } from "../hooks/useBreakpoint";
 
 const S = {
   ink: "#0E0E0C", paper: "#F4F1EB", rule: "#C8C3B8", rust: "#C94C2E",
@@ -12,9 +13,20 @@ const S = {
 
 const MAX_PROPOSALS = 10;
 
+function formatCountdown(deadlineNs: bigint): string {
+  const ms = Number(deadlineNs) / 1_000_000 - Date.now();
+  if (ms <= 0) return "Bidding closed";
+  const hours = Math.floor(ms / (1000 * 60 * 60));
+  if (hours < 48) return `Closes in ${hours}h`;
+  const days = Math.floor(hours / 24);
+  const rem = hours % 24;
+  return rem > 0 ? `Closes in ${days}d ${rem}h` : `Closes in ${days}d`;
+}
+
 export default function BrowseListingsPage() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const { isMobile } = useBreakpoint();
   const [requests, setRequests] = useState<BidRequestSummary[]>([]);
   const [county, setCounty] = useState<"All" | "Volusia" | "Flagler">("All");
   const [isVerified, setIsVerified] = useState(false);
@@ -34,20 +46,22 @@ export default function BrowseListingsPage() {
 
   return (
     <div style={{ background: S.paper, minHeight: "100vh" }}>
-      <nav style={{ borderBottom: `1px solid ${S.rule}`, padding: "16px 40px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <nav style={{ borderBottom: `1px solid ${S.rule}`, padding: isMobile ? "12px 16px" : "16px 40px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <a href="/" style={{ fontFamily: S.serif, fontSize: "1.1rem", fontWeight: 900, color: S.rust, textDecoration: "none" }}>BidtoList</a>
         <a href="/agents/dashboard" style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", color: S.inkLight, textDecoration: "none" }}>My Proposals</a>
       </nav>
-      <div style={{ maxWidth: 800, margin: "0 auto", padding: "60px 40px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 40 }}>
+
+      <div style={{ maxWidth: 800, margin: "0 auto", padding: isMobile ? "32px 16px" : "60px 40px" }}>
+        {/* Heading + filter */}
+        <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "flex-end", gap: 16, marginBottom: 32 }}>
           <div>
-            <h1 style={{ fontFamily: S.serif, fontSize: "2rem", fontWeight: 900, marginBottom: 4 }}>Open Listings</h1>
-            <p style={{ fontFamily: S.sans, color: S.inkLight }}>Submit a blind proposal — homeowners see all bids at once after the deadline.</p>
+            <h1 style={{ fontFamily: S.serif, fontSize: "clamp(1.6rem, 5vw, 2rem)", fontWeight: 900, marginBottom: 4 }}>Open Listings</h1>
+            <p style={{ fontFamily: S.sans, color: S.inkLight, fontSize: "0.9rem" }}>Submit a blind proposal — homeowners see all bids at once after the deadline.</p>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
             {(["All", "Volusia", "Flagler"] as const).map(c => (
               <button key={c} onClick={() => setCounty(c)}
-                style={{ background: county === c ? S.ink : "transparent", border: `1px solid ${S.ink}`, color: county === c ? S.paper : S.ink, fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", padding: "6px 14px", cursor: "pointer" }}>
+                style={{ background: county === c ? S.ink : "transparent", border: `1px solid ${S.ink}`, color: county === c ? S.paper : S.ink, fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", padding: "10px 14px", cursor: "pointer", minHeight: 44 }}>
                 {c}
               </button>
             ))}
@@ -55,8 +69,8 @@ export default function BrowseListingsPage() {
         </div>
 
         {!isVerified && isAuthenticated && (
-          <div style={{ border: `1px solid ${S.rule}`, padding: "12px 16px", marginBottom: 24, display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontFamily: S.mono, fontSize: "0.6rem", letterSpacing: "0.08em", textTransform: "uppercase", color: S.inkLight }}>
+          <div style={{ border: `1px solid ${S.rule}`, padding: "12px 16px", marginBottom: 24, display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "flex-start" : "center", gap: 8 }}>
+            <span style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", color: S.inkLight }}>
               Verification pending
             </span>
             <span style={{ fontFamily: S.sans, fontSize: "0.85rem", color: S.inkLight }}>
@@ -72,21 +86,19 @@ export default function BrowseListingsPage() {
         )}
 
         {filtered.map(req => {
-          const deadline = Number(req.bidDeadline) / 1_000_000;
-          const daysLeft = Math.max(0, Math.ceil((deadline - Date.now()) / (1000 * 60 * 60 * 24)));
           const count = Number(req.proposalCount);
           return (
-            <div key={req.id} style={{ border: `1px solid ${S.rule}`, padding: "24px", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
+            <div key={req.id} style={{ border: `1px solid ${S.rule}`, padding: isMobile ? "16px" : "24px", marginBottom: 12, display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", gap: 16 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ fontFamily: S.serif, fontSize: "1.05rem", fontWeight: 700, marginBottom: 4 }}>
                   {req.city}, {req.county} County · {req.zipCode}
                 </p>
-                <p style={{ fontFamily: S.mono, fontSize: "0.65rem", color: S.inkLight, letterSpacing: "0.06em" }}>
+                <p style={{ fontFamily: S.mono, fontSize: "0.7rem", color: S.inkLight, letterSpacing: "0.06em" }}>
                   {req.desiredSalePrice?.length > 0 ? `Target: $${(Number(req.desiredSalePrice[0]) / 100).toLocaleString()} · ` : ""}
-                  Deadline: {new Date(deadline).toLocaleDateString()} ({daysLeft}d left) · {count} / {MAX_PROPOSALS} bids
+                  {formatCountdown(req.bidDeadline)} · {count} / {MAX_PROPOSALS} bids
                 </p>
                 {req.notes && (
-                  <p style={{ fontFamily: S.sans, fontSize: "0.85rem", color: S.inkLight, marginTop: 8, maxWidth: 480 }}>
+                  <p style={{ fontFamily: S.sans, fontSize: "0.85rem", color: S.inkLight, marginTop: 8 }}>
                     {req.notes.slice(0, 120)}{req.notes.length > 120 ? "…" : ""}
                   </p>
                 )}
@@ -98,9 +110,10 @@ export default function BrowseListingsPage() {
                   background: isVerified ? S.rust : S.rule,
                   border: `1px solid ${isVerified ? S.rust : S.rule}`,
                   color: isVerified ? S.paper : S.inkLight,
-                  fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.08em",
-                  textTransform: "uppercase", padding: "10px 20px",
-                  cursor: isVerified ? "pointer" : "not-allowed", whiteSpace: "nowrap",
+                  fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.08em",
+                  textTransform: "uppercase", padding: "12px 20px", minHeight: 44,
+                  cursor: isVerified ? "pointer" : "not-allowed",
+                  width: isMobile ? "100%" : "auto", flexShrink: 0,
                 }}>
                 Submit Proposal
               </button>
