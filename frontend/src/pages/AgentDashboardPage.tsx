@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { getMyProposals } from "../services/listing";
+import { getMyFees, FeeRecord } from "../services/fee";
 import { useBreakpoint } from "../hooks/useBreakpoint";
 
 const S = {
@@ -8,13 +10,27 @@ const S = {
   mono: "'IBM Plex Mono', monospace", sans: "'IBM Plex Sans', sans-serif",
 };
 
+const STRIPE_SERVER = (import.meta as any).env?.VITE_STRIPE_SERVER_URL || "http://localhost:3003";
+
+function feeForProposal(fees: FeeRecord[], proposalId: string): FeeRecord | undefined {
+  return fees.find(f => f.proposalId === proposalId);
+}
+
+function feeStatusLabel(fee: FeeRecord | undefined): string {
+  if (!fee) return "owed";
+  if ("Paid" in fee.status)     return "paid";
+  if ("Waived" in fee.status)   return "waived";
+  if ("Invoiced" in fee.status) return "invoiced";
+  return "owed";
+}
+
 function statusColor(status: any): string {
-  if (!status) return "#7A7268";
+  if (!status) return S.inkLight;
   if ("Accepted" in status)  return "#2E7D32";
-  if ("Rejected" in status)  return "#7A7268";
-  if ("Pending" in status)   return "#C94C2E";
-  if ("Withdrawn" in status) return "#7A7268";
-  return "#7A7268";
+  if ("Rejected" in status)  return S.inkLight;
+  if ("Pending" in status)   return S.rust;
+  if ("Withdrawn" in status) return S.inkLight;
+  return S.inkLight;
 }
 
 function statusLabel(status: any): string {
@@ -29,10 +45,35 @@ function statusLabel(status: any): string {
 export default function AgentDashboardPage() {
   const { isMobile } = useBreakpoint();
   const [proposals, setProposals] = useState<any[]>([]);
+  const [fees, setFees] = useState<FeeRecord[]>([]);
+  const [payingFee, setPayingFee] = useState<string | null>(null);
 
   useEffect(() => {
     getMyProposals().then(setProposals).catch(console.error);
+    getMyFees().then(setFees).catch(console.error);
   }, []);
+
+  async function handlePayNow(proposalId: string, feeId?: string) {
+    const key = feeId ?? proposalId;
+    setPayingFee(key);
+    try {
+      const res = await fetch(`${STRIPE_SERVER}/api/stripe/create-checkout-session`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feeId: feeId ?? proposalId, proposalId }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast.error("Stripe is not configured. Contact billing@bidtolist.com to pay your fee.");
+      }
+    } catch {
+      toast.error("Could not reach payment server. Try again or contact support.");
+    } finally {
+      setPayingFee(null);
+    }
+  }
 
   const accepted  = proposals.filter((p: any) => p.status && "Accepted" in p.status);
   const pending   = proposals.filter((p: any) => p.status && "Pending" in p.status);
@@ -59,22 +100,54 @@ export default function AgentDashboardPage() {
         {accepted.length > 0 && (
           <section style={{ marginBottom: 40 }}>
             <p style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "#2E7D32", marginBottom: 16 }}>Won — Platform Fee Due</p>
-            {accepted.map((p: any) => (
-              <div key={p.id} style={{ border: "1px solid #2E7D32", padding: cardPad, marginBottom: 12 }}>
-                <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", gap: 8, marginBottom: 8 }}>
-                  <p style={{ fontFamily: S.sans, fontWeight: 500 }}>Request {p.requestId}</p>
-                  <span style={{ fontFamily: S.mono, fontSize: "0.65rem", color: "#2E7D32", letterSpacing: "0.08em", textTransform: "uppercase" }}>Accepted</span>
-                </div>
-                <p style={{ fontFamily: S.mono, fontSize: "0.7rem", color: S.inkLight, letterSpacing: "0.06em", marginBottom: 12 }}>
-                  {(p.commissionBps / 100).toFixed(2)}% commission · Est. ${p.estimatedSalePrice?.toLocaleString()}
-                </p>
-                <div style={{ background: "#FFF8E1", border: "1px solid #FFE082", padding: "12px 16px" }}>
-                  <p style={{ fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.08em", color: S.ink }}>
-                    PLATFORM FEE: $295.00 — A payment link will be emailed to you shortly.
+            {accepted.map((p: any) => {
+              const fee = feeForProposal(fees, p.id);
+              const feeStatus = feeStatusLabel(fee);
+              return (
+                <div key={p.id} style={{ border: "1px solid #2E7D32", padding: cardPad, marginBottom: 12 }}>
+                  <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", gap: 8, marginBottom: 8 }}>
+                    <p style={{ fontFamily: S.sans, fontWeight: 500 }}>Request {p.requestId}</p>
+                    <span style={{ fontFamily: S.mono, fontSize: "0.65rem", color: "#2E7D32", letterSpacing: "0.08em", textTransform: "uppercase" }}>Accepted</span>
+                  </div>
+                  <p style={{ fontFamily: S.mono, fontSize: "0.7rem", color: S.inkLight, letterSpacing: "0.06em", marginBottom: 12 }}>
+                    {(p.commissionBps / 100).toFixed(2)}% commission · Est. ${p.estimatedSalePrice?.toLocaleString()}
                   </p>
+
+                  {(feeStatus === "owed" || feeStatus === "invoiced") && (
+                    <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "center", gap: 12, background: "#FFF8E1", border: "1px solid #FFE082", padding: "12px 16px" }}>
+                      <p style={{ fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.08em", color: S.ink, flex: 1 }}>
+                        PLATFORM FEE: $295.00
+                        {feeStatus === "invoiced" ? " — Invoice sent" : " — Due now"}
+                      </p>
+                      <button
+                        data-testid={`pay-now-${p.id}`}
+                        onClick={() => handlePayNow(p.id, fee?.id)}
+                        disabled={payingFee === (fee?.id ?? p.id)}
+                        style={{ background: S.rust, border: `1px solid ${S.rust}`, color: S.paper, fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", padding: "10px 20px", cursor: "pointer", minHeight: 40, whiteSpace: "nowrap" }}
+                      >
+                        {payingFee === (fee?.id ?? p.id) ? "Redirecting…" : "Pay Now — $295"}
+                      </button>
+                    </div>
+                  )}
+
+                  {feeStatus === "paid" && (
+                    <div style={{ background: "#E8F5E9", border: "1px solid #A5D6A7", padding: "12px 16px" }}>
+                      <p style={{ fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.08em", color: "#2E7D32" }}>
+                        PLATFORM FEE: $295.00 — PAID
+                      </p>
+                    </div>
+                  )}
+
+                  {feeStatus === "waived" && (
+                    <div style={{ background: S.paper, border: `1px solid ${S.rule}`, padding: "12px 16px" }}>
+                      <p style={{ fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.08em", color: S.inkLight }}>
+                        PLATFORM FEE: WAIVED
+                      </p>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </section>
         )}
 

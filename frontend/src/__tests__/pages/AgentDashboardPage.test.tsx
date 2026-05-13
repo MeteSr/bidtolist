@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import AgentDashboardPage from "../../pages/AgentDashboardPage";
 
@@ -8,10 +8,17 @@ import AgentDashboardPage from "../../pages/AgentDashboardPage";
 vi.mock("../../services/listing", () => ({
   getMyProposals: vi.fn(),
 }));
+vi.mock("../../services/fee", () => ({
+  getMyFees: vi.fn(),
+}));
+vi.mock("react-hot-toast", () => ({ default: { success: vi.fn(), error: vi.fn() } }));
 
 import * as listingService from "../../services/listing";
+import * as feeService from "../../services/fee";
+import toast from "react-hot-toast";
 
 const mockGetMyProposals = listingService.getMyProposals as ReturnType<typeof vi.fn>;
+const mockGetMyFees      = feeService.getMyFees as ReturnType<typeof vi.fn>;
 
 const ACCEPTED = {
   id: "PROP_1", requestId: "BID_1", agentName: "Jane Smith",
@@ -21,9 +28,18 @@ const ACCEPTED = {
   status: { Accepted: null }, createdAt: BigInt(0),
 };
 
-const PENDING = { ...ACCEPTED, id: "PROP_2", requestId: "BID_2", status: { Pending: null } };
+const PENDING  = { ...ACCEPTED, id: "PROP_2", requestId: "BID_2", status: { Pending: null } };
 const REJECTED = { ...ACCEPTED, id: "PROP_3", requestId: "BID_3", status: { Rejected: null } };
 const WITHDRAWN = { ...ACCEPTED, id: "PROP_4", requestId: "BID_4", status: { Withdrawn: null } };
+
+const FEE_OWED: any = {
+  id: "FEE_1", requestId: "BID_1", proposalId: "PROP_1",
+  agentId: "principal-1", homeownerId: "principal-2",
+  amountCents: BigInt(29500), status: { Owed: null },
+  createdAt: BigInt(0), updatedAt: BigInt(0),
+};
+
+const FEE_PAID: any = { ...FEE_OWED, id: "FEE_2", status: { Paid: null } };
 
 function renderPage() {
   return render(
@@ -36,6 +52,7 @@ function renderPage() {
 beforeEach(() => {
   vi.clearAllMocks();
   mockGetMyProposals.mockResolvedValue([]);
+  mockGetMyFees.mockResolvedValue([]);
 });
 
 describe("AgentDashboardPage", () => {
@@ -56,7 +73,7 @@ describe("AgentDashboardPage", () => {
     renderPage();
     await waitFor(() => {
       expect(screen.getByText(/won/i)).toBeInTheDocument();
-      expect(screen.getByText(/\$295/)).toBeInTheDocument();
+      expect(screen.getAllByText(/\$295/).length).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -66,6 +83,52 @@ describe("AgentDashboardPage", () => {
     await waitFor(() => {
       expect(screen.getByText(/2\.50%/)).toBeInTheDocument();
     });
+  });
+
+  it("shows Pay Now button when fee is Owed", async () => {
+    mockGetMyProposals.mockResolvedValue([ACCEPTED]);
+    mockGetMyFees.mockResolvedValue([FEE_OWED]);
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByTestId("pay-now-PROP_1")).toBeInTheDocument();
+    });
+  });
+
+  it("shows Pay Now button when no fee record exists (mock mode)", async () => {
+    mockGetMyProposals.mockResolvedValue([ACCEPTED]);
+    mockGetMyFees.mockResolvedValue([]);
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByTestId("pay-now-PROP_1")).toBeInTheDocument();
+    });
+  });
+
+  it("shows Paid badge when fee status is Paid", async () => {
+    const acceptedProp2 = { ...ACCEPTED, id: "PROP_1" };
+    const paidFee = { ...FEE_PAID, proposalId: "PROP_1" };
+    mockGetMyProposals.mockResolvedValue([acceptedProp2]);
+    mockGetMyFees.mockResolvedValue([paidFee]);
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText(/PLATFORM FEE: \$295\.00 — PAID/i)).toBeInTheDocument();
+    });
+  });
+
+  it("clicking Pay Now calls Stripe server and shows error toast when mock mode", async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      json: () => Promise.resolve({ url: null, mock: true }),
+    });
+    vi.stubGlobal("fetch", mockFetch);
+
+    mockGetMyProposals.mockResolvedValue([ACCEPTED]);
+    mockGetMyFees.mockResolvedValue([FEE_OWED]);
+    renderPage();
+
+    await waitFor(() => expect(screen.getByTestId("pay-now-PROP_1")).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId("pay-now-PROP_1"));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    vi.unstubAllGlobals();
   });
 
   it("shows Pending section for pending proposal", async () => {
