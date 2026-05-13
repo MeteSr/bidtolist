@@ -44,6 +44,20 @@ persistent actor Listing {
     submittedAt:  Time.Time;
   };
 
+  public type BidRequestSummary = {
+    id:               Text;
+    city:             Text;
+    county:           Text;
+    zipCode:          Text;
+    targetListDate:   Time.Time;
+    desiredSalePrice: ?Nat;
+    notes:            Text;
+    bidDeadline:      Time.Time;
+    status:           BidRequestStatus;
+    createdAt:        Time.Time;
+    proposalCount:    Nat;
+  };
+
   public type ListingBidRequest = {
     id:               Text;
     address:          Text;
@@ -86,6 +100,8 @@ persistent actor Listing {
   };
 
   // ─── Stable State ────────────────────────────────────────────────────────────
+
+  private let MAX_PROPOSALS_PER_REQUEST : Nat = 10;
 
   private var bidCounter:      Nat = 0;
   private var proposalCounter: Nat = 0;
@@ -241,13 +257,29 @@ persistent actor Listing {
     }
   };
 
-  /// Public — agents browse open bid requests by county.
-  public query func getOpenBidRequests() : async [ListingBidRequest] {
-    Iter.toArray(
-      Iter.filter(Map.values(requests), func(r: ListingBidRequest) : Bool {
-        r.status == #Open
-      })
-    )
+  /// Public — agents browse open bid requests (summary view, address omitted for privacy).
+  public query func getOpenBidRequests() : async [BidRequestSummary] {
+    let open = Iter.filter(Map.values(requests), func(r: ListingBidRequest) : Bool {
+      r.status == #Open
+    });
+    Iter.toArray(Iter.map(open, func(r: ListingBidRequest) : BidRequestSummary {
+      let count = Iter.size(Iter.filter(Map.values(proposals), func(p: ListingProposal) : Bool {
+        p.requestId == r.id
+      }));
+      {
+        id               = r.id;
+        city             = r.city;
+        county           = r.county;
+        zipCode          = r.zipCode;
+        targetListDate   = r.targetListDate;
+        desiredSalePrice = r.desiredSalePrice;
+        notes            = r.notes;
+        bidDeadline      = r.bidDeadline;
+        status           = r.status;
+        createdAt        = r.createdAt;
+        proposalCount    = count;
+      }
+    }))
   };
 
   // ─── Agent: Proposal Lifecycle ────────────────────────────────────────────────
@@ -282,6 +314,8 @@ persistent actor Listing {
       case (?req) {
         if (req.status != #Open)          return #err(#InvalidInput("Request is not accepting proposals"));
         if (req.bidDeadline <= Time.now()) return #err(#DeadlinePassed);
+        let existingCount = Iter.size(Iter.filter(Map.values(proposals), func(p: ListingProposal) : Bool { p.requestId == requestId }));
+        if (existingCount >= MAX_PROPOSALS_PER_REQUEST) return #err(#InvalidInput("This listing has reached its maximum of 10 proposals"));
         if (commissionBps == 0)           return #err(#InvalidInput("commissionBps must be greater than 0"));
         if (estimatedSalePrice == 0)      return #err(#InvalidInput("estimatedSalePrice must be greater than 0"));
         if (Text.size(agentName) == 0)    return #err(#InvalidInput("agentName cannot be empty"));

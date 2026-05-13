@@ -14,6 +14,12 @@ export const idlFactory = ({ IDL }: any) => {
   const BidRequestStatus = IDL.Variant({ Open: IDL.Null, Awarded: IDL.Null, Cancelled: IDL.Null });
   const ProposalStatus   = IDL.Variant({ Pending: IDL.Null, Accepted: IDL.Null, Rejected: IDL.Null, Withdrawn: IDL.Null });
 
+  const BidRequestSummary = IDL.Record({
+    id: IDL.Text, city: IDL.Text, county: IDL.Text, zipCode: IDL.Text,
+    targetListDate: IDL.Int, desiredSalePrice: IDL.Opt(IDL.Nat),
+    notes: IDL.Text, bidDeadline: IDL.Int, status: BidRequestStatus,
+    createdAt: IDL.Int, proposalCount: IDL.Nat,
+  });
   const ListingBidRequest = IDL.Record({
     id: IDL.Text, address: IDL.Text, city: IDL.Text, county: IDL.Text, zipCode: IDL.Text,
     homeowner: IDL.Principal, targetListDate: IDL.Int, desiredSalePrice: IDL.Opt(IDL.Nat),
@@ -37,7 +43,7 @@ export const idlFactory = ({ IDL }: any) => {
     getMyBidRequests:                IDL.Func([], [IDL.Vec(ListingBidRequest)], ["query"]),
     getBidRequest:                   IDL.Func([IDL.Text], [Result(ListingBidRequest)], ["query"]),
     cancelBidRequest:                IDL.Func([IDL.Text], [Result(IDL.Null)], []),
-    getOpenBidRequests:              IDL.Func([], [IDL.Vec(ListingBidRequest)], ["query"]),
+    getOpenBidRequests:              IDL.Func([], [IDL.Vec(BidRequestSummary)], ["query"]),
     submitProposal:                  IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Nat, IDL.Text, IDL.Text, IDL.Nat, IDL.Nat, IDL.Vec(IDL.Text), IDL.Int, IDL.Text], [Result(ListingProposal)], []),
     getProposalsForRequest:          IDL.Func([IDL.Text], [IDL.Vec(ListingProposal)], ["query"]),
     getMyProposals:                  IDL.Func([], [IDL.Vec(ListingProposal)], ["query"]),
@@ -55,6 +61,15 @@ export const idlFactory = ({ IDL }: any) => {
 async function getActor() {
   return Actor.createActor(idlFactory, { agent: await getAgent(), canisterId: CANISTER_ID });
 }
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+export type BidRequestSummary = {
+  id: string; city: string; county: string; zipCode: string;
+  targetListDate: bigint; desiredSalePrice: [] | [bigint];
+  notes: string; bidDeadline: bigint; status: { Open: null } | { Awarded: null } | { Cancelled: null };
+  createdAt: bigint; proposalCount: bigint;
+};
 
 // ── Mock data ────────────────────────────────────────────────────────────────
 
@@ -86,10 +101,17 @@ export async function getMyBidRequests(): Promise<any[]> {
   return a.getMyBidRequests() as Promise<any[]>;
 }
 
-export async function getOpenBidRequests(): Promise<any[]> {
-  if (!CANISTER_ID) return MOCK_REQUESTS.filter((r: any) => r.status?.Open !== undefined);
+export async function getOpenBidRequests(): Promise<BidRequestSummary[]> {
+  if (!CANISTER_ID) {
+    return MOCK_REQUESTS
+      .filter((r: any) => r.status?.Open !== undefined)
+      .map((r: any) => ({
+        ...r,
+        proposalCount: BigInt(MOCK_PROPOSALS.filter((p: any) => p.requestId === r.id).length),
+      }));
+  }
   const a = await getActor();
-  return a.getOpenBidRequests() as Promise<any[]>;
+  return a.getOpenBidRequests() as Promise<BidRequestSummary[]>;
 }
 
 export async function submitProposal(args: {
@@ -158,4 +180,16 @@ export async function revokeHomeowner(principal: string) {
   const a = await getActor();
   const { Principal } = await import("@dfinity/principal");
   return a.revokeHomeowner(Principal.fromText(principal));
+}
+
+export async function getListingMetrics(): Promise<{ totalRequests: number; openRequests: number; awardedRequests: number; totalProposals: number }> {
+  if (!CANISTER_ID) return { totalRequests: 0, openRequests: 0, awardedRequests: 0, totalProposals: 0 };
+  const a = await getActor();
+  const m = await a.metrics() as any;
+  return {
+    totalRequests:   Number(m.totalRequests),
+    openRequests:    Number(m.openRequests),
+    awardedRequests: Number(m.awardedRequests),
+    totalProposals:  Number(m.totalProposals),
+  };
 }
