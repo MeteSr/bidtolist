@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getMyBidRequests, getProposalsForRequest, acceptProposal } from "../services/listing";
+import { addReview } from "../services/agent";
 import { notifyProposalResult } from "../services/email";
 import toast from "react-hot-toast";
 import { useBreakpoint } from "../hooks/useBreakpoint";
@@ -37,12 +38,119 @@ function proposalStatusLabel(status: any): string {
   return "Unknown";
 }
 
+function agentIdText(agentId: any): string {
+  if (typeof agentId === "string") return agentId;
+  return agentId?.toText?.() ?? String(agentId);
+}
+
+function StarPicker({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  return (
+    <div style={{ display: "flex", gap: 4 }} aria-label="Star rating">
+      {[1, 2, 3, 4, 5].map(n => (
+        <button
+          key={n}
+          type="button"
+          data-testid={`star-${n}`}
+          onClick={() => onChange(n)}
+          style={{
+            background: "transparent", border: "none", cursor: "pointer",
+            fontSize: "1.4rem", color: n <= value ? "#C94C2E" : "#C8C3B8",
+            padding: "0 2px", lineHeight: 1,
+          }}
+          aria-label={`${n} star${n > 1 ? "s" : ""}`}
+        >
+          ★
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ReviewForm({ proposal, onDone }: { proposal: any; onDone: () => void }) {
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const INP: React.CSSProperties = {
+    border: `1px solid ${S.rule}`, padding: "10px 12px", width: "100%",
+    fontFamily: S.sans, fontSize: "0.9rem", resize: "vertical" as const,
+    boxSizing: "border-box" as const, background: "white",
+  };
+
+  if (done) {
+    return (
+      <p data-testid="review-done" style={{ fontFamily: S.sans, fontSize: "0.85rem", color: "#2E7D32", marginTop: 12 }}>
+        Review submitted — thank you.
+      </p>
+    );
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (rating === 0) { toast.error("Please select a star rating."); return; }
+    setSubmitting(true);
+    try {
+      const result = await addReview({
+        agentId: agentIdText(proposal.agentId),
+        rating,
+        comment,
+        transactionId: proposal.id,
+      }) as any;
+      if ("err" in result) {
+        if ("DuplicateReview" in result.err) {
+          toast.error("You've already reviewed this agent for this transaction.");
+        } else if ("RateLimitExceeded" in result.err) {
+          toast.error("Review limit reached for today. Try again tomorrow.");
+        } else {
+          toast.error(JSON.stringify(result.err));
+        }
+        return;
+      }
+      setDone(true);
+      onDone();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <form data-testid="review-form" onSubmit={handleSubmit} style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${S.rule}` }}>
+      <p style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, marginBottom: 8 }}>
+        Rate {proposal.agentName}
+      </p>
+      <div style={{ marginBottom: 12 }}>
+        <StarPicker value={rating} onChange={setRating} />
+      </div>
+      <div style={{ marginBottom: 12 }}>
+        <textarea
+          data-testid="review-comment"
+          value={comment}
+          onChange={e => setComment(e.target.value)}
+          rows={3}
+          placeholder="Share your experience with this agent (optional)…"
+          style={INP}
+        />
+      </div>
+      <button
+        type="submit"
+        data-testid="review-submit"
+        disabled={submitting}
+        style={{ background: S.ink, border: `1px solid ${S.ink}`, color: S.paper, fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", padding: "10px 20px", cursor: "pointer", minHeight: 40 }}
+      >
+        {submitting ? "Submitting…" : "Submit Review"}
+      </button>
+    </form>
+  );
+}
+
 export default function MyBidsPage() {
   const { isMobile } = useBreakpoint();
   const [requests, setRequests] = useState<any[]>([]);
   const [proposals, setProposals] = useState<Record<string, any[]>>({});
   const [expanded, setExpanded] = useState<string | null>(null);
   const [accepting, setAccepting] = useState<string | null>(null);
+  const [reviewedIds, setReviewedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     getMyBidRequests().then(setRequests).catch(console.error);
@@ -130,14 +238,26 @@ export default function MyBidsPage() {
                     <div key={p.id} style={{ padding: isMobile ? "16px" : "20px 24px", borderBottom: `1px solid ${S.rule}` }}>
                       <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "flex-start", gap: 8, marginBottom: 12 }}>
                         <div>
-                          <p style={{ fontFamily: S.sans, fontWeight: 500, marginBottom: 2 }}>{p.agentName} · {p.agentBrokerage}</p>
+                          <p style={{ fontFamily: S.sans, fontWeight: 500, marginBottom: 2 }}>
+                            {p.agentName} · {p.agentBrokerage}
+                          </p>
                           <p style={{ fontFamily: S.mono, fontSize: "0.7rem", color: S.inkLight, letterSpacing: "0.06em" }}>
                             {(p.commissionBps / 100).toFixed(2)}% commission · Est. ${p.estimatedSalePrice?.toLocaleString()} · ~{p.estimatedDaysOnMarket} days
                           </p>
                         </div>
-                        <span style={{ fontFamily: S.mono, fontSize: "0.65rem", color: proposalStatusLabel(p.status) === "Accepted" ? S.rust : S.inkLight, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                          {proposalStatusLabel(p.status)}
-                        </span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                          {p.status && "Accepted" in p.status && (
+                            <a
+                              href={`/agents/profile/${agentIdText(p.agentId)}`}
+                              style={{ fontFamily: S.mono, fontSize: "0.6rem", letterSpacing: "0.06em", textTransform: "uppercase", color: S.rust, textDecoration: "none" }}
+                            >
+                              View Profile
+                            </a>
+                          )}
+                          <span style={{ fontFamily: S.mono, fontSize: "0.65rem", color: proposalStatusLabel(p.status) === "Accepted" ? S.rust : S.inkLight, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
+                            {proposalStatusLabel(p.status)}
+                          </span>
+                        </div>
                       </div>
                       <p style={{ fontFamily: S.sans, fontSize: "0.85rem", color: S.inkLight, marginBottom: 12 }}>{p.cmaSummary}</p>
                       {p.status && "Pending" in p.status && (
@@ -145,6 +265,17 @@ export default function MyBidsPage() {
                           style={{ background: S.rust, border: `1px solid ${S.rust}`, color: S.paper, fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", padding: "12px 20px", cursor: "pointer", minHeight: 44, width: isMobile ? "100%" : "auto" }}>
                           {accepting === p.id ? "Accepting..." : "Accept This Agent"}
                         </button>
+                      )}
+                      {p.status && "Accepted" in p.status && !reviewedIds.has(p.id) && (
+                        <ReviewForm
+                          proposal={p}
+                          onDone={() => setReviewedIds(prev => new Set([...prev, p.id]))}
+                        />
+                      )}
+                      {p.status && "Accepted" in p.status && reviewedIds.has(p.id) && (
+                        <p data-testid="review-done" style={{ fontFamily: S.sans, fontSize: "0.85rem", color: "#2E7D32", marginTop: 12 }}>
+                          Review submitted — thank you.
+                        </p>
                       )}
                     </div>
                   ))}
