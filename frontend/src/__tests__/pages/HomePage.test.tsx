@@ -93,16 +93,18 @@ describe("HomePage", () => {
 
   it("shows open listings count from metrics", async () => {
     renderPage();
-    const stat = await screen.findByTestId("stat-open-listings");
-    expect(stat).toHaveTextContent("5");
-    expect(stat).toHaveTextContent(/open listing/i);
+    await waitFor(() => {
+      expect(screen.getByTestId("stat-open-listings")).toHaveTextContent("5");
+    });
+    expect(screen.getByTestId("stat-open-listings")).toHaveTextContent(/open listing/i);
   });
 
   it("shows verified agent count from agent profiles", async () => {
     renderPage();
-    const stat = await screen.findByTestId("stat-verified-agents");
-    expect(stat).toHaveTextContent("2");
-    expect(stat).toHaveTextContent(/verified agent/i);
+    await waitFor(() => {
+      expect(screen.getByTestId("stat-verified-agents")).toHaveTextContent("2");
+    });
+    expect(screen.getByTestId("stat-verified-agents")).toHaveTextContent(/verified agent/i);
   });
 
   it("shows 0 counts gracefully when metrics returns zeros", async () => {

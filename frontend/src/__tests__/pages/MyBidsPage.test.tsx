@@ -12,12 +12,19 @@ vi.mock("../../services/listing", () => ({
   acceptProposal: vi.fn(),
 }));
 
+vi.mock("../../services/email", () => ({
+  notifyProposalResult: vi.fn(),
+}));
+
 vi.mock("react-hot-toast", () => ({
   default: { success: vi.fn(), error: vi.fn() },
 }));
 
 import * as listingService from "../../services/listing";
+import * as emailService from "../../services/email";
 import toast from "react-hot-toast";
+
+const mockNotifyProposalResult = emailService.notifyProposalResult as ReturnType<typeof vi.fn>;
 
 const mockGetMyBidRequests     = listingService.getMyBidRequests     as ReturnType<typeof vi.fn>;
 const mockGetProposalsForRequest = listingService.getProposalsForRequest as ReturnType<typeof vi.fn>;
@@ -37,7 +44,7 @@ const MOCK_REQUEST_PAST = {
 };
 
 const MOCK_PROPOSAL = {
-  id: "PROP_1", requestId: "BID_2", agentName: "Jane Smith",
+  id: "PROP_1", requestId: "BID_2", agentName: "Jane Smith", agentEmail: "jane@kw.com",
   agentBrokerage: "Keller Williams", commissionBps: 250, cmaSummary: "Great comps",
   marketingPlan: "MLS + Zillow", estimatedDaysOnMarket: 30, estimatedSalePrice: 350000,
   includedServices: ["MLS Listing"], validUntil: BigInt(0), coverLetter: "I'm the best",
@@ -180,5 +187,22 @@ describe("MyBidsPage — accept proposal", () => {
     await waitFor(() => {
       expect(vi.mocked(toast.error)).toHaveBeenCalled();
     });
+  });
+
+  it("fires notifyProposalResult with won=true for the accepted agent", async () => {
+    const user = await openProposals();
+    await user.click(screen.getByRole("button", { name: /accept this agent/i }));
+    await waitFor(() => expect(vi.mocked(toast.success)).toHaveBeenCalled());
+    expect(mockNotifyProposalResult).toHaveBeenCalledWith(
+      expect.objectContaining({ agentEmail: "jane@kw.com", won: true })
+    );
+  });
+
+  it("does not fire notifyProposalResult when acceptProposal returns err", async () => {
+    mockAcceptProposal.mockResolvedValue({ err: { NotAuthorized: null } } as any);
+    const user = await openProposals();
+    await user.click(screen.getByRole("button", { name: /accept this agent/i }));
+    await waitFor(() => expect(vi.mocked(toast.error)).toHaveBeenCalled());
+    expect(mockNotifyProposalResult).not.toHaveBeenCalled();
   });
 });

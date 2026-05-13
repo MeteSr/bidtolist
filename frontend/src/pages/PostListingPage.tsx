@@ -20,6 +20,7 @@ export default function PostListingPage() {
   const [form, setForm] = useState({
     address: "", city: "", county: "Volusia", zipCode: "",
     targetListDate: "", desiredSalePrice: "", notes: "", bidDeadlineHours: "168",
+    contactEmail: "",
   });
 
   useEffect(() => {
@@ -41,6 +42,7 @@ export default function PostListingPage() {
         targetListDate: new Date(form.targetListDate).getTime(),
         desiredSalePrice: form.desiredSalePrice ? parseInt(form.desiredSalePrice) * 100 : undefined,
         notes: form.notes, bidDeadline: deadline,
+        homeownerEmail: form.contactEmail,
       }) as any;
       if ("err" in result) { toast.error(JSON.stringify(result.err)); return; }
       toast.success("Listing posted! Agents can now submit proposals.");
@@ -129,6 +131,8 @@ export default function PostListingPage() {
               placeholder="Any details about the property, preferred services, timeline, etc."
               style={{ ...INP, resize: "vertical" }} />
           </div>
+
+          {field("Contact Email", "contactEmail", "email", "you@example.com")}
 
           <div style={{ marginBottom: 40 }}>
             <label htmlFor="field-deadline" style={LBL}>Bid Deadline (minimum 48 hours)</label>

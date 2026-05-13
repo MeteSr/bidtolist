@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getMyBidRequests, getProposalsForRequest, acceptProposal } from "../services/listing";
+import { notifyProposalResult } from "../services/email";
 import toast from "react-hot-toast";
 import { useBreakpoint } from "../hooks/useBreakpoint";
 
@@ -54,11 +55,26 @@ export default function MyBidsPage() {
     setExpanded(requestId);
   }
 
-  async function handleAccept(proposalId: string) {
+  async function handleAccept(proposalId: string, requestId: string) {
     setAccepting(proposalId);
     try {
       const result = await acceptProposal(proposalId) as any;
       if ("err" in result) { toast.error(JSON.stringify(result.err)); return; }
+
+      const req = requests.find((r: any) => r.id === requestId);
+      const allProps = proposals[requestId] || [];
+      for (const p of allProps) {
+        if (p.agentEmail) {
+          notifyProposalResult({
+            agentEmail: p.agentEmail,
+            agentName: p.agentName,
+            city: req?.city || "",
+            county: req?.county || "",
+            won: p.id === proposalId,
+          });
+        }
+      }
+
       toast.success("Proposal accepted! The agent will receive a platform fee invoice.");
       setRequests(await getMyBidRequests());
     } finally {
@@ -125,7 +141,7 @@ export default function MyBidsPage() {
                       </div>
                       <p style={{ fontFamily: S.sans, fontSize: "0.85rem", color: S.inkLight, marginBottom: 12 }}>{p.cmaSummary}</p>
                       {p.status && "Pending" in p.status && (
-                        <button onClick={() => handleAccept(p.id)} disabled={accepting === p.id}
+                        <button onClick={() => handleAccept(p.id, req.id)} disabled={accepting === p.id}
                           style={{ background: S.rust, border: `1px solid ${S.rust}`, color: S.paper, fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", padding: "12px 20px", cursor: "pointer", minHeight: 44, width: isMobile ? "100%" : "auto" }}>
                           {accepting === p.id ? "Accepting..." : "Accept This Agent"}
                         </button>
