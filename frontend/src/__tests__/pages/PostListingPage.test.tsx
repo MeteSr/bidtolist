@@ -46,7 +46,7 @@ const authedHomeowner = {
 };
 
 const unauthUser = {
-  isAuthenticated: false, principal: null, role: null as const,
+  isAuthenticated: false, principal: null, role: null as null,
   isLoading: false, login: vi.fn(), logout: vi.fn(),
 };
 
