@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DEPLOY_SCRIPT_VERSION="0.2.0"
+DEPLOY_SCRIPT_VERSION="0.2.1"
 ENV=${1:-local}
 
 echo "============================================"
@@ -91,7 +91,7 @@ if [ "$ENV" = "local" ]; then
 import json, subprocess
 ids = {}
 for name in ["listing", "agent", "fee"]:
-    result = subprocess.run(["icp","canister","status",name,"-e","local","--id-only"],
+    result = subprocess.run(["icp","canister","id",name,"-e","local"],
                             capture_output=True, text=True)
     cid = result.stdout.strip()
     if cid:

@@ -9,7 +9,8 @@
     "test": "vitest run",
     "test:unit": "vitest run --exclude 'src/__tests__/integration/**'",
     "test:unit:watch": "vitest --exclude 'src/__tests__/integration/**'",
-    "test:unit:coverage": "vitest run --coverage --exclude 'src/__tests__/integration/**'"
+    "test:unit:coverage": "vitest run --coverage --exclude 'src/__tests__/integration/**'",
+    "test:integration": "vitest run src/__tests__/integration/**"
   },
   "dependencies": {
     "@icp-sdk/auth": "^6.2.0",
