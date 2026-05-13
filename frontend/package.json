@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:ssg": "npm run build && node scripts/prerender.mjs && npm run gen:sitemap",
+    "gen:sitemap": "node scripts/gen-sitemap.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "test:unit": "vitest run --exclude 'src/__tests__/integration/**'",
@@ -17,6 +19,7 @@
     "@icp-sdk/core": "^5.2.1",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
+    "react-helmet-async": "^3.0.0",
     "react-hot-toast": "^2.4.1",
     "react-router-dom": "^7.13.2",
     "zustand": "^5.0.12"
