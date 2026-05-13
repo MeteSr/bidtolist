@@ -105,3 +105,51 @@ export async function verifyAgent(agentId: string) {
   const { Principal } = await import("@dfinity/principal");
   return a.verifyAgent(Principal.fromText(agentId));
 }
+
+// ── Reviews ───────────────────────────────────────────────────────────────────
+
+export type AgentReview = {
+  id: string; agentId: unknown; reviewerPrincipal: unknown;
+  rating: bigint; comment: string; transactionId: string; createdAt: bigint;
+};
+
+const MOCK_REVIEWS: AgentReview[] = [];
+
+export async function addReview(args: {
+  agentId: string; rating: number; comment: string; transactionId: string;
+}) {
+  if (!CANISTER_ID) {
+    const existing = MOCK_REVIEWS.find(r => (r as any).agentId === args.agentId && r.transactionId === args.transactionId);
+    if (existing) return { err: { DuplicateReview: null } };
+    const review: any = {
+      id: `AGREV_${Date.now()}`, agentId: args.agentId, reviewerPrincipal: "mock",
+      rating: BigInt(args.rating), comment: args.comment, transactionId: args.transactionId,
+      createdAt: BigInt(Date.now()),
+    };
+    MOCK_REVIEWS.push(review);
+    return { ok: review };
+  }
+  const a = await getActor();
+  const { Principal } = await import("@dfinity/principal");
+  return a.addReview({
+    agentId: Principal.fromText(args.agentId),
+    rating: BigInt(args.rating),
+    comment: args.comment,
+    transactionId: args.transactionId,
+  });
+}
+
+export async function getReviews(agentId: string): Promise<AgentReview[]> {
+  if (!CANISTER_ID) return MOCK_REVIEWS.filter(r => (r as any).agentId === agentId);
+  const a = await getActor();
+  const { Principal } = await import("@dfinity/principal");
+  return a.getReviews(Principal.fromText(agentId)) as Promise<AgentReview[]>;
+}
+
+export async function getAgentProfile(agentId: string): Promise<any | null> {
+  if (!CANISTER_ID) return null;
+  const a = await getActor();
+  const { Principal } = await import("@dfinity/principal");
+  const result = await a.getProfile(Principal.fromText(agentId)) as any[];
+  return result.length > 0 ? result[0] : null;
+}
