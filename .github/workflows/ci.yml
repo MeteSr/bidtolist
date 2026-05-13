@@ -63,6 +63,8 @@ jobs:
 
       - name: Start local network (needed for canister ID allocation)
         run: icp network start -d
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Compile all Motoko canisters
         # Parse only the canisters: block — networks:/environments: also have
@@ -75,7 +77,7 @@ jobs:
               icp build "$canister" || exit 1
             done
 
-  frontend-check:
+  test-frontend:
     name: Frontend — type-check, tests, build
     runs-on: ubuntu-latest
     permissions:

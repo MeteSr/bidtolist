@@ -1,5 +1,10 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { getAuthClient, resetAgent } from "../services/actor";
+import {
+  login as actorLogin,
+  logout as actorLogout,
+  isAuthenticated as actorIsAuthenticated,
+  getPrincipal,
+} from "../services/actor";
 import { getMyAgentProfile } from "../services/agent";
 
 export type UserRole = "agent" | "homeowner" | null;
@@ -40,11 +45,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        const client = getAuthClient();
-        const authed = await client.isAuthenticated();
+        // v6: isAuthenticated() is synchronous
+        const authed = actorIsAuthenticated();
         if (authed) {
-          const identity = await client.getIdentity();
-          setPrincipal(identity.getPrincipal().toText());
+          setPrincipal(await getPrincipal());
           setRole(await detectRole());
         }
         setIsAuthenticated(authed);
@@ -55,22 +59,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function login() {
-    const client = getAuthClient();
-    await client.login({
-      onSuccess: async () => {
-        resetAgent();
-        const identity = await client.getIdentity();
-        setPrincipal(identity.getPrincipal().toText());
-        setIsAuthenticated(true);
-        setRole(await detectRole());
-      },
-    });
+    await actorLogin();
+    setPrincipal(await getPrincipal());
+    setIsAuthenticated(true);
+    setRole(await detectRole());
   }
 
   async function logout() {
-    const client = getAuthClient();
-    await client.logout();
-    resetAgent();
+    await actorLogout();
     setPrincipal(null);
     setIsAuthenticated(false);
     setRole(null);
