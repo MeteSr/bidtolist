@@ -16,6 +16,8 @@ const INITIAL_FORM = {
   bio: "", phone: "", email: "",
 };
 
+const MAX_DOC_BYTES = 800 * 1024; // 800 KB
+
 function LabelStyle(): React.CSSProperties {
   return { fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, display: "block", marginBottom: 6 };
 }
@@ -29,6 +31,8 @@ export default function AgentRegisterPage() {
   const [profile, setProfile] = useState<any>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(INITIAL_FORM);
+  const [photoIdFile, setPhotoIdFile] = useState<File | null>(null);
+  const [licenseFile, setLicenseFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -52,12 +56,37 @@ export default function AgentRegisterPage() {
 
   function set(k: string, v: string) { setForm(f => ({ ...f, [k]: v })); }
 
+  function handlePhotoIdChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    if (file && file.size > MAX_DOC_BYTES) {
+      toast.error("Photo ID must be under 800 KB");
+      e.target.value = "";
+      setPhotoIdFile(null);
+      return;
+    }
+    setPhotoIdFile(file);
+  }
+
+  function handleLicenseDocChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    if (file && file.size > MAX_DOC_BYTES) {
+      toast.error("License document must be under 800 KB");
+      e.target.value = "";
+      setLicenseFile(null);
+      return;
+    }
+    setLicenseFile(file);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!isAuthenticated) { await login(); return; }
+    if (!photoIdFile || !licenseFile) return;
     setSaving(true);
     try {
-      const args = { ...form, statesLicensed: ["FL"] };
+      const photoIdDoc = new Uint8Array(await photoIdFile.arrayBuffer());
+      const licenseDoc  = new Uint8Array(await licenseFile.arrayBuffer());
+      const args = { ...form, statesLicensed: ["FL"], photoIdDoc, licenseDoc };
       const result = await registerAgent(args) as any;
       if ("err" in result) {
         if ("AlreadyExists" in result.err) {
@@ -154,8 +183,34 @@ export default function AgentRegisterPage() {
                 style={{ ...InputStyle(), resize: "vertical" }} />
             </div>
 
-            <button type="submit" disabled={saving || !isAuthenticated}
-              style={{ background: S.ink, border: `1px solid ${S.ink}`, color: S.paper, fontFamily: S.mono, fontSize: "0.75rem", letterSpacing: "0.08em", textTransform: "uppercase", padding: "14px 32px", cursor: saving ? "not-allowed" : "pointer", width: "100%", opacity: !isAuthenticated ? 0.5 : 1 }}>
+            <div style={{ marginBottom: 24 }}>
+              <label htmlFor="photoIdInput" style={LabelStyle()}>
+                State-Issued Photo ID <span style={{ color: S.rust }}>*</span>
+              </label>
+              <p style={{ fontFamily: S.sans, fontSize: "0.8rem", color: S.inkLight, marginBottom: 8 }}>
+                Driver's license or passport — JPG, PNG, or PDF, max 800 KB
+              </p>
+              <input id="photoIdInput" type="file"
+                accept="image/jpeg,image/png,image/heic,application/pdf"
+                onChange={handlePhotoIdChange}
+                style={{ fontFamily: S.sans, fontSize: "0.85rem" }} />
+            </div>
+
+            <div style={{ marginBottom: 40 }}>
+              <label htmlFor="licenseDocInput" style={LabelStyle()}>
+                State-Issued Agent License <span style={{ color: S.rust }}>*</span>
+              </label>
+              <p style={{ fontFamily: S.sans, fontSize: "0.8rem", color: S.inkLight, marginBottom: 8 }}>
+                Florida DBPR license document — JPG, PNG, or PDF, max 800 KB
+              </p>
+              <input id="licenseDocInput" type="file"
+                accept="image/jpeg,image/png,application/pdf"
+                onChange={handleLicenseDocChange}
+                style={{ fontFamily: S.sans, fontSize: "0.85rem" }} />
+            </div>
+
+            <button type="submit" disabled={saving || !isAuthenticated || !photoIdFile || !licenseFile}
+              style={{ background: S.ink, border: `1px solid ${S.ink}`, color: S.paper, fontFamily: S.mono, fontSize: "0.75rem", letterSpacing: "0.08em", textTransform: "uppercase", padding: "14px 32px", cursor: (saving || !isAuthenticated || !photoIdFile || !licenseFile) ? "not-allowed" : "pointer", width: "100%", opacity: (!isAuthenticated || !photoIdFile || !licenseFile) ? 0.5 : 1 }}>
               {saving ? "Submitting…" : "Create Agent Profile — Free"}
             </button>
           </form>

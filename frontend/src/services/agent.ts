@@ -15,6 +15,10 @@ export const idlFactory = ({ IDL }: any) => {
     phone: IDL.Text, email: IDL.Text, avgDaysOnMarket: IDL.Nat,
     listingsLast12Months: IDL.Nat, isVerified: IDL.Bool, createdAt: IDL.Int, updatedAt: IDL.Int,
   });
+  const AgentDocs = IDL.Record({
+    photoIdDoc: IDL.Vec(IDL.Nat8),
+    licenseDoc:  IDL.Vec(IDL.Nat8),
+  });
   const AgentReview = IDL.Record({
     id: IDL.Text, agentId: IDL.Principal, reviewerPrincipal: IDL.Principal,
     rating: IDL.Nat, comment: IDL.Text, transactionId: IDL.Text, createdAt: IDL.Int,
@@ -23,6 +27,8 @@ export const idlFactory = ({ IDL }: any) => {
     name: IDL.Text, brokerage: IDL.Text, licenseNumber: IDL.Text,
     statesLicensed: IDL.Vec(IDL.Text), county: IDL.Text, bio: IDL.Text,
     phone: IDL.Text, email: IDL.Text,
+    photoIdDoc: IDL.Vec(IDL.Nat8),
+    licenseDoc:  IDL.Vec(IDL.Nat8),
   });
   const Result = (ok: any) => IDL.Variant({ ok, err: Error });
 
@@ -36,6 +42,7 @@ export const idlFactory = ({ IDL }: any) => {
     addReview:            IDL.Func([IDL.Record({ agentId: IDL.Principal, rating: IDL.Nat, comment: IDL.Text, transactionId: IDL.Text })], [Result(AgentReview)], []),
     getReviews:           IDL.Func([IDL.Principal], [IDL.Vec(AgentReview)], ["query"]),
     isVerifiedAgent:      IDL.Func([IDL.Principal], [IDL.Bool], ["query"]),
+    getAgentDocs:         IDL.Func([IDL.Principal], [Result(AgentDocs)], []),
     metrics:              IDL.Func([], [IDL.Record({ totalAgents: IDL.Nat, verifiedAgents: IDL.Nat, totalReviews: IDL.Nat, isPaused: IDL.Bool })], ["query"]),
   });
 };
@@ -49,6 +56,7 @@ const MOCK_PROFILE: any = null;
 export async function registerAgent(args: {
   name: string; brokerage: string; licenseNumber: string;
   statesLicensed: string[]; county: string; bio: string; phone: string; email: string;
+  photoIdDoc: Uint8Array; licenseDoc: Uint8Array;
 }) {
   if (!CANISTER_ID) return { ok: { ...args, id: "mock", isVerified: false, avgDaysOnMarket: 0, listingsLast12Months: 0, createdAt: Date.now(), updatedAt: Date.now() } };
   const a = await getActor();

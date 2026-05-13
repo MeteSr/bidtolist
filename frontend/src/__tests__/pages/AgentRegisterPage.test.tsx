@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import AgentRegisterPage from "../../pages/AgentRegisterPage";
 
@@ -36,12 +37,30 @@ const VERIFIED_PROFILE = {
 };
 const PENDING_PROFILE = { ...VERIFIED_PROFILE, isVerified: false };
 
+const SMALL_PHOTO  = new File([new Uint8Array(100)], "id.jpg",      { type: "image/jpeg" });
+const SMALL_LICENSE = new File([new Uint8Array(200)], "license.pdf", { type: "application/pdf" });
+const BIG_FILE      = new File([new Uint8Array(900_000)], "big.jpg",  { type: "image/jpeg" });
+
 function authAs(opts: { isAuthenticated?: boolean; isLoading?: boolean; login?: () => Promise<void> } = {}) {
   mockUseAuth.mockReturnValue({
     isAuthenticated: opts.isAuthenticated ?? true,
     isLoading: opts.isLoading ?? false,
     login: opts.login ?? vi.fn(),
   });
+}
+
+async function fillTextFields() {
+  fireEvent.change(screen.getByPlaceholderText("Jane Smith"),            { target: { value: "Jane Smith" } });
+  fireEvent.change(screen.getByPlaceholderText("Keller Williams Realty"),{ target: { value: "KW Realty" } });
+  fireEvent.change(screen.getByPlaceholderText("SL3XXXXXX"),             { target: { value: "SL3001" } });
+  fireEvent.change(screen.getByPlaceholderText("(386) 555-0100"),        { target: { value: "3865550100" } });
+  fireEvent.change(screen.getByPlaceholderText("jane@brokerage.com"),    { target: { value: "jane@kw.com" } });
+}
+
+async function uploadBothFiles() {
+  const user = userEvent.setup();
+  await user.upload(screen.getByLabelText(/photo.?id/i),        SMALL_PHOTO);
+  await user.upload(screen.getByLabelText(/agent.*license/i),   SMALL_LICENSE);
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -53,6 +72,8 @@ describe("AgentRegisterPage", () => {
     mockRegister.mockResolvedValue({ ok: PENDING_PROFILE });
     mockUpdate.mockResolvedValue({ ok: PENDING_PROFILE });
   });
+
+  // ── Page states ──────────────────────────────────────────────────────────────
 
   it("shows loading indicator while auth is resolving", () => {
     authAs({ isLoading: true });
@@ -79,66 +100,9 @@ describe("AgentRegisterPage", () => {
 
   it("shows registration form when authenticated and no profile exists", async () => {
     authAs();
-    mockGetProfile.mockResolvedValue(null);
     render(<AgentRegisterPage />);
     await waitFor(() => expect(screen.getByText("Agent Sign Up")).toBeTruthy());
     expect(screen.getByRole("button", { name: /create agent profile/i })).toBeTruthy();
-  });
-
-  it("transitions to pending state after successful registration", async () => {
-    authAs();
-    mockGetProfile.mockResolvedValue(null);
-    mockRegister.mockResolvedValue({ ok: PENDING_PROFILE });
-
-    render(<AgentRegisterPage />);
-    await waitFor(() => screen.getByText("Agent Sign Up"));
-
-    fireEvent.change(screen.getByPlaceholderText("Jane Smith"), { target: { value: "Jane Smith" } });
-    fireEvent.change(screen.getByPlaceholderText("Keller Williams Realty"), { target: { value: "KW Realty" } });
-    fireEvent.change(screen.getByPlaceholderText("SL3XXXXXX"), { target: { value: "SL3001" } });
-    fireEvent.change(screen.getByPlaceholderText("(386) 555-0100"), { target: { value: "3865550100" } });
-    fireEvent.change(screen.getByPlaceholderText("jane@brokerage.com"), { target: { value: "jane@kw.com" } });
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /create agent profile/i }));
-    });
-
-    await waitFor(() => expect(screen.getByText("Under Review")).toBeTruthy());
-    expect(toast.success).toHaveBeenCalledWith(expect.stringContaining("submitted"));
-  });
-
-  it("handles AlreadyExists error by showing pending state", async () => {
-    authAs();
-    mockGetProfile
-      .mockResolvedValueOnce(null)           // initial mount check
-      .mockResolvedValueOnce(PENDING_PROFILE); // re-fetch after AlreadyExists
-    mockRegister.mockResolvedValue({ err: { AlreadyExists: null } });
-
-    render(<AgentRegisterPage />);
-    await waitFor(() => screen.getByText("Agent Sign Up"));
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /create agent profile/i }));
-    });
-
-    await waitFor(() => expect(screen.getByText("Under Review")).toBeTruthy());
-    expect(toast.success).not.toHaveBeenCalled();
-  });
-
-  it("shows toast.error for non-AlreadyExists errors", async () => {
-    authAs();
-    mockGetProfile.mockResolvedValue(null);
-    mockRegister.mockResolvedValue({ err: { NotAuthorized: null } });
-
-    render(<AgentRegisterPage />);
-    await waitFor(() => screen.getByText("Agent Sign Up"));
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /create agent profile/i }));
-    });
-
-    await waitFor(() => expect(toast.error).toHaveBeenCalled());
-    expect(screen.getByText("Agent Sign Up")).toBeTruthy();
   });
 
   it("shows pending state when profile exists and isVerified=false", async () => {
@@ -175,6 +139,186 @@ describe("AgentRegisterPage", () => {
     expect(link.href).toContain("/agents/browse");
   });
 
+  it("getMyAgentProfile rejection falls back to form state", async () => {
+    authAs();
+    mockGetProfile.mockRejectedValue(new Error("canister unreachable"));
+    render(<AgentRegisterPage />);
+    await waitFor(() => expect(screen.getByText("Agent Sign Up")).toBeTruthy());
+  });
+
+  // ── Document upload inputs ────────────────────────────────────────────────────
+
+  it("renders photo ID and license document file inputs", async () => {
+    authAs();
+    render(<AgentRegisterPage />);
+    await waitFor(() => screen.getByText("Agent Sign Up"));
+    expect(screen.getByLabelText(/photo.?id/i)).toBeTruthy();
+    expect(screen.getByLabelText(/agent.*license/i)).toBeTruthy();
+  });
+
+  it("photo ID input accepts images and PDF", async () => {
+    authAs();
+    render(<AgentRegisterPage />);
+    await waitFor(() => screen.getByText("Agent Sign Up"));
+    const input = screen.getByLabelText(/photo.?id/i) as HTMLInputElement;
+    expect(input.accept).toContain("image/jpeg");
+    expect(input.accept).toContain("application/pdf");
+  });
+
+  it("license document input accepts images and PDF", async () => {
+    authAs();
+    render(<AgentRegisterPage />);
+    await waitFor(() => screen.getByText("Agent Sign Up"));
+    const input = screen.getByLabelText(/agent.*license/i) as HTMLInputElement;
+    expect(input.accept).toContain("image/jpeg");
+    expect(input.accept).toContain("application/pdf");
+  });
+
+  // ── Submit disabled states ────────────────────────────────────────────────────
+
+  it("submit button is disabled when unauthenticated", async () => {
+    authAs({ isAuthenticated: false });
+    render(<AgentRegisterPage />);
+    await waitFor(() => screen.getByText("Agent Sign Up"));
+    const btn = screen.getByRole("button", { name: /create agent profile/i }) as HTMLButtonElement;
+    expect(btn.disabled).toBe(true);
+  });
+
+  it("submit button is disabled when authenticated but no files selected", async () => {
+    authAs();
+    render(<AgentRegisterPage />);
+    await waitFor(() => screen.getByText("Agent Sign Up"));
+    const btn = screen.getByRole("button", { name: /create agent profile/i }) as HTMLButtonElement;
+    expect(btn.disabled).toBe(true);
+  });
+
+  it("submit button is disabled when only photo ID is selected", async () => {
+    authAs();
+    render(<AgentRegisterPage />);
+    await waitFor(() => screen.getByText("Agent Sign Up"));
+    await userEvent.setup().upload(screen.getByLabelText(/photo.?id/i), SMALL_PHOTO);
+    const btn = screen.getByRole("button", { name: /create agent profile/i }) as HTMLButtonElement;
+    expect(btn.disabled).toBe(true);
+  });
+
+  it("submit button is disabled when only license doc is selected", async () => {
+    authAs();
+    render(<AgentRegisterPage />);
+    await waitFor(() => screen.getByText("Agent Sign Up"));
+    await userEvent.setup().upload(screen.getByLabelText(/agent.*license/i), SMALL_LICENSE);
+    const btn = screen.getByRole("button", { name: /create agent profile/i }) as HTMLButtonElement;
+    expect(btn.disabled).toBe(true);
+  });
+
+  it("submit button is enabled when authenticated and both files selected", async () => {
+    authAs();
+    render(<AgentRegisterPage />);
+    await waitFor(() => screen.getByText("Agent Sign Up"));
+    await uploadBothFiles();
+    const btn = screen.getByRole("button", { name: /create agent profile/i }) as HTMLButtonElement;
+    expect(btn.disabled).toBe(false);
+  });
+
+  // ── File size validation ──────────────────────────────────────────────────────
+
+  it("shows error and rejects photo ID over 800 KB", async () => {
+    authAs();
+    render(<AgentRegisterPage />);
+    await waitFor(() => screen.getByText("Agent Sign Up"));
+    await userEvent.setup().upload(screen.getByLabelText(/photo.?id/i), BIG_FILE);
+    expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("800"));
+    // input should be cleared — button stays disabled
+    const btn = screen.getByRole("button", { name: /create agent profile/i }) as HTMLButtonElement;
+    expect(btn.disabled).toBe(true);
+  });
+
+  it("shows error and rejects license doc over 800 KB", async () => {
+    authAs();
+    render(<AgentRegisterPage />);
+    await waitFor(() => screen.getByText("Agent Sign Up"));
+    await userEvent.setup().upload(screen.getByLabelText(/agent.*license/i), BIG_FILE);
+    expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("800"));
+    const btn = screen.getByRole("button", { name: /create agent profile/i }) as HTMLButtonElement;
+    expect(btn.disabled).toBe(true);
+  });
+
+  // ── Submission with blobs ─────────────────────────────────────────────────────
+
+  it("passes photoIdDoc and licenseDoc as Uint8Array to registerAgent", async () => {
+    authAs();
+    render(<AgentRegisterPage />);
+    await waitFor(() => screen.getByText("Agent Sign Up"));
+
+    await fillTextFields();
+    await uploadBothFiles();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /create agent profile/i }));
+    });
+
+    await waitFor(() => expect(mockRegister).toHaveBeenCalledTimes(1));
+    const args = mockRegister.mock.calls[0][0];
+    expect(args.photoIdDoc).toBeInstanceOf(Uint8Array);
+    expect(args.licenseDoc).toBeInstanceOf(Uint8Array);
+    expect(args.photoIdDoc.length).toBe(100);
+    expect(args.licenseDoc.length).toBe(200);
+  });
+
+  it("transitions to pending state after successful registration with documents", async () => {
+    authAs();
+    render(<AgentRegisterPage />);
+    await waitFor(() => screen.getByText("Agent Sign Up"));
+
+    await fillTextFields();
+    await uploadBothFiles();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /create agent profile/i }));
+    });
+
+    await waitFor(() => expect(screen.getByText("Under Review")).toBeTruthy());
+    expect(toast.success).toHaveBeenCalledWith(expect.stringContaining("submitted"));
+  });
+
+  it("handles AlreadyExists error by showing pending state", async () => {
+    authAs();
+    mockGetProfile
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(PENDING_PROFILE);
+    mockRegister.mockResolvedValue({ err: { AlreadyExists: null } });
+
+    render(<AgentRegisterPage />);
+    await waitFor(() => screen.getByText("Agent Sign Up"));
+
+    await uploadBothFiles();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /create agent profile/i }));
+    });
+
+    await waitFor(() => expect(screen.getByText("Under Review")).toBeTruthy());
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it("shows toast.error for non-AlreadyExists errors", async () => {
+    authAs();
+    mockRegister.mockResolvedValue({ err: { NotAuthorized: null } });
+
+    render(<AgentRegisterPage />);
+    await waitFor(() => screen.getByText("Agent Sign Up"));
+
+    await uploadBothFiles();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /create agent profile/i }));
+    });
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    expect(screen.getByText("Agent Sign Up")).toBeTruthy();
+  });
+
+  // ── Pending state update form ─────────────────────────────────────────────────
+
   it("calls updateAgentProfile from pending state update form", async () => {
     authAs();
     mockGetProfile.mockResolvedValue(PENDING_PROFILE);
@@ -183,8 +327,9 @@ describe("AgentRegisterPage", () => {
     render(<AgentRegisterPage />);
     await waitFor(() => screen.getByText("Under Review"));
 
-    const updateBtn = screen.getByRole("button", { name: /update profile/i });
-    await act(async () => { fireEvent.click(updateBtn); });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /update profile/i }));
+    });
 
     await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
     expect(toast.success).toHaveBeenCalledWith("Profile updated.");
@@ -203,20 +348,5 @@ describe("AgentRegisterPage", () => {
     });
 
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
-  });
-
-  it("submit button is disabled while unauthenticated", async () => {
-    authAs({ isAuthenticated: false });
-    render(<AgentRegisterPage />);
-    await waitFor(() => screen.getByText("Agent Sign Up"));
-    const btn = screen.getByRole("button", { name: /create agent profile/i }) as HTMLButtonElement;
-    expect(btn.disabled).toBe(true);
-  });
-
-  it("getMyAgentProfile rejection falls back to form state", async () => {
-    authAs();
-    mockGetProfile.mockRejectedValue(new Error("canister unreachable"));
-    render(<AgentRegisterPage />);
-    await waitFor(() => expect(screen.getByText("Agent Sign Up")).toBeTruthy());
   });
 });

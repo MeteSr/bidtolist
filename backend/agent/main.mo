@@ -46,6 +46,8 @@ persistent actor Agent {
     bio:            Text;
     phone:          Text;
     email:          Text;
+    photoIdDoc:     Blob;   // state-issued photo ID (driver's licence / passport)
+    licenseDoc:     Blob;   // state-issued agent licence document
   };
 
   public type UpdateArgs = {
@@ -57,6 +59,11 @@ persistent actor Agent {
     bio:            Text;
     phone:          Text;
     email:          Text;
+  };
+
+  public type AgentDocs = {
+    photoIdDoc: Blob;
+    licenseDoc: Blob;
   };
 
   public type AgentReview = {
@@ -102,9 +109,12 @@ persistent actor Agent {
   private var reviewCounter:    Nat         = 0;
 
   private let agents           = Map.empty<Principal, AgentProfile>();
+  private let agentDocs        = Map.empty<Principal, AgentDocs>();
   private let reviews          = Map.empty<Text, AgentReview>();
   private let reviewKeys       = Map.empty<Text, Text>();
   private let reviewRateLimits = Map.empty<Text, (Nat, Int)>();
+
+  private let MAX_DOC_BYTES : Nat = 819_200; // 800 KB per document
 
   // ─── Rate Limit ──────────────────────────────────────────────────────────────
 
@@ -172,6 +182,10 @@ persistent actor Agent {
     if (Text.size(args.licenseNumber) == 0)   return #err(#InvalidInput("licenseNumber cannot be empty"));
     if (Text.size(args.email)          > 256) return #err(#InvalidInput("email too long"));
     if (Text.size(args.bio)            > 2000) return #err(#InvalidInput("bio exceeds 2000 characters"));
+    if (args.photoIdDoc.size()        == 0)   return #err(#InvalidInput("photoIdDoc cannot be empty"));
+    if (args.licenseDoc.size()        == 0)   return #err(#InvalidInput("licenseDoc cannot be empty"));
+    if (args.photoIdDoc.size()  > MAX_DOC_BYTES) return #err(#InvalidInput("photoIdDoc exceeds 800 KB"));
+    if (args.licenseDoc.size()  > MAX_DOC_BYTES) return #err(#InvalidInput("licenseDoc exceeds 800 KB"));
 
     let now = Time.now();
     let profile: AgentProfile = {
@@ -191,6 +205,7 @@ persistent actor Agent {
       updatedAt            = now;
     };
     Map.add(agents, Principal.compare, msg.caller, profile);
+    Map.add(agentDocs, Principal.compare, msg.caller, { photoIdDoc = args.photoIdDoc; licenseDoc = args.licenseDoc });
     #ok(profile)
   };
 
@@ -270,6 +285,15 @@ persistent actor Agent {
   };
 
   // ─── Admin ────────────────────────────────────────────────────────────────────
+
+  /// Return the verification documents for an agent (admin only).
+  public shared(msg) func getAgentDocs(agentId: Principal) : async Result.Result<AgentDocs, Error> {
+    if (not isAdmin(msg.caller)) return #err(#NotAuthorized);
+    switch (Map.get(agentDocs, Principal.compare, agentId)) {
+      case null { #err(#NotFound) };
+      case (?docs) { #ok(docs) };
+    }
+  };
 
   public shared(msg) func verifyAgent(agentId: Principal) : async Result.Result<(), Error> {
     if (not isAdmin(msg.caller)) return #err(#NotAuthorized);
