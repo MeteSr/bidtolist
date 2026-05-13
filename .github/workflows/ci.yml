@@ -138,9 +138,9 @@ jobs:
 
       - name: Wire cross-canister references
         run: |
-          LISTING_ID=$(icp canister status listing -e local --id-only 2>/dev/null || echo "")
-          AGENT_ID=$(icp canister status agent   -e local --id-only 2>/dev/null || echo "")
-          FEE_ID=$(icp canister status fee       -e local --id-only 2>/dev/null || echo "")
+          LISTING_ID=$(icp canister id listing -e local 2>/dev/null || echo "")
+          AGENT_ID=$(icp canister id agent     -e local 2>/dev/null || echo "")
+          FEE_ID=$(icp canister id fee         -e local 2>/dev/null || echo "")
           DEPLOYER=$(icp identity principal)
 
           [ -n "$FEE_ID"   ] && icp canister call listing setFeeCanisterId   "(\"$FEE_ID\")"   -e local
