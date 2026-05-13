@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { useAuth } from "../contexts/AuthContext";
 import { getListingMetrics } from "../services/listing";
 import { getAllAgentProfiles } from "../services/agent";
@@ -45,6 +46,20 @@ export default function HomePage() {
 
   return (
     <div style={{ background: S.paper, minHeight: "100vh" }}>
+      <Helmet>
+        <title>BidtoList — Let Agents Compete for Your Listing | Volusia &amp; Flagler Counties, FL</title>
+        <meta name="description" content="Sell your home in Volusia or Flagler County, FL. Post once — licensed realtors submit blind proposals with commission rate, marketing plan, and CMA. Free for homeowners. Pick your agent after the deadline." />
+        <meta name="keywords" content="sell your home Volusia County, find a realtor Daytona Beach, Flagler County real estate agent, Palm Coast listing agent, Daytona Beach realtor, FSBO alternative Florida" />
+        <link rel="canonical" href="https://bidtolist.com/" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://bidtolist.com/" />
+        <meta property="og:title" content="BidtoList — Let Agents Compete for Your Listing" />
+        <meta property="og:description" content="Post your home once. Licensed agents submit blind proposals. You pick the winner. Serving Volusia &amp; Flagler Counties, FL." />
+        <meta property="og:image" content="https://bidtolist.com/og-image.png" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="BidtoList — Let Agents Compete for Your Listing" />
+        <meta name="twitter:description" content="Post your home once. Licensed agents submit blind proposals. You pick the winner. Serving Volusia &amp; Flagler Counties, FL." />
+      </Helmet>
       {/* Nav */}
       <nav style={{ borderBottom: `1px solid ${S.rule}`, padding: navPad, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span style={{ fontFamily: S.serif, fontSize: "1.25rem", fontWeight: 900, color: S.rust }}>BidtoList</span>
