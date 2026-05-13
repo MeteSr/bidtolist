@@ -35,6 +35,15 @@ persistent actor Listing {
     #DeadlinePassed;
   };
 
+  public type HomeownerVerificationRequest = {
+    id:           Text;
+    principal:    Principal;
+    address:      Text;
+    parcelNumber: Text;
+    contactEmail: Text;
+    submittedAt:  Time.Time;
+  };
+
   public type ListingBidRequest = {
     id:               Text;
     address:          Text;
@@ -86,9 +95,13 @@ persistent actor Listing {
   private var adminInitialized: Bool = false;
   private var feeCanisterId:   Text = "";
   private var platformFeeCents: Nat = 29500; // $295.00 default
+  private var agentCanisterId: Text = "";
 
   private let requests  = Map.empty<Text, ListingBidRequest>();
   private let proposals = Map.empty<Text, ListingProposal>();
+  private let verifiedHomeowners = Map.empty<Principal, Bool>();
+  private let verificationRequests = Map.empty<Text, HomeownerVerificationRequest>();
+  private var verificationCounter: Nat = 0;
 
   // ─── Rate Limit ──────────────────────────────────────────────────────────────
 
@@ -142,6 +155,11 @@ persistent actor Listing {
     "PROP_" # Nat.toText(proposalCounter)
   };
 
+  private func nextVerificationId() : Text {
+    verificationCounter += 1;
+    "VER_" # Nat.toText(verificationCounter)
+  };
+
   // ─── Homeowner: Bid Request Lifecycle ────────────────────────────────────────
 
   public shared(msg) func createBidRequest(
@@ -155,6 +173,13 @@ persistent actor Listing {
     bidDeadline:      Int
   ) : async Result.Result<ListingBidRequest, Error> {
     switch (requireActive(msg.caller)) { case (#err(e)) return #err(e); case _ {} };
+
+    // Homeowner must be verified (if verification has been used — skip if map is empty so dev mode works without admin)
+    if (Map.size(verifiedHomeowners) > 0) {
+      if (Map.get(verifiedHomeowners, Principal.compare, msg.caller) == null) {
+        return #err(#NotAuthorized);
+      };
+    };
 
     if (Text.size(address) == 0)  return #err(#InvalidInput("address cannot be empty"));
     if (Text.size(city) == 0)     return #err(#InvalidInput("city cannot be empty"));
@@ -242,6 +267,15 @@ persistent actor Listing {
     coverLetter:           Text
   ) : async Result.Result<ListingProposal, Error> {
     switch (requireActive(msg.caller)) { case (#err(e)) return #err(e); case _ {} };
+
+    // Verify agent if agent canister is wired
+    if (agentCanisterId != "") {
+      let agentActor = actor(agentCanisterId) : actor {
+        isVerifiedAgent : (Principal) -> async Bool;
+      };
+      let verified = await agentActor.isVerifiedAgent(msg.caller);
+      if (not verified) return #err(#NotAuthorized);
+    };
 
     switch (Map.get(requests, Text.compare, requestId)) {
       case null    { #err(#NotFound) };
@@ -362,6 +396,12 @@ persistent actor Listing {
     #ok(())
   };
 
+  public shared(msg) func setAgentCanisterId(id: Text) : async Result.Result<(), Error> {
+    if (not isAdmin(msg.caller)) return #err(#NotAuthorized);
+    agentCanisterId := id;
+    #ok(())
+  };
+
   public shared(msg) func setPlatformFee(cents: Nat) : async Result.Result<(), Error> {
     if (not isAdmin(msg.caller)) return #err(#NotAuthorized);
     platformFeeCents := cents;
@@ -404,6 +444,43 @@ persistent actor Listing {
     isPaused := false;
     pauseExpiryNs := null;
     #ok(())
+  };
+
+  public shared(msg) func requestHomeownerVerification(
+    address: Text, parcelNumber: Text, contactEmail: Text
+  ) : async Result.Result<HomeownerVerificationRequest, Error> {
+    switch (requireActive(msg.caller)) { case (#err(e)) return #err(e); case _ {} };
+    let id = nextVerificationId();
+    let req: HomeownerVerificationRequest = {
+      id; principal = msg.caller; address; parcelNumber; contactEmail;
+      submittedAt = Time.now();
+    };
+    Map.add(verificationRequests, Text.compare, id, req);
+    #ok(req)
+  };
+
+  public shared(msg) func verifyHomeowner(principal: Principal) : async Result.Result<(), Error> {
+    if (not isAdmin(msg.caller)) return #err(#NotAuthorized);
+    Map.add(verifiedHomeowners, Principal.compare, principal, true);
+    #ok(())
+  };
+
+  public shared(msg) func revokeHomeowner(principal: Principal) : async Result.Result<(), Error> {
+    if (not isAdmin(msg.caller)) return #err(#NotAuthorized);
+    Map.add(verifiedHomeowners, Principal.compare, principal, false);
+    #ok(())
+  };
+
+  public query(msg) func isHomeownerVerified() : async Bool {
+    switch (Map.get(verifiedHomeowners, Principal.compare, msg.caller)) {
+      case null { false };
+      case (?v) { v };
+    }
+  };
+
+  public query(msg) func getPendingVerificationRequests() : async [HomeownerVerificationRequest] {
+    if (not isAdmin(msg.caller)) return [];
+    Iter.toArray(Map.values(verificationRequests))
   };
 
   public query func metrics() : async Metrics {

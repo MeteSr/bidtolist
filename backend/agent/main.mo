@@ -346,6 +346,13 @@ persistent actor Agent {
     #ok(())
   };
 
+  public query func isVerifiedAgent(principal: Principal) : async Bool {
+    switch (Map.get(agents, Principal.compare, principal)) {
+      case null { false };
+      case (?p) { p.isVerified };
+    }
+  };
+
   public query func metrics() : async Metrics {
     var verified = 0;
     for (a in Map.values(agents)) { if (a.isVerified) { verified += 1 } };
