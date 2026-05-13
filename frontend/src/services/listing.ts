@@ -26,19 +26,29 @@ export const idlFactory = ({ IDL }: any) => {
     includedServices: IDL.Vec(IDL.Text), validUntil: IDL.Int, coverLetter: IDL.Text,
     status: ProposalStatus, createdAt: IDL.Int,
   });
-  const Result         = (ok: any) => IDL.Variant({ ok, err: Error });
+  const HomeownerVerificationRequest = IDL.Record({
+    id: IDL.Text, principal: IDL.Principal, address: IDL.Text,
+    parcelNumber: IDL.Text, contactEmail: IDL.Text, submittedAt: IDL.Int,
+  });
+  const Result = (ok: any) => IDL.Variant({ ok, err: Error });
 
   return IDL.Service({
-    createBidRequest:       IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Int, IDL.Opt(IDL.Nat), IDL.Text, IDL.Int], [Result(ListingBidRequest)], []),
-    getMyBidRequests:       IDL.Func([], [IDL.Vec(ListingBidRequest)], ["query"]),
-    getBidRequest:          IDL.Func([IDL.Text], [Result(ListingBidRequest)], ["query"]),
-    cancelBidRequest:       IDL.Func([IDL.Text], [Result(IDL.Null)], []),
-    getOpenBidRequests:     IDL.Func([], [IDL.Vec(ListingBidRequest)], ["query"]),
-    submitProposal:         IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Nat, IDL.Text, IDL.Text, IDL.Nat, IDL.Nat, IDL.Vec(IDL.Text), IDL.Int, IDL.Text], [Result(ListingProposal)], []),
-    getProposalsForRequest: IDL.Func([IDL.Text], [IDL.Vec(ListingProposal)], ["query"]),
-    getMyProposals:         IDL.Func([], [IDL.Vec(ListingProposal)], ["query"]),
-    acceptProposal:         IDL.Func([IDL.Text], [Result(IDL.Null)], []),
-    metrics:                IDL.Func([], [IDL.Record({ totalRequests: IDL.Nat, openRequests: IDL.Nat, awardedRequests: IDL.Nat, totalProposals: IDL.Nat, isPaused: IDL.Bool })], ["query"]),
+    createBidRequest:                IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Int, IDL.Opt(IDL.Nat), IDL.Text, IDL.Int], [Result(ListingBidRequest)], []),
+    getMyBidRequests:                IDL.Func([], [IDL.Vec(ListingBidRequest)], ["query"]),
+    getBidRequest:                   IDL.Func([IDL.Text], [Result(ListingBidRequest)], ["query"]),
+    cancelBidRequest:                IDL.Func([IDL.Text], [Result(IDL.Null)], []),
+    getOpenBidRequests:              IDL.Func([], [IDL.Vec(ListingBidRequest)], ["query"]),
+    submitProposal:                  IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Nat, IDL.Text, IDL.Text, IDL.Nat, IDL.Nat, IDL.Vec(IDL.Text), IDL.Int, IDL.Text], [Result(ListingProposal)], []),
+    getProposalsForRequest:          IDL.Func([IDL.Text], [IDL.Vec(ListingProposal)], ["query"]),
+    getMyProposals:                  IDL.Func([], [IDL.Vec(ListingProposal)], ["query"]),
+    acceptProposal:                  IDL.Func([IDL.Text], [Result(IDL.Null)], []),
+    requestHomeownerVerification:    IDL.Func([IDL.Text, IDL.Text, IDL.Text], [Result(HomeownerVerificationRequest)], []),
+    isHomeownerVerified:             IDL.Func([], [IDL.Bool], ["query"]),
+    getPendingVerificationRequests:  IDL.Func([], [IDL.Vec(HomeownerVerificationRequest)], ["query"]),
+    verifyHomeowner:                 IDL.Func([IDL.Principal], [Result(IDL.Null)], []),
+    revokeHomeowner:                 IDL.Func([IDL.Principal], [Result(IDL.Null)], []),
+    setAgentCanisterId:              IDL.Func([IDL.Text], [Result(IDL.Null)], []),
+    metrics:                         IDL.Func([], [IDL.Record({ totalRequests: IDL.Nat, openRequests: IDL.Nat, awardedRequests: IDL.Nat, totalProposals: IDL.Nat, isPaused: IDL.Bool })], ["query"]),
   });
 };
 
@@ -116,4 +126,36 @@ export async function acceptProposal(proposalId: string) {
   if (!CANISTER_ID) return { ok: null };
   const a = await getActor();
   return a.acceptProposal(proposalId);
+}
+
+export async function requestHomeownerVerification(address: string, parcelNumber: string, contactEmail: string) {
+  if (!CANISTER_ID) return { ok: { id: "VER_mock", principal: "mock", address, parcelNumber, contactEmail, submittedAt: BigInt(Date.now()) } };
+  const a = await getActor();
+  return a.requestHomeownerVerification(address, parcelNumber, contactEmail);
+}
+
+export async function isHomeownerVerified(): Promise<boolean> {
+  if (!CANISTER_ID) return false;
+  const a = await getActor();
+  return a.isHomeownerVerified() as Promise<boolean>;
+}
+
+export async function getPendingVerificationRequests(): Promise<any[]> {
+  if (!CANISTER_ID) return [];
+  const a = await getActor();
+  return a.getPendingVerificationRequests() as Promise<any[]>;
+}
+
+export async function verifyHomeowner(principal: string) {
+  if (!CANISTER_ID) return { ok: null };
+  const a = await getActor();
+  const { Principal } = await import("@dfinity/principal");
+  return a.verifyHomeowner(Principal.fromText(principal));
+}
+
+export async function revokeHomeowner(principal: string) {
+  if (!CANISTER_ID) return { ok: null };
+  const a = await getActor();
+  const { Principal } = await import("@dfinity/principal");
+  return a.revokeHomeowner(Principal.fromText(principal));
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DEPLOY_SCRIPT_VERSION="0.1.0"
+DEPLOY_SCRIPT_VERSION="0.2.0"
 ENV=${1:-local}
 
 echo "============================================"
@@ -104,9 +104,13 @@ PYEOF
   echo "▶ Wiring cross-canister references..."
   LISTING_ID=$(icp canister status listing -e local --id-only 2>/dev/null || echo "")
   FEE_ID=$(icp canister status fee -e local --id-only 2>/dev/null || echo "")
+  AGENT_ID=$(icp canister status agent -e local --id-only 2>/dev/null || echo "")
   if [ -n "$LISTING_ID" ] && [ -n "$FEE_ID" ]; then
     icp canister call listing setFeeCanisterId "(\"$FEE_ID\")" -e local 2>/dev/null && echo "  ✓ listing → fee wired" || true
     icp canister call fee setListingCanisterId "(\"$LISTING_ID\")" -e local 2>/dev/null && echo "  ✓ fee ← listing wired" || true
+    if [ -n "$AGENT_ID" ]; then
+      icp canister call listing setAgentCanisterId "(\"$AGENT_ID\")" -e local 2>/dev/null && echo "  ✓ listing → agent wired" || true
+    fi
     # Admin init with deploy principal
     icp canister call listing addAdmin "(principal \"$DEPLOY_PRINCIPAL\")" -e local 2>/dev/null || true
     icp canister call agent addAdmin "(principal \"$DEPLOY_PRINCIPAL\")" -e local 2>/dev/null || true

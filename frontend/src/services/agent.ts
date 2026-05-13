@@ -35,6 +35,7 @@ export const idlFactory = ({ IDL }: any) => {
     updateProfile:        IDL.Func([RegisterArgs], [Result(AgentProfile)], []),
     addReview:            IDL.Func([IDL.Record({ agentId: IDL.Principal, rating: IDL.Nat, comment: IDL.Text, transactionId: IDL.Text })], [Result(AgentReview)], []),
     getReviews:           IDL.Func([IDL.Principal], [IDL.Vec(AgentReview)], ["query"]),
+    isVerifiedAgent:      IDL.Func([IDL.Principal], [IDL.Bool], ["query"]),
     metrics:              IDL.Func([], [IDL.Record({ totalAgents: IDL.Nat, verifiedAgents: IDL.Nat, totalReviews: IDL.Nat, isPaused: IDL.Bool })], ["query"]),
   });
 };
@@ -71,4 +72,11 @@ export async function getAgentProfilesByCounty(county: string): Promise<any[]> {
   if (!CANISTER_ID) return [];
   const a = await getActor();
   return a.getProfilesByCounty(county) as Promise<any[]>;
+}
+
+export async function isVerifiedAgent(principal: string): Promise<boolean> {
+  if (!CANISTER_ID) return false;
+  const a = await getActor();
+  const { Principal } = await import("@dfinity/principal");
+  return a.isVerifiedAgent(Principal.fromText(principal)) as Promise<boolean>;
 }

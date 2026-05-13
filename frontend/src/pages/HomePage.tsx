@@ -8,12 +8,26 @@ const S = {
 };
 
 export default function HomePage() {
-  const { isAuthenticated, login } = useAuth();
+  const { isAuthenticated, role, login } = useAuth();
   const navigate = useNavigate();
 
   async function handlePostListing() {
     if (!isAuthenticated) await login();
-    navigate("/post");
+    // After login, role is resolved — route to the right dashboard
+    if (role === "agent") {
+      navigate("/agents/dashboard");
+    } else {
+      navigate("/post");
+    }
+  }
+
+  async function handleAgentEntry() {
+    if (!isAuthenticated) await login();
+    if (role === "agent") {
+      navigate("/agents/dashboard");
+    } else {
+      navigate("/agents/register");
+    }
   }
 
   return (
@@ -22,8 +36,10 @@ export default function HomePage() {
       <nav style={{ borderBottom: `1px solid ${S.rule}`, padding: "16px 40px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span style={{ fontFamily: S.serif, fontSize: "1.25rem", fontWeight: 900, color: S.rust }}>BidtoList</span>
         <div style={{ display: "flex", gap: 24 }}>
-          <a href="/agents/browse" style={{ fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", color: S.inkLight, textDecoration: "none" }}>For Agents</a>
-          <a href="/agents/register" style={{ fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", color: S.ink, textDecoration: "none" }}>Agent Sign Up</a>
+          <a href="/agents/browse" style={{ fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", color: S.inkLight, textDecoration: "none" }}>Browse Listings</a>
+          <button onClick={handleAgentEntry} style={{ background: "none", border: "none", padding: 0, fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", color: S.ink, cursor: "pointer" }}>
+            {isAuthenticated && role === "agent" ? "My Dashboard" : "Agent Sign Up"}
+          </button>
         </div>
       </nav>
 
@@ -40,10 +56,10 @@ export default function HomePage() {
         </p>
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
           <button onClick={handlePostListing} style={{ background: S.rust, border: `1px solid ${S.rust}`, color: S.paper, fontFamily: S.mono, fontSize: "0.75rem", letterSpacing: "0.08em", textTransform: "uppercase", padding: "14px 32px", cursor: "pointer" }}>
-            Post Your Home — Free
+            {isAuthenticated && role === "agent" ? "Go to Dashboard" : "Post Your Home — Free"}
           </button>
           <a href="/agents/browse" style={{ display: "inline-flex", alignItems: "center", padding: "14px 32px", border: `1px solid ${S.ink}`, fontFamily: S.mono, fontSize: "0.75rem", letterSpacing: "0.08em", textTransform: "uppercase", color: S.ink, textDecoration: "none" }}>
-            Browse Listings (Agents)
+            Browse Listings
           </a>
         </div>
       </section>
