@@ -74,6 +74,15 @@ export async function getAgentProfilesByCounty(county: string): Promise<any[]> {
   return a.getProfilesByCounty(county) as Promise<any[]>;
 }
 
+export async function updateAgentProfile(args: {
+  name: string; brokerage: string; licenseNumber: string;
+  statesLicensed: string[]; county: string; bio: string; phone: string; email: string;
+}) {
+  if (!CANISTER_ID) return { ok: { ...args, id: "mock", isVerified: false, avgDaysOnMarket: 0, listingsLast12Months: 0, createdAt: Date.now(), updatedAt: Date.now() } };
+  const a = await getActor();
+  return a.updateProfile(args);
+}
+
 export async function isVerifiedAgent(principal: string): Promise<boolean> {
   if (!CANISTER_ID) return false;
   const a = await getActor();
