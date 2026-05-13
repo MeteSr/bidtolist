@@ -1,0 +1,7 @@
+title = "BidtoList gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "False-positive suppressions"
