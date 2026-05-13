@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { getAllAgentProfiles, verifyAgent } from "../services/agent";
 import { getPendingVerificationRequests, verifyHomeowner } from "../services/listing";
+import { getAllFees, markFeeInvoiced, markFeePaid, waiveFee, FeeRecord } from "../services/fee";
 import { notifyAgentVerified } from "../services/email";
 import { useBreakpoint } from "../hooks/useBreakpoint";
 
@@ -11,20 +12,31 @@ const S = {
   mono: "'IBM Plex Mono', monospace", sans: "'IBM Plex Sans', sans-serif",
 };
 
+function feeStatusBadge(status: FeeRecord["status"]): { label: string; color: string } {
+  if ("Paid" in status)     return { label: "Paid",     color: "#2E7D32" };
+  if ("Waived" in status)   return { label: "Waived",   color: S.inkLight };
+  if ("Invoiced" in status) return { label: "Invoiced", color: "#1565C0" };
+  return                           { label: "Owed",     color: S.rust };
+}
+
 export default function AdminPage() {
   const { isMobile } = useBreakpoint();
   const [agents, setAgents] = useState<any[]>([]);
   const [pendingHomeowners, setPendingHomeowners] = useState<any[]>([]);
+  const [fees, setFees] = useState<FeeRecord[]>([]);
   const [verifyingAgent, setVerifyingAgent] = useState<string | null>(null);
   const [verifyingHomeowner, setVerifyingHomeowner] = useState<string | null>(null);
+  const [updatingFee, setUpdatingFee] = useState<string | null>(null);
 
   async function loadData() {
-    const [allAgents, pending] = await Promise.all([
+    const [allAgents, pending, allFees] = await Promise.all([
       getAllAgentProfiles().catch(() => []),
       getPendingVerificationRequests().catch(() => []),
+      getAllFees().catch(() => []),
     ]);
     setAgents((allAgents as any[]).filter(a => !a.isVerified));
     setPendingHomeowners(pending as any[]);
+    setFees(allFees as FeeRecord[]);
   }
 
   useEffect(() => { loadData(); }, []);
@@ -54,8 +66,28 @@ export default function AdminPage() {
     }
   }
 
-  const navPad = isMobile ? "12px 16px" : "16px 40px";
-  const secPad = isMobile ? "32px 16px" : "60px 40px";
+  async function handleFeeAction(feeId: string, action: "invoiced" | "paid" | "waived") {
+    setUpdatingFee(feeId);
+    try {
+      const fn = action === "invoiced" ? markFeeInvoiced
+               : action === "paid"     ? markFeePaid
+               :                        waiveFee;
+      const result = await fn(feeId) as any;
+      if (result && "err" in result) { toast.error(JSON.stringify(result.err)); return; }
+      toast.success(`Fee marked ${action}.`);
+      await loadData();
+    } finally {
+      setUpdatingFee(null);
+    }
+  }
+
+  // Revenue summary
+  const totalOwedCents  = fees.filter(f => "Owed" in f.status || "Invoiced" in f.status).reduce((s, f) => s + Number(f.amountCents), 0);
+  const totalPaidCents  = fees.filter(f => "Paid" in f.status).reduce((s, f) => s + Number(f.amountCents), 0);
+  const totalWaivedCents = fees.filter(f => "Waived" in f.status).reduce((s, f) => s + Number(f.amountCents), 0);
+
+  const navPad  = isMobile ? "12px 16px" : "16px 40px";
+  const secPad  = isMobile ? "32px 16px" : "60px 40px";
   const cardPad = isMobile ? "16px" : "20px 24px";
 
   return (
@@ -70,7 +102,92 @@ export default function AdminPage() {
           Admin Dashboard
         </h1>
 
-        {/* Agent Verifications */}
+        {/* ── Fee Revenue ───────────────────────────────────────────────────── */}
+        <section style={{ marginBottom: 56 }}>
+          <p style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.12em", textTransform: "uppercase", color: S.inkLight, marginBottom: 16 }}>
+            Platform Fee Revenue
+          </p>
+
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
+            {[
+              { label: "Outstanding", cents: totalOwedCents, testId: "fee-stat-owed" },
+              { label: "Collected MTD", cents: totalPaidCents, testId: "fee-stat-paid" },
+              { label: "Waived", cents: totalWaivedCents, testId: "fee-stat-waived" },
+            ].map(({ label, cents, testId }) => (
+              <div key={label} style={{ border: `1px solid ${S.rule}`, padding: cardPad }}>
+                <p style={{ fontFamily: S.mono, fontSize: "0.6rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, marginBottom: 4 }}>{label}</p>
+                <p data-testid={testId} style={{ fontFamily: S.serif, fontSize: "1.4rem", fontWeight: 700 }}>
+                  ${(cents / 100).toFixed(2)}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {fees.length === 0 ? (
+            <div style={{ border: `1px solid ${S.rule}`, padding: 24, textAlign: "center" }}>
+              <p style={{ fontFamily: S.sans, color: S.inkLight, fontSize: "0.9rem" }}>No fee records yet.</p>
+            </div>
+          ) : (
+            fees.map(fee => {
+              const { label, color } = feeStatusBadge(fee.status);
+              const isOwed     = "Owed" in fee.status;
+              const isInvoiced = "Invoiced" in fee.status;
+              const isUpdating = updatingFee === fee.id;
+
+              return (
+                <div key={fee.id} style={{ border: `1px solid ${S.rule}`, padding: cardPad, marginBottom: 8 }}>
+                  <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", gap: 12 }}>
+                    <div>
+                      <p style={{ fontFamily: S.sans, fontSize: "0.9rem", fontWeight: 500, marginBottom: 2 }}>
+                        ${(Number(fee.amountCents) / 100).toFixed(2)} — {fee.requestId} / {fee.proposalId}
+                      </p>
+                      <p style={{ fontFamily: S.mono, fontSize: "0.65rem", color: S.inkLight, letterSpacing: "0.06em" }}>
+                        {new Date(Number(fee.createdAt) / 1_000_000).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <span data-testid={`fee-status-${fee.id}`} style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", color, border: `1px solid ${color}`, padding: "4px 8px" }}>
+                        {label}
+                      </span>
+                      {isOwed && (
+                        <button
+                          data-testid={`fee-invoice-${fee.id}`}
+                          onClick={() => handleFeeAction(fee.id, "invoiced")}
+                          disabled={isUpdating}
+                          style={{ background: "transparent", border: `1px solid ${S.ink}`, color: S.ink, fontFamily: S.mono, fontSize: "0.6rem", letterSpacing: "0.06em", textTransform: "uppercase", padding: "6px 10px", cursor: "pointer", minHeight: 32 }}
+                        >
+                          Mark Invoiced
+                        </button>
+                      )}
+                      {(isOwed || isInvoiced) && (
+                        <button
+                          data-testid={`fee-paid-${fee.id}`}
+                          onClick={() => handleFeeAction(fee.id, "paid")}
+                          disabled={isUpdating}
+                          style={{ background: S.ink, border: `1px solid ${S.ink}`, color: S.paper, fontFamily: S.mono, fontSize: "0.6rem", letterSpacing: "0.06em", textTransform: "uppercase", padding: "6px 10px", cursor: "pointer", minHeight: 32 }}
+                        >
+                          Mark Paid
+                        </button>
+                      )}
+                      {(isOwed || isInvoiced) && (
+                        <button
+                          data-testid={`fee-waive-${fee.id}`}
+                          onClick={() => handleFeeAction(fee.id, "waived")}
+                          disabled={isUpdating}
+                          style={{ background: "transparent", border: `1px solid ${S.rule}`, color: S.inkLight, fontFamily: S.mono, fontSize: "0.6rem", letterSpacing: "0.06em", textTransform: "uppercase", padding: "6px 10px", cursor: "pointer", minHeight: 32 }}
+                        >
+                          Waive
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </section>
+
+        {/* ── Agent Verifications ───────────────────────────────────────────── */}
         <section style={{ marginBottom: 56 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 16 }}>
             <p style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.12em", textTransform: "uppercase", color: S.inkLight }}>
@@ -116,7 +233,7 @@ export default function AdminPage() {
           )}
         </section>
 
-        {/* Homeowner Verifications */}
+        {/* ── Homeowner Verifications ───────────────────────────────────────── */}
         <section>
           <p style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.12em", textTransform: "uppercase", color: S.inkLight, marginBottom: 16 }}>
             Pending Homeowner Verifications
