@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { createBidRequest } from "../services/listing";
+import { createBidRequest, isHomeownerVerified } from "../services/listing";
+import { useAuth } from "../contexts/AuthContext";
 
 const S = {
   ink: "#0E0E0C", paper: "#F4F1EB", rule: "#C8C3B8", rust: "#C94C2E",
@@ -11,11 +12,20 @@ const S = {
 
 export default function PostListingPage() {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [saving, setSaving] = useState(false);
+  const [verifiedState, setVerifiedState] = useState<"loading" | "verified" | "unverified">("loading");
   const [form, setForm] = useState({
     address: "", city: "", county: "Volusia", zipCode: "",
     targetListDate: "", desiredSalePrice: "", notes: "", bidDeadlineDays: "7",
   });
+
+  useEffect(() => {
+    if (!isAuthenticated) { setVerifiedState("unverified"); return; }
+    isHomeownerVerified()
+      .then(ok => setVerifiedState(ok ? "verified" : "unverified"))
+      .catch(() => setVerifiedState("unverified"));
+  }, [isAuthenticated]);
 
   function set(k: string, v: string) { setForm(f => ({ ...f, [k]: v })); }
 
@@ -40,8 +50,8 @@ export default function PostListingPage() {
 
   const field = (label: string, key: string, type = "text", placeholder = "") => (
     <div style={{ marginBottom: 24 }}>
-      <label style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, display: "block", marginBottom: 6 }}>{label}</label>
-      <input type={type} value={(form as any)[key]} placeholder={placeholder}
+      <label htmlFor={`field-${key}`} style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, display: "block", marginBottom: 6 }}>{label}</label>
+      <input id={`field-${key}`} type={type} value={(form as any)[key]} placeholder={placeholder}
         onChange={e => set(key, e.target.value)}
         style={{ border: `1px solid ${S.rule}`, padding: "10px 12px", width: "100%", fontFamily: S.sans, fontSize: "0.95rem", background: "white" }} />
     </div>
@@ -56,24 +66,52 @@ export default function PostListingPage() {
         <h1 style={{ fontFamily: S.serif, fontSize: "2rem", fontWeight: 900, marginBottom: 8 }}>Post Your Listing</h1>
         <p style={{ fontFamily: S.sans, color: S.inkLight, marginBottom: 40 }}>Agents will submit blind proposals until your deadline.</p>
 
-        <form onSubmit={handleSubmit}>
+        {verifiedState === "loading" && (
+          <p style={{ fontFamily: S.mono, fontSize: "0.75rem", color: S.inkLight }}>Checking verification status…</p>
+        )}
+
+        {verifiedState === "unverified" && !isAuthenticated && (
+          <div data-testid="sign-in-gate" style={{ border: `1px solid ${S.rule}`, padding: 32, textAlign: "center" }}>
+            <p style={{ fontFamily: S.serif, fontSize: "1.1rem", fontWeight: 700, marginBottom: 12 }}>Sign in to post a listing</p>
+            <p style={{ fontFamily: S.sans, color: S.inkLight, marginBottom: 24, fontSize: "0.9rem" }}>
+              You need to sign in and verify property ownership before posting.
+            </p>
+            <a href="/" style={{ fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", color: S.rust, textDecoration: "none" }}>
+              ← Sign in on the home page
+            </a>
+          </div>
+        )}
+
+        {verifiedState === "unverified" && isAuthenticated && (
+          <div style={{ border: `1px solid ${S.rule}`, padding: 32 }}>
+            <p style={{ fontFamily: S.serif, fontSize: "1.1rem", fontWeight: 700, marginBottom: 12 }}>Verify your ownership first</p>
+            <p style={{ fontFamily: S.sans, color: S.inkLight, marginBottom: 24, lineHeight: 1.7, fontSize: "0.9rem" }}>
+              Before you can post a listing, we need to confirm you own the property. Submit your parcel number and we'll verify it — usually within 24 hours.
+            </p>
+            <a href="/verify" style={{ display: "inline-block", background: S.rust, border: `1px solid ${S.rust}`, color: S.paper, fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", padding: "12px 24px", textDecoration: "none" }}>
+              Start Verification
+            </a>
+          </div>
+        )}
+
+        {verifiedState === "verified" && <form onSubmit={handleSubmit}>
           {field("Street Address", "address", "text", "123 Main St")}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
             <div>
-              <label style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, display: "block", marginBottom: 6 }}>City</label>
-              <input value={form.city} onChange={e => set("city", e.target.value)} placeholder="Daytona Beach"
+              <label htmlFor="field-city" style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, display: "block", marginBottom: 6 }}>City</label>
+              <input id="field-city" value={form.city} onChange={e => set("city", e.target.value)} placeholder="Daytona Beach"
                 style={{ border: `1px solid ${S.rule}`, padding: "10px 12px", width: "100%", fontFamily: S.sans }} />
             </div>
             <div>
-              <label style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, display: "block", marginBottom: 6 }}>Zip Code</label>
-              <input value={form.zipCode} onChange={e => set("zipCode", e.target.value)} placeholder="32118"
+              <label htmlFor="field-zipCode" style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, display: "block", marginBottom: 6 }}>Zip Code</label>
+              <input id="field-zipCode" value={form.zipCode} onChange={e => set("zipCode", e.target.value)} placeholder="32118"
                 style={{ border: `1px solid ${S.rule}`, padding: "10px 12px", width: "100%", fontFamily: S.sans }} />
             </div>
           </div>
 
           <div style={{ marginBottom: 24 }}>
-            <label style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, display: "block", marginBottom: 6 }}>County</label>
-            <select value={form.county} onChange={e => set("county", e.target.value)}
+            <label htmlFor="field-county" style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, display: "block", marginBottom: 6 }}>County</label>
+            <select id="field-county" value={form.county} onChange={e => set("county", e.target.value)}
               style={{ border: `1px solid ${S.rule}`, padding: "10px 12px", width: "100%", fontFamily: S.sans }}>
               <option value="Volusia">Volusia County</option>
               <option value="Flagler">Flagler County</option>
@@ -84,14 +122,14 @@ export default function PostListingPage() {
           {field("Desired Sale Price (optional)", "desiredSalePrice", "number", "350000")}
 
           <div style={{ marginBottom: 24 }}>
-            <label style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, display: "block", marginBottom: 6 }}>Notes for Agents</label>
-            <textarea value={form.notes} onChange={e => set("notes", e.target.value)} rows={4} placeholder="Any details about the property, preferred services, timeline, etc."
+            <label htmlFor="field-notes" style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, display: "block", marginBottom: 6 }}>Notes for Agents</label>
+            <textarea id="field-notes" value={form.notes} onChange={e => set("notes", e.target.value)} rows={4} placeholder="Any details about the property, preferred services, timeline, etc."
               style={{ border: `1px solid ${S.rule}`, padding: "10px 12px", width: "100%", fontFamily: S.sans, resize: "vertical" }} />
           </div>
 
           <div style={{ marginBottom: 40 }}>
-            <label style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, display: "block", marginBottom: 6 }}>Bid Deadline (days from now)</label>
-            <select value={form.bidDeadlineDays} onChange={e => set("bidDeadlineDays", e.target.value)}
+            <label htmlFor="field-deadline" style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, display: "block", marginBottom: 6 }}>Bid Deadline (days from now)</label>
+            <select id="field-deadline" value={form.bidDeadlineDays} onChange={e => set("bidDeadlineDays", e.target.value)}
               style={{ border: `1px solid ${S.rule}`, padding: "10px 12px", width: "100%", fontFamily: S.sans }}>
               <option value="3">3 days</option>
               <option value="5">5 days</option>
@@ -105,7 +143,7 @@ export default function PostListingPage() {
             style={{ background: S.rust, border: `1px solid ${S.rust}`, color: S.paper, fontFamily: S.mono, fontSize: "0.75rem", letterSpacing: "0.08em", textTransform: "uppercase", padding: "14px 32px", cursor: "pointer", width: "100%" }}>
             {saving ? "Posting..." : "Post Listing — Free"}
           </button>
-        </form>
+        </form>}
       </div>
     </div>
   );

@@ -1,5 +1,8 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { getListingMetrics } from "../services/listing";
+import { getAllAgentProfiles } from "../services/agent";
 
 const S = {
   ink: "#0E0E0C", paper: "#F4F1EB", rule: "#C8C3B8", rust: "#C94C2E",
@@ -10,6 +13,17 @@ const S = {
 export default function HomePage() {
   const { isAuthenticated, role, login } = useAuth();
   const navigate = useNavigate();
+  const [openListings, setOpenListings] = useState<number | null>(null);
+  const [verifiedAgents, setVerifiedAgents] = useState<number | null>(null);
+
+  useEffect(() => {
+    getListingMetrics()
+      .then(m => setOpenListings(m.openRequests))
+      .catch(() => setOpenListings(0));
+    getAllAgentProfiles()
+      .then(profiles => setVerifiedAgents(profiles.filter((p: any) => p.isVerified).length))
+      .catch(() => setVerifiedAgents(0));
+  }, []);
 
   async function handlePostListing() {
     if (!isAuthenticated) await login();
@@ -63,6 +77,32 @@ export default function HomePage() {
           </a>
         </div>
       </section>
+
+      {/* Trust signals */}
+      <div style={{ maxWidth: 760, margin: "0 auto", padding: "0 40px 48px", display: "flex", gap: 40, flexWrap: "wrap" }}>
+        <div data-testid="stat-open-listings">
+          <p style={{ fontFamily: S.serif, fontSize: "1.6rem", fontWeight: 900, color: S.ink, marginBottom: 2 }}>
+            {openListings !== null ? openListings : "—"}
+          </p>
+          <p style={{ fontFamily: S.mono, fontSize: "0.6rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight }}>
+            {openListings === 1 ? "open listing" : "open listings"}
+          </p>
+        </div>
+        <div data-testid="stat-verified-agents">
+          <p style={{ fontFamily: S.serif, fontSize: "1.6rem", fontWeight: 900, color: S.ink, marginBottom: 2 }}>
+            {verifiedAgents !== null ? verifiedAgents : "—"}
+          </p>
+          <p style={{ fontFamily: S.mono, fontSize: "0.6rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight }}>
+            {verifiedAgents === 1 ? "verified agent" : "verified agents"}
+          </p>
+        </div>
+        <div>
+          <p style={{ fontFamily: S.serif, fontSize: "1.6rem", fontWeight: 900, color: S.ink, marginBottom: 2 }}>$295</p>
+          <p style={{ fontFamily: S.mono, fontSize: "0.6rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight }}>
+            flat fee — paid only on win
+          </p>
+        </div>
+      </div>
 
       {/* Divider */}
       <div style={{ borderTop: `1px solid ${S.rule}`, margin: "0 40px" }} />
