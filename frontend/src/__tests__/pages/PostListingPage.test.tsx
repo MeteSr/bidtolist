@@ -122,6 +122,7 @@ describe("PostListingPage — form submission", () => {
     expect(screen.getByLabelText(/target list date/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/notes/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/bid deadline/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/contact email/i)).toBeInTheDocument();
   });
 
   it("has Volusia and Flagler county options", async () => {

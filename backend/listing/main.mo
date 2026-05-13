@@ -65,6 +65,7 @@ persistent actor Listing {
     county:           Text;    // "Volusia" | "Flagler"
     zipCode:          Text;
     homeowner:        Principal;
+    homeownerEmail:   Text;
     targetListDate:   Time.Time;
     desiredSalePrice: ?Nat;
     notes:            Text;
@@ -78,6 +79,7 @@ persistent actor Listing {
     requestId:             Text;
     agentId:               Principal;
     agentName:             Text;
+    agentEmail:            Text;
     agentBrokerage:        Text;
     commissionBps:         Nat;
     cmaSummary:            Text;
@@ -186,7 +188,8 @@ persistent actor Listing {
     targetListDate:   Int,
     desiredSalePrice: ?Nat,
     notes:            Text,
-    bidDeadline:      Int
+    bidDeadline:      Int,
+    homeownerEmail:   Text
   ) : async Result.Result<ListingBidRequest, Error> {
     switch (requireActive(msg.caller)) { case (#err(e)) return #err(e); case _ {} };
 
@@ -211,6 +214,7 @@ persistent actor Listing {
       county;
       zipCode;
       homeowner        = msg.caller;
+      homeownerEmail;
       targetListDate;
       desiredSalePrice;
       notes;
@@ -288,6 +292,7 @@ persistent actor Listing {
   public shared(msg) func submitProposal(
     requestId:             Text,
     agentName:             Text,
+    agentEmail:            Text,
     agentBrokerage:        Text,
     commissionBps:         Nat,
     cmaSummary:            Text,
@@ -324,7 +329,7 @@ persistent actor Listing {
         let proposal: ListingProposal = {
           id; requestId;
           agentId               = msg.caller;
-          agentName; agentBrokerage; commissionBps; cmaSummary;
+          agentName; agentEmail; agentBrokerage; commissionBps; cmaSummary;
           marketingPlan; estimatedDaysOnMarket; estimatedSalePrice;
           includedServices; validUntil; coverLetter;
           status    = #Pending;
@@ -371,7 +376,7 @@ persistent actor Listing {
             // Accept winner
             Map.add(proposals, Text.compare, winner.id, {
               id = winner.id; requestId = winner.requestId;
-              agentId = winner.agentId; agentName = winner.agentName;
+              agentId = winner.agentId; agentName = winner.agentName; agentEmail = winner.agentEmail;
               agentBrokerage = winner.agentBrokerage; commissionBps = winner.commissionBps;
               cmaSummary = winner.cmaSummary; marketingPlan = winner.marketingPlan;
               estimatedDaysOnMarket = winner.estimatedDaysOnMarket;
@@ -385,7 +390,7 @@ persistent actor Listing {
               if (p.requestId == winner.requestId and p.id != winner.id and p.status == #Pending) {
                 Map.add(proposals, Text.compare, pid, {
                   id = p.id; requestId = p.requestId; agentId = p.agentId;
-                  agentName = p.agentName; agentBrokerage = p.agentBrokerage;
+                  agentName = p.agentName; agentEmail = p.agentEmail; agentBrokerage = p.agentBrokerage;
                   commissionBps = p.commissionBps; cmaSummary = p.cmaSummary;
                   marketingPlan = p.marketingPlan;
                   estimatedDaysOnMarket = p.estimatedDaysOnMarket;

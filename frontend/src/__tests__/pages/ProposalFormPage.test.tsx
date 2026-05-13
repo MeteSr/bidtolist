@@ -19,10 +19,15 @@ vi.mock("../../contexts/AuthContext", () => ({
 
 vi.mock("../../services/listing", () => ({
   submitProposal: vi.fn(),
+  getBidRequest: vi.fn(),
 }));
 
 vi.mock("../../services/agent", () => ({
   getMyAgentProfile: vi.fn(),
+}));
+
+vi.mock("../../services/email", () => ({
+  notifyNewProposal: vi.fn(),
 }));
 
 vi.mock("react-hot-toast", () => ({
@@ -31,10 +36,13 @@ vi.mock("react-hot-toast", () => ({
 
 import * as listingService from "../../services/listing";
 import * as agentService from "../../services/agent";
+import * as emailService from "../../services/email";
 import toast from "react-hot-toast";
 
 const mockSubmitProposal    = listingService.submitProposal    as ReturnType<typeof vi.fn>;
+const mockGetBidRequest     = listingService.getBidRequest     as ReturnType<typeof vi.fn>;
 const mockGetMyAgentProfile = agentService.getMyAgentProfile  as ReturnType<typeof vi.fn>;
+const mockNotifyNewProposal = emailService.notifyNewProposal  as ReturnType<typeof vi.fn>;
 
 const verifiedAgent = {
   isAuthenticated: true, principal: "abc", role: "agent" as const,
@@ -51,11 +59,18 @@ function renderPage(requestId = "BID_1") {
   );
 }
 
+const MOCK_BID_REQUEST = {
+  id: "BID_1", homeownerEmail: "owner@example.com",
+  city: "Daytona Beach", county: "Volusia",
+  bidDeadline: BigInt(Date.now() + 7 * 24 * 60 * 60 * 1000) * BigInt(1_000_000),
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
   mockNavigate.mockReset();
   mockUseAuth.mockReturnValue(verifiedAgent);
-  mockGetMyAgentProfile.mockResolvedValue({ isVerified: true });
+  mockGetMyAgentProfile.mockResolvedValue({ isVerified: true, email: "agent@kw.com" });
+  mockGetBidRequest.mockResolvedValue({ ok: MOCK_BID_REQUEST });
   mockSubmitProposal.mockResolvedValue({ ok: { id: "PROP_1" } } as any);
 });
 
@@ -171,5 +186,32 @@ describe("ProposalFormPage — submission", () => {
       expect(vi.mocked(toast.error)).toHaveBeenCalled();
       expect(mockNavigate).not.toHaveBeenCalled();
     });
+  });
+
+  it("fires notifyNewProposal with homeowner email after successful submit", async () => {
+    const user = userEvent.setup();
+    renderPage("BID_1");
+    await waitFor(() => screen.getByLabelText(/your name/i));
+    await user.type(screen.getByLabelText(/your name/i), "Jane Smith");
+    await user.type(screen.getByLabelText(/brokerage/i), "KW");
+    await user.type(screen.getByLabelText(/est\. sale price/i), "350000");
+    await user.click(screen.getByRole("button", { name: /submit sealed proposal/i }));
+    await waitFor(() => {
+      expect(mockNotifyNewProposal).toHaveBeenCalledWith(
+        expect.objectContaining({ homeownerEmail: "owner@example.com" })
+      );
+    });
+  });
+
+  it("does not fire notifyNewProposal when canister returns err", async () => {
+    mockSubmitProposal.mockResolvedValue({ err: { NotAuthorized: null } } as any);
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => screen.getByLabelText(/your name/i));
+    await user.type(screen.getByLabelText(/your name/i), "Jane Smith");
+    await user.type(screen.getByLabelText(/brokerage/i), "KW");
+    await user.click(screen.getByRole("button", { name: /submit sealed proposal/i }));
+    await waitFor(() => expect(vi.mocked(toast.error)).toHaveBeenCalled());
+    expect(mockNotifyNewProposal).not.toHaveBeenCalled();
   });
 });

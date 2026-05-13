@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { getAllAgentProfiles, verifyAgent } from "../services/agent";
 import { getPendingVerificationRequests, verifyHomeowner } from "../services/listing";
+import { notifyAgentVerified } from "../services/email";
 import { useBreakpoint } from "../hooks/useBreakpoint";
 
 const S = {
@@ -28,11 +29,12 @@ export default function AdminPage() {
 
   useEffect(() => { loadData(); }, []);
 
-  async function handleVerifyAgent(agentId: string) {
+  async function handleVerifyAgent(agentId: string, agentEmail: string, agentName: string) {
     setVerifyingAgent(agentId);
     try {
       const result = await verifyAgent(agentId) as any;
       if ("err" in result) { toast.error(JSON.stringify(result.err)); return; }
+      notifyAgentVerified({ agentEmail, agentName });
       toast.success("Agent verified.");
       await loadData();
     } finally {
@@ -102,7 +104,7 @@ export default function AdminPage() {
                     </p>
                   </div>
                   <button
-                    onClick={() => handleVerifyAgent(String(agent.id))}
+                    onClick={() => handleVerifyAgent(String(agent.id), agent.email, agent.name)}
                     disabled={verifyingAgent === String(agent.id)}
                     style={{ background: S.ink, border: `1px solid ${S.ink}`, color: S.paper, fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", padding: "12px 20px", cursor: "pointer", minHeight: 44, whiteSpace: "nowrap", width: isMobile ? "100%" : "auto" }}
                   >

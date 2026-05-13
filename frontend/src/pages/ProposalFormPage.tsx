@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { submitProposal } from "../services/listing";
+import { submitProposal, getBidRequest } from "../services/listing";
 import { getMyAgentProfile } from "../services/agent";
+import { notifyNewProposal } from "../services/email";
 import { useBreakpoint } from "../hooks/useBreakpoint";
 
 const S = {
@@ -19,6 +20,8 @@ export default function ProposalFormPage() {
   const { isMobile } = useBreakpoint();
   const [saving, setSaving] = useState(false);
   const [verifiedState, setVerifiedState] = useState<"loading" | "verified" | "blocked">("loading");
+  const [agentEmail, setAgentEmail] = useState("");
+  const [bidRequest, setBidRequest] = useState<any>(null);
   const [form, setForm] = useState({
     agentName: "", agentBrokerage: "", commissionPct: "2.5",
     cmaSummary: "", marketingPlan: "", estimatedDaysOnMarket: "30",
@@ -28,9 +31,17 @@ export default function ProposalFormPage() {
 
   useEffect(() => {
     getMyAgentProfile()
-      .then(profile => setVerifiedState(profile?.isVerified ? "verified" : "blocked"))
+      .then(profile => {
+        setVerifiedState(profile?.isVerified ? "verified" : "blocked");
+        if (profile?.email) setAgentEmail(profile.email);
+      })
       .catch(() => setVerifiedState("blocked"));
-  }, []);
+    if (requestId) {
+      getBidRequest(requestId)
+        .then((res: any) => { if (res?.ok) setBidRequest(res.ok); })
+        .catch(() => {});
+    }
+  }, [requestId]);
 
   function set(k: string, v: string) { setForm(f => ({ ...f, [k]: v })); }
 
@@ -46,13 +57,26 @@ export default function ProposalFormPage() {
       const commissionBps = Math.round(parseFloat(form.commissionPct) * 100);
       const validUntil = Date.now() + parseInt(form.validUntilDays) * 24 * 60 * 60 * 1000;
       const result = await submitProposal({
-        requestId, agentName: form.agentName, agentBrokerage: form.agentBrokerage,
-        commissionBps, cmaSummary: form.cmaSummary, marketingPlan: form.marketingPlan,
+        requestId, agentName: form.agentName, agentEmail,
+        agentBrokerage: form.agentBrokerage, commissionBps,
+        cmaSummary: form.cmaSummary, marketingPlan: form.marketingPlan,
         estimatedDaysOnMarket: parseInt(form.estimatedDaysOnMarket),
         estimatedSalePrice: parseInt(form.estimatedSalePrice),
         includedServices: selectedServices, validUntil, coverLetter: form.coverLetter,
       }) as any;
       if ("err" in result) { toast.error(JSON.stringify(result.err)); return; }
+
+      if (bidRequest?.homeownerEmail) {
+        const deadline = new Date(Number(bidRequest.bidDeadline) / 1_000_000).toLocaleDateString();
+        notifyNewProposal({
+          homeownerEmail: bidRequest.homeownerEmail,
+          city: bidRequest.city,
+          county: bidRequest.county,
+          proposalCount: 1,
+          deadlineDate: deadline,
+        });
+      }
+
       toast.success("Proposal submitted! The homeowner will see it after the deadline.");
       navigate("/agents/dashboard");
     } finally {

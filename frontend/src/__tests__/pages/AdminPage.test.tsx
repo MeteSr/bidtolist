@@ -10,11 +10,17 @@ vi.mock("../../services/listing", () => ({
   getPendingVerificationRequests: vi.fn(),
   verifyHomeowner: vi.fn(),
 }));
+vi.mock("../../services/email", () => ({
+  notifyAgentVerified: vi.fn(),
+}));
 vi.mock("react-hot-toast", () => ({ default: { success: vi.fn(), error: vi.fn() } }));
 
 import * as agentService from "../../services/agent";
 import * as listingService from "../../services/listing";
+import * as emailService from "../../services/email";
 import toast from "react-hot-toast";
+
+const mockNotifyAgentVerified = emailService.notifyAgentVerified as ReturnType<typeof vi.fn>;
 
 const mockGetAllAgents = agentService.getAllAgentProfiles as ReturnType<typeof vi.fn>;
 const mockVerifyAgent = agentService.verifyAgent as ReturnType<typeof vi.fn>;
@@ -124,6 +130,26 @@ describe("AdminPage", () => {
     await waitFor(() => expect(screen.getByText("Jane Smith")).toBeDefined());
     fireEvent.click(screen.getAllByRole("button", { name: /verify agent/i })[0]);
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
+  });
+
+  it("fires notifyAgentVerified with agent email and name after verification", async () => {
+    renderPage();
+    await waitFor(() => expect(screen.getByText("Jane Smith")).toBeDefined());
+    fireEvent.click(screen.getAllByRole("button", { name: /verify agent/i })[0]);
+    await waitFor(() => expect(toast.success).toHaveBeenCalled());
+    expect(mockNotifyAgentVerified).toHaveBeenCalledWith({
+      agentEmail: "jane@kw.com",
+      agentName: "Jane Smith",
+    });
+  });
+
+  it("does not fire notifyAgentVerified when verifyAgent fails", async () => {
+    mockVerifyAgent.mockResolvedValue({ err: { NotAuthorized: null } });
+    renderPage();
+    await waitFor(() => expect(screen.getByText("Jane Smith")).toBeDefined());
+    fireEvent.click(screen.getAllByRole("button", { name: /verify agent/i })[0]);
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    expect(mockNotifyAgentVerified).not.toHaveBeenCalled();
   });
 
   it("shows empty state when no unverified agents", async () => {
