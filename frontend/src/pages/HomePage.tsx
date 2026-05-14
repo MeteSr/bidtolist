@@ -62,14 +62,14 @@ export default function HomePage() {
   return (
     <div style={{ background: S.bg, minHeight: "100vh", overflowX: "hidden" }}>
       <Helmet>
-        <title>BidtoList — Let Agents Compete for Your Listing | Volusia &amp; Flagler Counties, FL</title>
-        <meta name="description" content="Sell your home in Volusia or Flagler County, FL. Post once — licensed realtors submit blind proposals with commission rate, marketing plan, and CMA. Free for homeowners." />
-        <meta name="keywords" content="sell your home Volusia County, find a realtor Daytona Beach, Flagler County real estate agent, Palm Coast listing agent" />
+        <title>BidtoList — Let Agents Compete for Your Listing</title>
+        <meta name="description" content="Sell your home anywhere in the USA. Post once — licensed realtors submit blind proposals with commission rate, marketing plan, and CMA. Free for homeowners." />
+        <meta name="keywords" content="sell your home, find a realtor, real estate agent, listing agent, FSBO, home sale" />
         <link rel="canonical" href="https://bidtolist.com/" />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://bidtolist.com/" />
         <meta property="og:title" content="BidtoList — Let Agents Compete for Your Listing" />
-        <meta property="og:description" content="Post your home once. Licensed agents submit blind proposals. You pick the winner. Serving Volusia &amp; Flagler Counties, FL." />
+        <meta property="og:description" content="Post your home once. Licensed agents submit blind proposals. You pick the winner. Free for homeowners across the USA." />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="BidtoList — Let Agents Compete for Your Listing" />
         <meta name="twitter:description" content="Post your home once. Licensed agents submit blind proposals. You pick the winner." />
@@ -189,7 +189,7 @@ export default function HomePage() {
             }}>
               <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: S.green }} />
               <span style={{ fontFamily: S.sans, fontSize: "0.78rem", fontWeight: 600, color: S.green }}>
-                Volusia &amp; Flagler Counties, FL
+                Available Across the USA
               </span>
             </div>
 
@@ -298,7 +298,7 @@ export default function HomePage() {
                   147 Ocean Shore Blvd
                 </p>
                 <p style={{ fontFamily: S.sans, fontSize: "0.85rem", color: S.muted, marginBottom: 20 }}>
-                  Ormond Beach, Volusia County · 32176
+                  Austin, TX · 78701
                 </p>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
@@ -378,8 +378,14 @@ export default function HomePage() {
           <span style={{ fontFamily: S.sans, fontSize: "0.78rem", fontWeight: 600, color: S.muted, textTransform: "uppercase", letterSpacing: "0.08em" }}>
             Serving agents from
           </span>
-          {["Coldwell Banker", "RE/MAX", "Keller Williams", "EXP Realty", "Century 21"].map(name => (
-            <span key={name} style={{ fontFamily: S.sans, fontSize: "0.88rem", fontWeight: 700, color: "#9CA3AF" }}>
+          {[
+            { name: "Coldwell Banker", color: "#003087" },
+            { name: "RE/MAX",          color: "#DC1C2E" },
+            { name: "Keller Williams", color: "#B40101" },
+            { name: "EXP Realty",      color: "#0C2340" },
+            { name: "Century 21",      color: "#B08A2E" },
+          ].map(({ name, color }) => (
+            <span key={name} style={{ fontFamily: S.sans, fontSize: "0.88rem", fontWeight: 700, color }}>
               {name}
             </span>
           ))}
@@ -415,7 +421,7 @@ export default function HomePage() {
               </p>
               <a
                 href="/signup?role=homeowner"
-                style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: S.sans, fontSize: "0.88rem", fontWeight: 700, color: S.green, textDecoration: "none" }}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: S.sans, fontSize: "0.88rem", fontWeight: 700, color: S.green, textDecoration: "none", border: `2px solid ${S.green}`, borderRadius: 100, padding: "10px 22px" }}
               >
                 Get Started →
               </a>
@@ -527,7 +533,7 @@ export default function HomePage() {
             {[
               { icon: "💸", t: "No Monthly Fees",     d: "Register free. You only pay $295 when your proposal is accepted — no subscriptions, no per-bid charges.", color: S.yellow,    pale: S.yellowPale },
               { icon: "🔒", t: "Level Playing Field", d: "Blind bidding means your proposal wins on quality — not on who you know or how long you've been in the business.", color: S.green,     pale: S.greenLight },
-              { icon: "✅", t: "Verified Homeowners", d: "Every listing comes from a verified property owner in Volusia or Flagler County. No wasted proposals.",       color: S.peach,     pale: S.peachLight },
+              { icon: "✅", t: "Verified Homeowners", d: "Every listing comes from a verified property owner across the USA. No wasted proposals.",       color: S.peach,     pale: S.peachLight },
             ].map(({ icon, t, d, color, pale }) => (
               <div key={t} style={{ background: pale, borderRadius: 20, padding: "32px 28px", border: `1px solid ${color}22` }}>
                 <div style={{ width: 52, height: 52, borderRadius: 14, background: S.white, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20, fontSize: "1.4rem", boxShadow: `0 4px 16px ${color}22` }}>
@@ -602,7 +608,7 @@ export default function HomePage() {
           <span style={{ fontFamily: S.sans, fontSize: "0.72rem", color: "rgba(255,255,255,0.3)" }}>© 2026</span>
         </div>
         <span style={{ fontFamily: S.sans, fontSize: "0.72rem", color: "rgba(255,255,255,0.3)", letterSpacing: "0.04em" }}>
-          Volusia + Flagler Counties, FL
+          Nationwide · USA
         </span>
       </footer>
     </div>
