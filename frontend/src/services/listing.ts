@@ -24,7 +24,7 @@ export const idlFactory = ({ IDL }: any) => {
     id: IDL.Text, address: IDL.Text, city: IDL.Text, county: IDL.Text, zipCode: IDL.Text,
     homeowner: IDL.Principal, homeownerEmail: IDL.Text, targetListDate: IDL.Int,
     desiredSalePrice: IDL.Opt(IDL.Nat), notes: IDL.Text, bidDeadline: IDL.Int,
-    status: BidRequestStatus, createdAt: IDL.Int,
+    status: BidRequestStatus, createdAt: IDL.Int, feePaid: IDL.Bool,
   });
   const ListingProposal = IDL.Record({
     id: IDL.Text, requestId: IDL.Text, agentId: IDL.Principal, agentName: IDL.Text,

@@ -7,6 +7,10 @@
     "start": "tsx server.ts"
   },
   "dependencies": {
+    "@dfinity/agent": "^2.1.3",
+    "@dfinity/candid": "^2.1.3",
+    "@dfinity/identity": "^2.1.3",
+    "@dfinity/principal": "^2.1.3",
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "stripe": "^14.25.0"

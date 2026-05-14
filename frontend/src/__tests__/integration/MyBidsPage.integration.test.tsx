@@ -67,7 +67,7 @@ describe("MyBidsPage — integration (real service, mock fallback)", () => {
         id: "BID_MY_1", address: "123 Oak St", city: "Daytona Beach", county: "Volusia",
         zipCode: "32118", homeowner: "homeowner-p", homeownerEmail: "owner@test.com",
         targetListDate: BigInt(0), desiredSalePrice: [], notes: "",
-        bidDeadline: FUTURE_NS, status: { Open: null }, createdAt: BigInt(0),
+        bidDeadline: FUTURE_NS, status: { Open: null }, createdAt: BigInt(0), feePaid: false,
       },
     ];
     renderPage();
@@ -83,7 +83,7 @@ describe("MyBidsPage — integration (real service, mock fallback)", () => {
         id: "BID_MY_2", address: "456 Elm St", city: "Palm Coast", county: "Flagler",
         zipCode: "32164", homeowner: "homeowner-p", homeownerEmail: "owner@test.com",
         targetListDate: BigInt(0), desiredSalePrice: [], notes: "",
-        bidDeadline: FUTURE_NS, status: { Open: null }, createdAt: BigInt(0),
+        bidDeadline: FUTURE_NS, status: { Open: null }, createdAt: BigInt(0), feePaid: false,
       },
     ];
     renderPage();
@@ -98,7 +98,7 @@ describe("MyBidsPage — integration (real service, mock fallback)", () => {
         id: "BID_MY_3", address: "789 Pine Ave", city: "Daytona Beach", county: "Volusia",
         zipCode: "32118", homeowner: "homeowner-p", homeownerEmail: "owner@test.com",
         targetListDate: BigInt(0), desiredSalePrice: [], notes: "",
-        bidDeadline: PAST_NS, status: { Open: null }, createdAt: BigInt(0),
+        bidDeadline: PAST_NS, status: { Open: null }, createdAt: BigInt(0), feePaid: false,
       },
     ];
     renderPage();
@@ -113,7 +113,7 @@ describe("MyBidsPage — integration (real service, mock fallback)", () => {
         id: "BID_MY_4", address: "1 Bid Rd", city: "Daytona Beach", county: "Volusia",
         zipCode: "32118", homeowner: "homeowner-p", homeownerEmail: "owner@test.com",
         targetListDate: BigInt(0), desiredSalePrice: [], notes: "",
-        bidDeadline: PAST_NS, status: { Open: null }, createdAt: BigInt(0),
+        bidDeadline: PAST_NS, status: { Open: null }, createdAt: BigInt(0), feePaid: false,
       },
     ];
     (window as any).__e2e_proposals = [
@@ -143,7 +143,7 @@ describe("MyBidsPage — integration (real service, mock fallback)", () => {
         id: "BID_MY_5", address: "2 Empty Ln", city: "Palm Coast", county: "Flagler",
         zipCode: "32164", homeowner: "homeowner-p", homeownerEmail: "owner@test.com",
         targetListDate: BigInt(0), desiredSalePrice: [], notes: "",
-        bidDeadline: PAST_NS, status: { Open: null }, createdAt: BigInt(0),
+        bidDeadline: PAST_NS, status: { Open: null }, createdAt: BigInt(0), feePaid: false,
       },
     ];
     const user = userEvent.setup();

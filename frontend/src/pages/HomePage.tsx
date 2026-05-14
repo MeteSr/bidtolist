@@ -596,9 +596,6 @@ export default function HomePage() {
           <a href="/faq" style={{ fontFamily: S.sans, fontSize: "0.72rem", fontWeight: 500, color: "rgba(255,255,255,0.45)", textDecoration: "none", letterSpacing: "0.04em" }}>
             FAQ
           </a>
-          <span style={{ fontFamily: S.sans, fontSize: "0.72rem", color: "rgba(255,255,255,0.3)", letterSpacing: "0.04em" }}>
-            Nationwide · USA
-          </span>
         </div>
       </footer>
     </div>

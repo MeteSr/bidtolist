@@ -62,7 +62,7 @@ persistent actor Listing {
     id:               Text;
     address:          Text;
     city:             Text;
-    county:           Text;    // "Volusia" | "Flagler"
+    county:           Text;
     zipCode:          Text;
     homeowner:        Principal;
     homeownerEmail:   Text;
@@ -72,6 +72,7 @@ persistent actor Listing {
     bidDeadline:      Time.Time;
     status:           BidRequestStatus;
     createdAt:        Time.Time;
+    feePaid:          Bool;
   };
 
   public type ListingProposal = {
@@ -235,6 +236,7 @@ persistent actor Listing {
       bidDeadline;
       status           = #Open;
       createdAt        = Time.now();
+      feePaid          = false;
     };
     Map.add(requests, Text.compare, id, req);
     #ok(req)
@@ -257,7 +259,7 @@ persistent actor Listing {
       case (?r) {
         let privileged = r.homeowner == msg.caller
           or isAdmin(msg.caller)
-          or hasAcceptedProposal(id, msg.caller);
+          or (hasAcceptedProposal(id, msg.caller) and r.feePaid);
         if (privileged) {
           #ok(r)
         } else {
@@ -289,6 +291,7 @@ persistent actor Listing {
           targetListDate = req.targetListDate;
           desiredSalePrice = req.desiredSalePrice; notes = req.notes;
           bidDeadline = req.bidDeadline; status = #Cancelled; createdAt = req.createdAt;
+          feePaid = req.feePaid;
         });
         #ok(())
       };
@@ -459,6 +462,7 @@ persistent actor Listing {
               targetListDate = req.targetListDate;
               desiredSalePrice = req.desiredSalePrice; notes = req.notes;
               bidDeadline = req.bidDeadline; status = #Awarded; createdAt = req.createdAt;
+              feePaid = false;
             });
 
             // Record platform fee in the fee canister (fire-and-forget — don't block on failure)
@@ -496,6 +500,33 @@ persistent actor Listing {
           case null  { false };
           case (?req){ req.homeowner == reviewer };
         }
+      };
+    }
+  };
+
+  // ─── Fee Payment Gate ─────────────────────────────────────────────────────────
+
+  private func isFeeCanister(caller: Principal) : Bool {
+    feeCanisterId != "" and Principal.toText(caller) == feeCanisterId
+  };
+
+  /// Called by the fee canister after a winning agent's Stripe payment is confirmed.
+  /// Flips feePaid = true, which is the gate that allows getBidRequest to return the address.
+  public shared(msg) func markListingFeePaid(requestId: Text) : async Result.Result<(), Error> {
+    if (not isAdmin(msg.caller) and not isFeeCanister(msg.caller)) return #err(#NotAuthorized);
+    switch (Map.get(requests, Text.compare, requestId)) {
+      case null { #err(#NotFound) };
+      case (?req) {
+        Map.add(requests, Text.compare, requestId, {
+          id = req.id; address = req.address; city = req.city;
+          county = req.county; zipCode = req.zipCode;
+          homeowner = req.homeowner; homeownerEmail = req.homeownerEmail;
+          targetListDate = req.targetListDate;
+          desiredSalePrice = req.desiredSalePrice; notes = req.notes;
+          bidDeadline = req.bidDeadline; status = req.status; createdAt = req.createdAt;
+          feePaid = true;
+        });
+        #ok(())
       };
     }
   };
