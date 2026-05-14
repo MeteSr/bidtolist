@@ -11,6 +11,7 @@ import AgentDashboardPage from "./pages/AgentDashboardPage";
 import HomeownerVerifyPage from "./pages/HomeownerVerifyPage";
 import AdminPage from "./pages/AdminPage";
 import AgentProfilePage from "./pages/AgentProfilePage";
+import FaqPage from "./pages/FaqPage";
 
 export default function App() {
   return (
@@ -27,6 +28,7 @@ export default function App() {
         <Route path="/agents/propose/:requestId" element={<ProposalFormPage />} />
         <Route path="/agents/dashboard"          element={<AgentDashboardPage />} />
         <Route path="/agents/profile/:agentId"   element={<AgentProfilePage />} />
+        <Route path="/faq"                        element={<FaqPage />} />
       </Routes>
     </AuthProvider>
   );
