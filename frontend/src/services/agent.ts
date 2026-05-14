@@ -52,8 +52,6 @@ async function getActor() {
   return Actor.createActor(idlFactory, { agent: await getAgent(), canisterId: CANISTER_ID });
 }
 
-const MOCK_PROFILE: any = typeof window !== "undefined" ? ((window as any).__e2e_agent_profile ?? null) : null;
-
 export async function registerAgent(args: {
   name: string; brokerage: string; licenseNumber: string;
   statesLicensed: string[]; county: string; bio: string; phone: string; email: string;
@@ -65,7 +63,7 @@ export async function registerAgent(args: {
 }
 
 export async function getMyAgentProfile(): Promise<any | null> {
-  if (!CANISTER_ID) return MOCK_PROFILE;
+  if (!CANISTER_ID) return (typeof window !== "undefined" && (window as any).__e2e_agent_profile) ?? null;
   const a = await getActor();
   const result = await a.getMyProfile() as any[];
   return result.length > 0 ? result[0] : null;
@@ -113,20 +111,22 @@ export type AgentReview = {
   rating: bigint; comment: string; transactionId: string; createdAt: bigint;
 };
 
-const MOCK_REVIEWS: AgentReview[] = (typeof window !== "undefined" && (window as any).__e2e_reviews) || [];
+function mockReviews(): AgentReview[] { return (typeof window !== "undefined" && (window as any).__e2e_reviews) || []; }
 
 export async function addReview(args: {
   agentId: string; rating: number; comment: string; transactionId: string;
 }) {
   if (!CANISTER_ID) {
-    const existing = MOCK_REVIEWS.find(r => (r as any).agentId === args.agentId && r.transactionId === args.transactionId);
+    const reviews = mockReviews();
+    const existing = reviews.find(r => (r as any).agentId === args.agentId && r.transactionId === args.transactionId);
     if (existing) return { err: { DuplicateReview: null } };
+    if (!(window as any).__e2e_reviews) (window as any).__e2e_reviews = [];
     const review: any = {
       id: `AGREV_${Date.now()}`, agentId: args.agentId, reviewerPrincipal: "mock",
       rating: BigInt(args.rating), comment: args.comment, transactionId: args.transactionId,
       createdAt: BigInt(Date.now()),
     };
-    MOCK_REVIEWS.push(review);
+    (window as any).__e2e_reviews.push(review);
     return { ok: review };
   }
   const a = await getActor();
@@ -140,7 +140,7 @@ export async function addReview(args: {
 }
 
 export async function getReviews(agentId: string): Promise<AgentReview[]> {
-  if (!CANISTER_ID) return MOCK_REVIEWS.filter(r => (r as any).agentId === agentId);
+  if (!CANISTER_ID) return mockReviews().filter(r => (r as any).agentId === agentId);
   const a = await getActor();
   const { Principal } = await import("@dfinity/principal");
   return a.getReviews(Principal.fromText(agentId)) as Promise<AgentReview[]>;
