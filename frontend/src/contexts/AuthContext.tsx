@@ -15,6 +15,7 @@ interface AuthState {
   role: UserRole;
   isLoading: boolean;
   login: () => Promise<void>;
+  loginWithRole: (intendedRole: "homeowner" | "agent") => Promise<UserRole>;
   logout: () => Promise<void>;
 }
 
@@ -24,6 +25,7 @@ const AuthContext = createContext<AuthState>({
   role: null,
   isLoading: true,
   login: async () => {},
+  loginWithRole: async () => "homeowner",
   logout: async () => {},
 });
 
@@ -72,6 +74,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRole(await detectRole());
   }
 
+  async function loginWithRole(intendedRole: "homeowner" | "agent"): Promise<UserRole> {
+    await actorLogin();
+    setPrincipal(await getPrincipal());
+    setIsAuthenticated(true);
+    const detected = await detectRole();
+    // If they already have an agent profile, honour that; otherwise use their selection.
+    const finalRole: UserRole = detected === "agent" ? "agent" : intendedRole;
+    setRole(finalRole);
+    return finalRole;
+  }
+
   async function logout() {
     await actorLogout();
     setPrincipal(null);
@@ -80,7 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, principal, role, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, principal, role, isLoading, login, loginWithRole, logout }}>
       {children}
     </AuthContext.Provider>
   );

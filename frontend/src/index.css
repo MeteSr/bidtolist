@@ -1,20 +1,25 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --ink:       #0E0E0C;
-  --paper:     #F4F1EB;
-  --rule:      #C8C3B8;
-  --rust:      #C94C2E;
-  --ink-light: #7A7268;
-  --serif:     'Playfair Display', Georgia, serif;
-  --mono:      'IBM Plex Mono', monospace;
-  --sans:      'IBM Plex Sans', sans-serif;
+  --white:        #FFFFFF;
+  --peach:        #F28B68;
+  --peach-dark:   #D4724F;
+  --peach-light:  #FFF3EF;
+  --blue:         #1B3F8A;
+  --blue-light:   #EBF2FF;
+  --blue-mid:     #3B5FCC;
+  --text:         #111827;
+  --text-muted:   #6B7280;
+  --border:       #E5E7EB;
+  --serif:        'Playfair Display', Georgia, serif;
+  --mono:         'IBM Plex Mono', monospace;
+  --sans:         'IBM Plex Sans', sans-serif;
 }
 
 html, body, #root {
   height: 100%;
-  background: var(--paper);
-  color: var(--ink);
+  background: var(--white);
+  color: var(--text);
   font-family: var(--sans);
   font-weight: 300;
   font-size: 16px;
@@ -22,7 +27,7 @@ html, body, #root {
   -webkit-font-smoothing: antialiased;
 }
 
-a { color: var(--rust); text-decoration: none; }
+a { color: var(--peach); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
 button {
@@ -31,9 +36,9 @@ button {
   font-size: 0.75rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  border: 1px solid var(--ink);
-  background: var(--ink);
-  color: var(--paper);
+  border: 1px solid var(--blue);
+  background: var(--blue);
+  color: var(--white);
   padding: 10px 20px;
   transition: opacity 0.15s;
 }
@@ -43,14 +48,14 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 input, textarea, select {
   font-family: var(--sans);
   font-size: 0.95rem;
-  border: 1px solid var(--rule);
-  background: white;
-  color: var(--ink);
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: var(--text);
   padding: 10px 12px;
   width: 100%;
   outline: none;
 }
-input:focus, textarea:focus, select:focus { border-color: var(--ink); }
+input:focus, textarea:focus, select:focus { border-color: var(--blue); }
 
 label {
   display: block;
@@ -58,6 +63,6 @@ label {
   font-size: 0.65rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--ink-light);
+  color: var(--text-muted);
   margin-bottom: 6px;
 }
