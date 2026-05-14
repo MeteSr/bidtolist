@@ -552,7 +552,7 @@ export default function HomePage() {
           </p>
           <h2 style={{ fontFamily: S.sans, fontSize: "clamp(1.8rem, 3.5vw, 2.8rem)", fontWeight: 800, color: S.white, lineHeight: 1.15, marginBottom: 20, letterSpacing: "-0.02em" }}>
             Free for homeowners.<br />
-            <span style={{ color: S.yellow }}>$295 flat</span> for agents — on a win only.
+            <span style={{ color: S.yellow }}>$295 win fee</span> for agents.
           </h2>
           <p style={{ fontFamily: S.sans, fontSize: "0.95rem", color: "rgba(255,255,255,0.7)", lineHeight: 1.75, marginBottom: 44 }}>
             BidtoList earns only when an agent wins a listing — so our incentives are perfectly aligned with yours.
