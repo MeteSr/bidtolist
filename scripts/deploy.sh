@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DEPLOY_SCRIPT_VERSION="0.2.1"
+DEPLOY_SCRIPT_VERSION="0.3.0"
 ENV=${1:-local}
 
 echo "============================================"
@@ -110,12 +110,15 @@ PYEOF
     icp canister call fee setListingCanisterId "(\"$LISTING_ID\")" -e local 2>/dev/null && echo "  ✓ fee ← listing wired" || true
     if [ -n "$AGENT_ID" ]; then
       icp canister call listing setAgentCanisterId "(\"$AGENT_ID\")" -e local 2>/dev/null && echo "  ✓ listing → agent wired" || true
+      icp canister call agent setListingCanisterId "(\"$LISTING_ID\")" -e local 2>/dev/null && echo "  ✓ agent → listing wired" || true
     fi
-    # Admin init with deploy principal
+    # Admin init — addAdmin is now controller-gated on first call; deploy principal is the controller
     icp canister call listing addAdmin "(principal \"$DEPLOY_PRINCIPAL\")" -e local 2>/dev/null || true
     icp canister call agent addAdmin "(principal \"$DEPLOY_PRINCIPAL\")" -e local 2>/dev/null || true
     icp canister call fee addAdmin "(principal \"$DEPLOY_PRINCIPAL\")" -e local 2>/dev/null || true
     echo "  ✓ Admin principal registered"
+    # Enable homeowner verification gate now that admin is set
+    icp canister call listing enableVerification "()" -e local 2>/dev/null && echo "  ✓ Homeowner verification enabled" || true
   fi
 else
   echo "▶ Building backend canisters..."
@@ -130,6 +133,25 @@ else
     icp canister install "$canister" -e "$ENV" --mode upgrade 2>/dev/null || \
     icp canister install "$canister" -e "$ENV" --mode install
   done
+
+  echo "▶ Wiring cross-canister references..."
+  LISTING_ID=$(icp canister status listing -e "$ENV" --id-only 2>/dev/null || echo "")
+  FEE_ID=$(icp canister status fee -e "$ENV" --id-only 2>/dev/null || echo "")
+  AGENT_ID=$(icp canister status agent -e "$ENV" --id-only 2>/dev/null || echo "")
+  if [ -n "$LISTING_ID" ] && [ -n "$FEE_ID" ]; then
+    icp canister call listing setFeeCanisterId "(\"$FEE_ID\")" -e "$ENV" 2>/dev/null && echo "  ✓ listing → fee wired" || true
+    icp canister call fee setListingCanisterId "(\"$LISTING_ID\")" -e "$ENV" 2>/dev/null && echo "  ✓ fee ← listing wired" || true
+    if [ -n "$AGENT_ID" ]; then
+      icp canister call listing setAgentCanisterId "(\"$AGENT_ID\")" -e "$ENV" 2>/dev/null && echo "  ✓ listing → agent wired" || true
+      icp canister call agent setListingCanisterId "(\"$LISTING_ID\")" -e "$ENV" 2>/dev/null && echo "  ✓ agent → listing wired" || true
+    fi
+    # addAdmin is controller-gated on first call; safe to call on every deploy (idempotent after init)
+    icp canister call listing addAdmin "(principal \"$DEPLOY_PRINCIPAL\")" -e "$ENV" 2>/dev/null || true
+    icp canister call agent addAdmin "(principal \"$DEPLOY_PRINCIPAL\")" -e "$ENV" 2>/dev/null || true
+    icp canister call fee addAdmin "(principal \"$DEPLOY_PRINCIPAL\")" -e "$ENV" 2>/dev/null || true
+    echo "  ✓ Admin principal registered"
+    icp canister call listing enableVerification "()" -e "$ENV" 2>/dev/null && echo "  ✓ Homeowner verification enabled" || true
+  fi
 fi
 
 # ── Frontend ──────────────────────────────────────────────────────────────────
