@@ -20,9 +20,12 @@ export default defineConfig(({ mode }) => {
     },
     define: {
       "process.env.DFX_NETWORK":      JSON.stringify(env.DFX_NETWORK || "local"),
-      "process.env.LISTING_CANISTER_ID": JSON.stringify(env.CANISTER_ID_LISTING || ""),
-      "process.env.AGENT_CANISTER_ID":   JSON.stringify(env.CANISTER_ID_AGENT   || ""),
-      "process.env.FEE_CANISTER_ID":     JSON.stringify(env.CANISTER_ID_FEE     || ""),
+      // In test mode always use empty canister IDs so the mock fallback runs;
+      // this prevents integration tests from hitting a local replica that may
+      // not be running (canister IDs come from deploy.sh output in .env).
+      "process.env.LISTING_CANISTER_ID": JSON.stringify(mode === "test" ? "" : (env.CANISTER_ID_LISTING || "")),
+      "process.env.AGENT_CANISTER_ID":   JSON.stringify(mode === "test" ? "" : (env.CANISTER_ID_AGENT   || "")),
+      "process.env.FEE_CANISTER_ID":     JSON.stringify(mode === "test" ? "" : (env.CANISTER_ID_FEE     || "")),
     },
     test: {
       globals: true,

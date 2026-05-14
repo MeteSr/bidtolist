@@ -76,8 +76,8 @@ export type BidRequestSummary = {
 
 // ── Mock data ────────────────────────────────────────────────────────────────
 
-const MOCK_REQUESTS: any[]  = (typeof window !== "undefined" && (window as any).__e2e_requests)  || [];
-const MOCK_PROPOSALS: any[] = (typeof window !== "undefined" && (window as any).__e2e_proposals) || [];
+function mockRequests(): any[]  { return (typeof window !== "undefined" && (window as any).__e2e_requests)  || []; }
+function mockProposals(): any[] { return (typeof window !== "undefined" && (window as any).__e2e_proposals) || []; }
 
 // ── Service API ──────────────────────────────────────────────────────────────
 
@@ -87,8 +87,9 @@ export async function createBidRequest(args: {
   homeownerEmail: string;
 }) {
   if (!CANISTER_ID) {
+    if (!(window as any).__e2e_requests) (window as any).__e2e_requests = [];
     const req = { id: `BID_${Date.now()}`, ...args, homeowner: "mock", status: { Open: null }, createdAt: Date.now() };
-    MOCK_REQUESTS.push(req);
+    (window as any).__e2e_requests.push(req);
     return { ok: req };
   }
   const a = await getActor();
@@ -101,7 +102,7 @@ export async function createBidRequest(args: {
 
 export async function getBidRequest(requestId: string) {
   if (!CANISTER_ID) {
-    const req = MOCK_REQUESTS.find((r: any) => r.id === requestId);
+    const req = mockRequests().find((r: any) => r.id === requestId);
     return req ? { ok: req } : { err: { NotFound: null } };
   }
   const a = await getActor();
@@ -109,18 +110,20 @@ export async function getBidRequest(requestId: string) {
 }
 
 export async function getMyBidRequests(): Promise<any[]> {
-  if (!CANISTER_ID) return MOCK_REQUESTS;
+  if (!CANISTER_ID) return mockRequests();
   const a = await getActor();
   return a.getMyBidRequests() as Promise<any[]>;
 }
 
 export async function getOpenBidRequests(): Promise<BidRequestSummary[]> {
   if (!CANISTER_ID) {
-    return MOCK_REQUESTS
+    const reqs = mockRequests();
+    const props = mockProposals();
+    return reqs
       .filter((r: any) => r.status?.Open !== undefined)
       .map((r: any) => ({
         ...r,
-        proposalCount: BigInt(MOCK_PROPOSALS.filter((p: any) => p.requestId === r.id).length),
+        proposalCount: BigInt(props.filter((p: any) => p.requestId === r.id).length),
       }));
   }
   const a = await getActor();
@@ -134,8 +137,9 @@ export async function submitProposal(args: {
   validUntil: number; coverLetter: string;
 }) {
   if (!CANISTER_ID) {
+    if (!(window as any).__e2e_proposals) (window as any).__e2e_proposals = [];
     const p = { id: `PROP_${Date.now()}`, ...args, agentId: "mock", status: { Pending: null }, createdAt: Date.now() };
-    MOCK_PROPOSALS.push(p);
+    (window as any).__e2e_proposals.push(p);
     return { ok: p };
   }
   const a = await getActor();
@@ -147,13 +151,13 @@ export async function submitProposal(args: {
 }
 
 export async function getProposalsForRequest(requestId: string): Promise<any[]> {
-  if (!CANISTER_ID) return MOCK_PROPOSALS.filter((p: any) => p.requestId === requestId);
+  if (!CANISTER_ID) return mockProposals().filter((p: any) => p.requestId === requestId);
   const a = await getActor();
   return a.getProposalsForRequest(requestId) as Promise<any[]>;
 }
 
 export async function getMyProposals(): Promise<any[]> {
-  if (!CANISTER_ID) return MOCK_PROPOSALS;
+  if (!CANISTER_ID) return mockProposals();
   const a = await getActor();
   return a.getMyProposals() as Promise<any[]>;
 }

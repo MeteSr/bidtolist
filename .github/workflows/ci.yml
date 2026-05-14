@@ -194,10 +194,9 @@ jobs:
 
   test-integration:
     runs-on: ubuntu-latest
-    # TODO(#integration): activate once src/__tests__/integration/ has tests.
-    # This job deploys the full 3-canister stack and runs Vitest integration
-    # tests that call live canisters via the service layer (no mocks).
-    # Until then the step succeeds immediately so the job stays green.
+    # Runs Vitest integration tests against the service layer's !CANISTER_ID
+    # mock fallback — no live canisters needed. Tests in
+    # frontend/src/__tests__/integration/ inject data via window.__e2e_* globals.
     needs: [motoko-check]
     steps:
       - uses: actions/checkout@v6
@@ -210,15 +209,13 @@ jobs:
         run: npm install
 
       - name: Run integration tests
-        # Stub: replace this echo with `npm run test:integration` once
-        # frontend/src/__tests__/integration/ contains real test files.
-        run: echo "No integration tests yet — stub passes."
+        run: npm run test:integration
 
   test-e2e:
     runs-on: ubuntu-latest
-    # TODO(#e2e): activate once tests/e2e/ has specs.
-    # Pattern: no canister needed — service layer falls back to in-memory
-    # mocks when CANISTER_ID_* env vars are absent (same as HomeGentic).
+    # Playwright E2E tests — no live canisters needed. Service layer falls back
+    # to in-memory mocks when CANISTER_ID_* env vars are absent. Tests inject
+    # data via window.__e2e_* globals through addInitScript.
     needs: [test-frontend]
     steps:
       - uses: actions/checkout@v6
@@ -230,10 +227,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
       - name: Run E2E tests
-        # Stub: replace this echo with `npm run test:e2e` once
-        # tests/e2e/ contains Playwright specs.
-        run: echo "No E2E tests yet — stub passes."
+        run: npm run test:e2e
 
       - name: Upload E2E artifacts on failure
         if: failure()
