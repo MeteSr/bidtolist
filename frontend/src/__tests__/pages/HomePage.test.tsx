@@ -36,7 +36,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockUseAuth.mockReturnValue({
     isAuthenticated: false, principal: null, role: null,
-    isLoading: false, login: vi.fn(), logout: vi.fn(),
+    isLoading: false, login: vi.fn(), loginWithRole: vi.fn(), logout: vi.fn(),
   });
   mockGetListingMetrics.mockResolvedValue({
     totalRequests: 12, openRequests: 5, awardedRequests: 3, totalProposals: 28,
@@ -61,13 +61,14 @@ describe("HomePage", () => {
 
   it("renders Post Your Home CTA", () => {
     renderPage();
-    expect(screen.getByRole("button", { name: /post your home/i })).toBeInTheDocument();
+    // Now an anchor in the homeowner section
+    expect(screen.getByRole("link", { name: /post your home/i })).toBeInTheDocument();
   });
 
-  it("renders Browse Listings CTA", () => {
+  it("renders hero CTAs for homeowners and agents", () => {
     renderPage();
-    // There are two Browse Listings links (nav + hero); check at least one
-    expect(screen.getAllByRole("link", { name: /browse listings/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole("link", { name: /i'm a homeowner/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /i'm a real estate agent/i })).toBeInTheDocument();
   });
 
   it("renders how it works section with 3 steps", () => {
@@ -119,12 +120,12 @@ describe("HomePage", () => {
     });
   });
 
-  it("shows Go to Dashboard button when authenticated agent", () => {
+  it("shows Dashboard button when authenticated agent", () => {
     mockUseAuth.mockReturnValue({
       isAuthenticated: true, principal: "abc", role: "agent",
-      isLoading: false, login: vi.fn(), logout: vi.fn(),
+      isLoading: false, login: vi.fn(), loginWithRole: vi.fn(), logout: vi.fn(),
     });
     renderPage();
-    expect(screen.getByRole("button", { name: /go to dashboard/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /dashboard/i })).toBeInTheDocument();
   });
 });
