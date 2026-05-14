@@ -149,7 +149,7 @@ export default function HomePage() {
       {/* ── Hero ────────────────────────────────────────────────────────────── */}
       <section style={{
         background: S.bg,
-        padding:    isMobile ? "56px 20px 72px" : "80px 48px 104px",
+        padding:    isMobile ? "56px 20px 48px" : "80px 48px 68px",
         position:   "relative",
         overflow:   "hidden",
       }}>
@@ -385,8 +385,8 @@ export default function HomePage() {
         boxShadow:    "0 8px 40px rgba(0,0,0,0.10), 0 0 0 1px rgba(0,0,0,0.04)",
         padding:      isMobile ? "20px 20px" : "22px 40px",
         maxWidth:     1100,
-        marginTop:    isMobile ? -36 : -52,
-        marginBottom: isMobile ? -36 : -52,
+        marginTop:    isMobile ? -16 : -20,
+        marginBottom: isMobile ? -44 : -56,
         marginLeft:   isMobile ? 20 : "auto",
         marginRight:  isMobile ? 20 : "auto",
         position:     "relative",
@@ -405,7 +405,7 @@ export default function HomePage() {
       </div>
 
       {/* ── How it works ────────────────────────────────────────────────────── */}
-      <section id="how-it-works" style={{ padding: isMobile ? "108px 20px 72px" : "156px 48px 104px" }}>
+      <section id="how-it-works" style={{ background: "#FAFBFC", padding: isMobile ? "116px 20px 72px" : "148px 48px 104px" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 2fr", gap: isMobile ? 40 : 80, alignItems: "start" }}>
             {/* Left */}
