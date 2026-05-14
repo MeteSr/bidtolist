@@ -149,7 +149,7 @@ export default function HomePage() {
       {/* ── Hero ────────────────────────────────────────────────────────────── */}
       <section style={{
         background: S.bg,
-        padding:    isMobile ? "56px 20px 48px" : "80px 48px 64px",
+        padding:    isMobile ? "56px 20px 72px" : "80px 48px 104px",
         position:   "relative",
         overflow:   "hidden",
       }}>
@@ -378,9 +378,21 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── Trusted-by band ─────────────────────────────────────────────────── */}
-      <div style={{ background: S.white, borderTop: `1px solid ${S.border}`, borderBottom: `1px solid ${S.border}`, padding: isMobile ? "22px 20px" : "22px 48px" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", gap: isMobile ? 20 : 48, flexWrap: "wrap", justifyContent: "center" }}>
+      {/* ── Trusted-by band (floating card) ─────────────────────────────────── */}
+      <div style={{
+        background:   S.white,
+        borderRadius: isMobile ? 16 : 20,
+        boxShadow:    "0 8px 40px rgba(0,0,0,0.10), 0 0 0 1px rgba(0,0,0,0.04)",
+        padding:      isMobile ? "20px 20px" : "22px 40px",
+        maxWidth:     1100,
+        marginTop:    isMobile ? -36 : -52,
+        marginBottom: isMobile ? -36 : -52,
+        marginLeft:   isMobile ? 20 : "auto",
+        marginRight:  isMobile ? 20 : "auto",
+        position:     "relative",
+        zIndex:       10,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 20 : 48, flexWrap: "wrap", justifyContent: "center" }}>
           <span style={{ fontFamily: S.sans, fontSize: "0.78rem", fontWeight: 600, color: S.muted, textTransform: "uppercase", letterSpacing: "0.08em" }}>
             Serving agents from
           </span>
@@ -393,7 +405,7 @@ export default function HomePage() {
       </div>
 
       {/* ── How it works ────────────────────────────────────────────────────── */}
-      <section id="how-it-works" style={{ padding: isMobile ? "72px 20px" : "104px 48px" }}>
+      <section id="how-it-works" style={{ padding: isMobile ? "108px 20px 72px" : "156px 48px 104px" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 2fr", gap: isMobile ? 40 : 80, alignItems: "start" }}>
             {/* Left */}
