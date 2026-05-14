@@ -517,7 +517,7 @@ export default function HomePage() {
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 20, marginBottom: 48 }}>
             {[
               { icon: "💸", t: "No Monthly Fees",     d: "Register free. You only pay $295 when your proposal is accepted — no subscriptions, no per-bid charges.", color: S.yellow,    pale: S.yellowPale },
-              { icon: "🔒", t: "Level Playing Field", d: "Blind bidding means your proposal wins on quality — not on who you know or how long you've been in the business.", color: S.green,     pale: S.greenLight },
+              { icon: "🔒", t: "Level Playing Field", d: "Blind bidding means your proposal wins on quality — not on who you know.", color: S.green,     pale: S.greenLight },
               { icon: "✅", t: "Verified Homeowners", d: "Every listing comes from a verified property owner. No wasted proposals.",       color: S.peach,     pale: S.peachLight },
             ].map(({ icon, t, d, color, pale }) => (
               <div key={t} style={{ background: pale, borderRadius: 20, padding: "32px 28px", border: `1px solid ${color}22` }}>
