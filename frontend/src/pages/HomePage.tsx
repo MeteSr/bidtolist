@@ -478,7 +478,7 @@ export default function HomePage() {
         <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", gap: isMobile ? 28 : 0, flexWrap: "wrap", justifyContent: isMobile ? "flex-start" : "space-around", alignItems: "center" }}>
           {[
             { val: "$0",   label: "Cost for Homeowners" },
-            { val: "$295", label: "Flat Fee — Win Only"  },
+            { val: "$295", label: "Cost For Winning Agent" },
           ].map(({ val, label, testId }) => (
             <div key={label} style={{ textAlign: "center" }}>
               <p
