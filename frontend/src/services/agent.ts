@@ -52,7 +52,7 @@ async function getActor() {
   return Actor.createActor(idlFactory, { agent: await getAgent(), canisterId: CANISTER_ID });
 }
 
-const MOCK_PROFILE: any = null;
+const MOCK_PROFILE: any = typeof window !== "undefined" ? ((window as any).__e2e_agent_profile ?? null) : null;
 
 export async function registerAgent(args: {
   name: string; brokerage: string; licenseNumber: string;
@@ -72,7 +72,7 @@ export async function getMyAgentProfile(): Promise<any | null> {
 }
 
 export async function getAllAgentProfiles(): Promise<any[]> {
-  if (!CANISTER_ID) return [];
+  if (!CANISTER_ID) return (typeof window !== "undefined" && (window as any).__e2e_agent_profiles) || [];
   const a = await getActor();
   return a.getAllProfiles() as Promise<any[]>;
 }
@@ -113,7 +113,7 @@ export type AgentReview = {
   rating: bigint; comment: string; transactionId: string; createdAt: bigint;
 };
 
-const MOCK_REVIEWS: AgentReview[] = [];
+const MOCK_REVIEWS: AgentReview[] = (typeof window !== "undefined" && (window as any).__e2e_reviews) || [];
 
 export async function addReview(args: {
   agentId: string; rating: number; comment: string; transactionId: string;
@@ -147,7 +147,10 @@ export async function getReviews(agentId: string): Promise<AgentReview[]> {
 }
 
 export async function getAgentProfile(agentId: string): Promise<any | null> {
-  if (!CANISTER_ID) return null;
+  if (!CANISTER_ID) {
+    const profiles: any[] = (typeof window !== "undefined" && (window as any).__e2e_agent_profiles) || [];
+    return profiles.find((p: any) => p.id === agentId) ?? null;
+  }
   const a = await getActor();
   const { Principal } = await import("@dfinity/principal");
   const result = await a.getProfile(Principal.fromText(agentId)) as any[];

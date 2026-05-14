@@ -74,8 +74,8 @@ export type BidRequestSummary = {
 
 // ── Mock data ────────────────────────────────────────────────────────────────
 
-const MOCK_REQUESTS: any[] = [];
-const MOCK_PROPOSALS: any[] = [];
+const MOCK_REQUESTS: any[]  = (typeof window !== "undefined" && (window as any).__e2e_requests)  || [];
+const MOCK_PROPOSALS: any[] = (typeof window !== "undefined" && (window as any).__e2e_proposals) || [];
 
 // ── Service API ──────────────────────────────────────────────────────────────
 
@@ -169,7 +169,7 @@ export async function requestHomeownerVerification(address: string, parcelNumber
 }
 
 export async function isHomeownerVerified(): Promise<boolean> {
-  if (!CANISTER_ID) return false;
+  if (!CANISTER_ID) return !!(typeof window !== "undefined" && (window as any).__e2e_homeowner_verified);
   const a = await getActor();
   return a.isHomeownerVerified() as Promise<boolean>;
 }
