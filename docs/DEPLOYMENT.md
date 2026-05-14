@@ -40,11 +40,12 @@ separate terminal:
 cd agents/email && npm install && npm run dev
 
 # Stripe webhook + checkout server (port 3003)
+# Requires @dfinity/agent — run npm install before first use
 cd agents/stripe-webhook && npm install && npm run dev
 ```
 
-> **Issue #43** tracks consolidating these into a single server following the
-> HomeGentic architecture (rate limiting, structured logging, unified entry point).
+> **Issue #43** tracks consolidating these into the HomeGentic shared agent server
+> (namespaced routes at `/api/bidtolist/*`, unified rate limiting and logging).
 
 ---
 
@@ -179,9 +180,14 @@ STRIPE_SECRET_KEY=sk_test_...
 VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
 STRIPE_PRICE_PLATFORM_FEE=price_...
 STRIPE_WEBHOOK_SECRET=whsec_...   # from Stripe dashboard → Webhooks → your endpoint
+
+# ICP wiring — needed to unlock the homeowner address after payment
+FEE_CANISTER_ID=...               # local canister ID from icp canister id fee
+ICP_HOST=http://localhost:4943
+WEBHOOK_IDENTITY_SEED=<64-char hex>  # 32-byte Ed25519 secret for an identity that is admin on the fee canister
 ```
 
-4. Start the Stripe server: `cd agents/stripe-webhook && npm run dev`
+4. Start the Stripe server: `cd agents/stripe-webhook && npm install && npm run dev`
 5. Forward webhooks locally: `stripe listen --forward-to localhost:3003/api/stripe/webhook`
 6. Test with card `4242 4242 4242 4242`, any future expiry, any CVC.
 
@@ -193,6 +199,19 @@ STRIPE_WEBHOOK_SECRET=whsec_...   # from Stripe dashboard → Webhooks → your 
 4. Configure a Stripe webhook pointing at `https://your-domain/api/stripe/webhook`
    for the `checkout.session.completed` event.
 5. Copy the webhook signing secret into `STRIPE_WEBHOOK_SECRET`.
+6. Set the ICP wiring env vars on the server:
+   - `FEE_CANISTER_ID` — mainnet canister ID of the fee canister
+   - `ICP_HOST=https://ic0.app`
+   - `WEBHOOK_IDENTITY_SEED` — 64-char hex for an Ed25519 identity that is admin on the fee canister
+
+To generate a webhook identity seed:
+```bash
+node -e "const {randomBytes} = require('crypto'); console.log(randomBytes(32).toString('hex'));"
+```
+Then add that principal as admin on the fee canister:
+```bash
+dfx canister call fee addAdmin '(principal "<webhook-principal>")' --network ic
+```
 
 > **Note:** The Stripe server uses `stripe.webhooks.constructEvent` with HMAC
 > signature verification on every `POST /api/stripe/webhook` request. Requests
@@ -205,8 +224,15 @@ STRIPE_WEBHOOK_SECRET=whsec_...   # from Stripe dashboard → Webhooks → your 
 3. Agent is redirected to Stripe's hosted checkout page.
 4. On success, Stripe redirects to `/agents/dashboard?fee_paid=1` and fires
    a `checkout.session.completed` webhook.
-5. The webhook handler marks the fee paid in the ICP fee canister
-   (TODO: wire `markFeePaid` call — see `agents/stripe-webhook/server.ts:91`).
+5. The webhook calls `fee.markFeePaid(feeId)` on the ICP fee canister via `@dfinity/agent`
+   using the `WEBHOOK_IDENTITY_SEED` admin identity.
+6. The fee canister updates the record to `#Paid` and calls back to
+   `listing.markListingFeePaid(requestId)`, which flips `feePaid = true`.
+7. The winning agent's next `getBidRequest` call now returns the homeowner's
+   street address and email.
+
+> **Address gate**: the homeowner's address is never returned to anyone except the homeowner,
+> admins, and the winning agent **after** `feePaid == true`. Do not bypass this gate.
 
 ---
 
