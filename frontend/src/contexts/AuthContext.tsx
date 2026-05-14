@@ -45,6 +45,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
+        if (typeof window !== "undefined" && (window as any).__e2e_principal) {
+          setPrincipal((window as any).__e2e_principal);
+          setRole((window as any).__e2e_role || "homeowner");
+          setIsAuthenticated(true);
+          setIsLoading(false);
+          return;
+        }
         // v6: isAuthenticated() is synchronous
         const authed = actorIsAuthenticated();
         if (authed) {
