@@ -178,21 +178,6 @@ export default function HomePage() {
         }}>
           {/* Left — copy */}
           <div>
-            <div style={{
-              display:      "inline-flex",
-              alignItems:   "center",
-              gap:          8,
-              background:   S.greenLight,
-              borderRadius: 100,
-              padding:      "6px 16px",
-              marginBottom: 28,
-            }}>
-              <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: S.green }} />
-              <span style={{ fontFamily: S.sans, fontSize: "0.78rem", fontWeight: 600, color: S.green }}>
-                Available Across the USA
-              </span>
-            </div>
-
             <h1 style={{
               fontFamily:   S.sans,
               fontSize:     "clamp(2.2rem, 5vw, 3.6rem)",
@@ -533,7 +518,7 @@ export default function HomePage() {
             {[
               { icon: "💸", t: "No Monthly Fees",     d: "Register free. You only pay $295 when your proposal is accepted — no subscriptions, no per-bid charges.", color: S.yellow,    pale: S.yellowPale },
               { icon: "🔒", t: "Level Playing Field", d: "Blind bidding means your proposal wins on quality — not on who you know or how long you've been in the business.", color: S.green,     pale: S.greenLight },
-              { icon: "✅", t: "Verified Homeowners", d: "Every listing comes from a verified property owner across the USA. No wasted proposals.",       color: S.peach,     pale: S.peachLight },
+              { icon: "✅", t: "Verified Homeowners", d: "Every listing comes from a verified property owner. No wasted proposals.",       color: S.peach,     pale: S.peachLight },
             ].map(({ icon, t, d, color, pale }) => (
               <div key={t} style={{ background: pale, borderRadius: 20, padding: "32px 28px", border: `1px solid ${color}22` }}>
                 <div style={{ width: 52, height: 52, borderRadius: 14, background: S.white, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20, fontSize: "1.4rem", boxShadow: `0 4px 16px ${color}22` }}>
