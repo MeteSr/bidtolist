@@ -1,9 +1,6 @@
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from "../contexts/AuthContext";
-import { getListingMetrics } from "../services/listing";
-import { getAllAgentProfiles } from "../services/agent";
 import { useBreakpoint } from "../hooks/useBreakpoint";
 
 const S = {
@@ -56,18 +53,6 @@ export default function HomePage() {
   const { isAuthenticated, role, login } = useAuth();
   const navigate = useNavigate();
   const { isMobile } = useBreakpoint();
-  const [openListings, setOpenListings]     = useState<number | null>(null);
-  const [verifiedAgents, setVerifiedAgents] = useState<number | null>(null);
-
-  useEffect(() => {
-    getListingMetrics()
-      .then(m => setOpenListings(m.openRequests))
-      .catch(() => setOpenListings(0));
-    getAllAgentProfiles()
-      .then(profiles => setVerifiedAgents(profiles.filter((p: any) => p.isVerified).length))
-      .catch(() => setVerifiedAgents(0));
-  }, []);
-
   async function handleSignIn() {
     if (!isAuthenticated) await login();
     if (role === "agent") navigate("/agents/dashboard");
@@ -225,9 +210,6 @@ export default function HomePage() {
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
               <StarRow />
               <span style={{ fontFamily: S.sans, fontSize: "0.85rem", fontWeight: 600, color: S.dark }}>5.0</span>
-              <span style={{ fontFamily: S.sans, fontSize: "0.82rem", color: S.muted }}>
-                • Trusted by {verifiedAgents !== null ? verifiedAgents : "—"} verified agents
-              </span>
             </div>
 
             <p style={{
@@ -504,8 +486,6 @@ export default function HomePage() {
       <div style={{ background: S.yellow, padding: isMobile ? "28px 20px" : "32px 48px" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", gap: isMobile ? 28 : 0, flexWrap: "wrap", justifyContent: isMobile ? "flex-start" : "space-around", alignItems: "center" }}>
           {[
-            { val: openListings !== null ? String(openListings) : "—",   label: openListings === 1 ? "Open Listing" : "Open Listings",   testId: "stat-open-listings"   },
-            { val: verifiedAgents !== null ? String(verifiedAgents) : "—", label: verifiedAgents === 1 ? "Verified Agent" : "Verified Agents", testId: "stat-verified-agents" },
             { val: "$0",   label: "Cost for Homeowners" },
             { val: "$295", label: "Flat Fee — Win Only"  },
           ].map(({ val, label, testId }) => (
