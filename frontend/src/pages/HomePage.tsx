@@ -123,7 +123,7 @@ export default function HomePage() {
           ) : (
             <a
               href="/signup"
-              style={{ display: "inline-block", background: S.green, color: S.white, fontFamily: S.sans, fontSize: "0.88rem", fontWeight: 700, padding: "10px 22px", borderRadius: 100, textDecoration: "none" }}
+              style={{ display: "inline-block", background: S.green, border: `2px solid ${S.green}`, color: S.white, fontFamily: S.sans, fontSize: "0.88rem", fontWeight: 700, padding: "10px 22px", borderRadius: 100, textDecoration: "none" }}
             >
               Get Started →
             </a>
@@ -241,7 +241,7 @@ export default function HomePage() {
                   flex:           isMobile ? "1 1 100%" : "0 0 auto",
                 }}
               >
-                Post Your Home — Free →
+                Post Your Home
               </a>
               <a
                 href="#agents"
