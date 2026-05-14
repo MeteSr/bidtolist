@@ -1,6 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import HomePage from "./pages/HomePage";
+import SignUpPage from "./pages/SignUpPage";
 import PostListingPage from "./pages/PostListingPage";
 import MyBidsPage from "./pages/MyBidsPage";
 import AgentRegisterPage from "./pages/AgentRegisterPage";
@@ -16,6 +17,7 @@ export default function App() {
     <AuthProvider>
       <Routes>
         <Route path="/"                          element={<HomePage />} />
+        <Route path="/signup"                    element={<SignUpPage />} />
         <Route path="/post"                      element={<PostListingPage />} />
         <Route path="/my-bids"                   element={<MyBidsPage />} />
         <Route path="/verify"                    element={<HomeownerVerifyPage />} />
