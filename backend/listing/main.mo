@@ -105,21 +105,23 @@ persistent actor Listing {
 
   private let MAX_PROPOSALS_PER_REQUEST : Nat = 10;
 
-  private var bidCounter:      Nat = 0;
-  private var proposalCounter: Nat = 0;
-  private var isPaused:        Bool = false;
-  private var pauseExpiryNs:   ?Int = null;
-  private var adminListEntries: [Principal] = [];
-  private var adminInitialized: Bool = false;
-  private var feeCanisterId:   Text = "";
-  private var platformFeeCents: Nat = 29500; // $295.00 default
-  private var agentCanisterId: Text = "";
+  private var bidCounter:          Nat = 0;
+  private var proposalCounter:     Nat = 0;
+  private var isPaused:            Bool = false;
+  private var pauseExpiryNs:       ?Int = null;
+  private var adminListEntries:    [Principal] = [];
+  private var adminInitialized:    Bool = false;
+  private var feeCanisterId:       Text = "";
+  private var platformFeeCents:    Nat = 29500; // $295.00 default
+  private var agentCanisterId:     Text = "";
+  // Vuln 1: explicit flag instead of map-size heuristic; admin must call enableVerification()
+  private var verificationEnabled: Bool = false;
 
-  private let requests  = Map.empty<Text, ListingBidRequest>();
-  private let proposals = Map.empty<Text, ListingProposal>();
-  private let verifiedHomeowners = Map.empty<Principal, Bool>();
-  private let verificationRequests = Map.empty<Text, HomeownerVerificationRequest>();
-  private var verificationCounter: Nat = 0;
+  private let requests              = Map.empty<Text, ListingBidRequest>();
+  private let proposals             = Map.empty<Text, ListingProposal>();
+  private let verifiedHomeowners    = Map.empty<Principal, Bool>();
+  private let verificationRequests  = Map.empty<Text, HomeownerVerificationRequest>();
+  private var verificationCounter:  Nat = 0;
 
   // ─── Rate Limit ──────────────────────────────────────────────────────────────
 
@@ -163,6 +165,18 @@ persistent actor Listing {
     #ok(())
   };
 
+  // Returns true if the caller has an accepted proposal on the given request.
+  private func hasAcceptedProposal(requestId: Text, caller: Principal) : Bool {
+    Option.isSome(
+      Array.find<ListingProposal>(
+        Iter.toArray(Map.values(proposals)),
+        func(p: ListingProposal) : Bool {
+          p.requestId == requestId and p.agentId == caller and p.status == #Accepted
+        }
+      )
+    )
+  };
+
   private func nextBidId() : Text {
     bidCounter += 1;
     "BID_" # Nat.toText(bidCounter)
@@ -193,8 +207,8 @@ persistent actor Listing {
   ) : async Result.Result<ListingBidRequest, Error> {
     switch (requireActive(msg.caller)) { case (#err(e)) return #err(e); case _ {} };
 
-    // Homeowner must be verified (if verification has been used — skip if map is empty so dev mode works without admin)
-    if (Map.size(verifiedHomeowners) > 0) {
+    // Vuln 1 fix: explicit flag — no map-size bypass
+    if (verificationEnabled) {
       if (Map.get(verifiedHomeowners, Principal.compare, msg.caller) == null) {
         return #err(#NotAuthorized);
       };
@@ -234,10 +248,29 @@ persistent actor Listing {
     )
   };
 
-  public query func getBidRequest(id: Text) : async Result.Result<ListingBidRequest, Error> {
+  /// Vuln 4 fix: only homeowner, admin, or winning agent receives PII fields (address, homeownerEmail).
+  /// All other authenticated callers get the record with those fields redacted.
+  public shared query(msg) func getBidRequest(id: Text) : async Result.Result<ListingBidRequest, Error> {
+    if (Principal.isAnonymous(msg.caller)) return #err(#NotAuthorized);
     switch (Map.get(requests, Text.compare, id)) {
       case null { #err(#NotFound) };
-      case (?r) { #ok(r) };
+      case (?r) {
+        let privileged = r.homeowner == msg.caller
+          or isAdmin(msg.caller)
+          or hasAcceptedProposal(id, msg.caller);
+        if (privileged) {
+          #ok(r)
+        } else {
+          // Return non-PII fields; address and homeownerEmail are blanked for non-privileged callers
+          #ok({
+            id = r.id; address = ""; city = r.city; county = r.county;
+            zipCode = r.zipCode; homeowner = r.homeowner; homeownerEmail = "";
+            targetListDate = r.targetListDate; desiredSalePrice = r.desiredSalePrice;
+            notes = r.notes; bidDeadline = r.bidDeadline;
+            status = r.status; createdAt = r.createdAt;
+          })
+        }
+      };
     }
   };
 
@@ -252,7 +285,8 @@ persistent actor Listing {
         Map.add(requests, Text.compare, id, {
           id = req.id; address = req.address; city = req.city;
           county = req.county; zipCode = req.zipCode;
-          homeowner = req.homeowner; targetListDate = req.targetListDate;
+          homeowner = req.homeowner; homeownerEmail = req.homeownerEmail;
+          targetListDate = req.targetListDate;
           desiredSalePrice = req.desiredSalePrice; notes = req.notes;
           bidDeadline = req.bidDeadline; status = #Cancelled; createdAt = req.createdAt;
         });
@@ -288,7 +322,7 @@ persistent actor Listing {
 
   // ─── Agent: Proposal Lifecycle ────────────────────────────────────────────────
 
-  /// Submit a proposal. Sealed until bidDeadline — the frontend enforces the reveal gate.
+  /// Submit a proposal. Sealed until bidDeadline — server enforces the reveal gate in getProposalsForRequest.
   public shared(msg) func submitProposal(
     requestId:             Text,
     agentName:             Text,
@@ -341,10 +375,26 @@ persistent actor Listing {
     }
   };
 
-  public query func getProposalsForRequest(requestId: Text) : async [ListingProposal] {
+  /// Vuln 3 fix: server-side deadline gate enforces the sealed-bid guarantee.
+  /// - Before bidDeadline: homeowner and admin see all proposals; agents see only their own.
+  /// - After bidDeadline: all authenticated callers see all proposals.
+  public shared query(msg) func getProposalsForRequest(requestId: Text) : async [ListingProposal] {
+    if (Principal.isAnonymous(msg.caller)) return [];
+    let now = Time.now();
+    let req = Map.get(requests, Text.compare, requestId);
+    let deadlinePassed = switch (req) {
+      case null    { true };
+      case (?r)    { now >= r.bidDeadline };
+    };
+    let isOwner = switch (req) {
+      case null    { false };
+      case (?r)    { r.homeowner == msg.caller };
+    };
     Iter.toArray(
       Iter.filter(Map.values(proposals), func(p: ListingProposal) : Bool {
-        p.requestId == requestId
+        p.requestId == requestId and (
+          deadlinePassed or isOwner or isAdmin(msg.caller) or p.agentId == msg.caller
+        )
       })
     )
   };
@@ -405,7 +455,8 @@ persistent actor Listing {
             Map.add(requests, Text.compare, req.id, {
               id = req.id; address = req.address; city = req.city;
               county = req.county; zipCode = req.zipCode;
-              homeowner = req.homeowner; targetListDate = req.targetListDate;
+              homeowner = req.homeowner; homeownerEmail = req.homeownerEmail;
+              targetListDate = req.targetListDate;
               desiredSalePrice = req.desiredSalePrice; notes = req.notes;
               bidDeadline = req.bidDeadline; status = #Awarded; createdAt = req.createdAt;
             });
@@ -422,6 +473,28 @@ persistent actor Listing {
 
             #ok(())
           };
+        }
+      };
+    }
+  };
+
+  // ─── Cross-canister Helper ────────────────────────────────────────────────────
+
+  /// Vuln 5: Called by the agent canister to verify a review transaction.
+  /// Returns true iff proposalId is an #Accepted proposal for agentId where reviewer is the homeowner.
+  public query func validateReviewTransaction(
+    proposalId: Text,
+    reviewer:   Principal,
+    agentId:    Principal
+  ) : async Bool {
+    switch (Map.get(proposals, Text.compare, proposalId)) {
+      case null { false };
+      case (?p) {
+        if (p.status != #Accepted) return false;
+        if (p.agentId != agentId)  return false;
+        switch (Map.get(requests, Text.compare, p.requestId)) {
+          case null  { false };
+          case (?req){ req.homeowner == reviewer };
         }
       };
     }
@@ -453,8 +526,21 @@ persistent actor Listing {
     #ok(())
   };
 
+  /// Vuln 1: Admin explicitly enables the homeowner verification gate after first homeowners are set up.
+  public shared(msg) func enableVerification() : async Result.Result<(), Error> {
+    if (not isAdmin(msg.caller)) return #err(#NotAuthorized);
+    verificationEnabled := true;
+    #ok(())
+  };
+
+  /// Vuln 2 fix: first call is restricted to the canister's controller (the deploying identity).
+  /// Once adminInitialized is true only existing admins may add further admins.
   public shared(msg) func addAdmin(newAdmin: Principal) : async Result.Result<(), Error> {
-    if (adminInitialized and not isAdmin(msg.caller)) return #err(#NotAuthorized);
+    if (adminInitialized) {
+      if (not isAdmin(msg.caller)) return #err(#NotAuthorized);
+    } else {
+      if (not Principal.isController(msg.caller)) return #err(#NotAuthorized);
+    };
     if (not isAdmin(newAdmin)) {
       adminListEntries := Array.concat(adminListEntries, [newAdmin]);
     };

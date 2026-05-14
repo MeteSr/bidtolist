@@ -102,11 +102,13 @@ persistent actor Agent {
 
   // ─── Stable State ─────────────────────────────────────────────────────────────
 
-  private var isPaused:         Bool        = false;
-  private var pauseExpiryNs:    ?Int        = null;
-  private var adminListEntries: [Principal] = [];
-  private var adminInitialized: Bool        = false;
-  private var reviewCounter:    Nat         = 0;
+  private var isPaused:           Bool        = false;
+  private var pauseExpiryNs:      ?Int        = null;
+  private var adminListEntries:   [Principal] = [];
+  private var adminInitialized:   Bool        = false;
+  private var reviewCounter:      Nat         = 0;
+  // Vuln 5: listing canister ID used to validate review transactions
+  private var listingCanisterId:  Text        = "";
 
   private let agents           = Map.empty<Principal, AgentProfile>();
   private let agentDocs        = Map.empty<Principal, AgentDocs>();
@@ -262,6 +264,15 @@ persistent actor Agent {
     if (args.rating < 1 or args.rating > 5) return #err(#InvalidInput("rating must be 1–5"));
     if (Text.size(args.transactionId) == 0) return #err(#InvalidInput("transactionId cannot be empty"));
 
+    // Vuln 5 fix: verify the transactionId corresponds to a real accepted proposal
+    // where msg.caller is the homeowner and args.agentId is the winning agent.
+    if (listingCanisterId == "") return #err(#InvalidInput("Reviews are not available until the listing canister is wired"));
+    let listingActor = actor(listingCanisterId) : actor {
+      validateReviewTransaction : (Text, Principal, Principal) -> async Bool;
+    };
+    let valid = await listingActor.validateReviewTransaction(args.transactionId, msg.caller, args.agentId);
+    if (not valid) return #err(#InvalidInput("transactionId does not correspond to a completed transaction you were party to"));
+
     let compositeKey = Principal.toText(msg.caller) # "|" # args.transactionId;
     if (Map.get(reviewKeys, Text.compare, compositeKey) != null) return #err(#DuplicateReview);
     if (not tryConsumeReviewSlot(msg.caller)) return #err(#RateLimitExceeded);
@@ -339,8 +350,19 @@ persistent actor Agent {
     #ok(())
   };
 
+  public shared(msg) func setListingCanisterId(id: Text) : async Result.Result<(), Error> {
+    if (not isAdmin(msg.caller)) return #err(#NotAuthorized);
+    listingCanisterId := id;
+    #ok(())
+  };
+
+  /// Vuln 2 fix: first call restricted to the canister's controller; subsequent calls require an existing admin.
   public shared(msg) func addAdmin(newAdmin: Principal) : async Result.Result<(), Error> {
-    if (adminInitialized and not isAdmin(msg.caller)) return #err(#NotAuthorized);
+    if (adminInitialized) {
+      if (not isAdmin(msg.caller)) return #err(#NotAuthorized);
+    } else {
+      if (not Principal.isController(msg.caller)) return #err(#NotAuthorized);
+    };
     if (not isAdmin(newAdmin)) {
       adminListEntries := Array.concat(adminListEntries, [newAdmin]);
     };

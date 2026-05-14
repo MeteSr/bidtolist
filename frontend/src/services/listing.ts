@@ -54,7 +54,9 @@ export const idlFactory = ({ IDL }: any) => {
     getPendingVerificationRequests:  IDL.Func([], [IDL.Vec(HomeownerVerificationRequest)], ["query"]),
     verifyHomeowner:                 IDL.Func([IDL.Principal], [Result(IDL.Null)], []),
     revokeHomeowner:                 IDL.Func([IDL.Principal], [Result(IDL.Null)], []),
+    enableVerification:              IDL.Func([], [Result(IDL.Null)], []),
     setAgentCanisterId:              IDL.Func([IDL.Text], [Result(IDL.Null)], []),
+    validateReviewTransaction:       IDL.Func([IDL.Text, IDL.Principal, IDL.Principal], [IDL.Bool], ["query"]),
     metrics:                         IDL.Func([], [IDL.Record({ totalRequests: IDL.Nat, openRequests: IDL.Nat, awardedRequests: IDL.Nat, totalProposals: IDL.Nat, isPaused: IDL.Bool })], ["query"]),
   });
 };

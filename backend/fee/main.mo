@@ -162,8 +162,13 @@ persistent actor Fee {
     #ok(())
   };
 
+  /// Vuln 2 fix: first call restricted to the canister's controller; subsequent calls require an existing admin.
   public shared(msg) func addAdmin(newAdmin: Principal) : async Result.Result<(), Error> {
-    if (adminInitialized and not isAdmin(msg.caller)) return #err(#NotAuthorized);
+    if (adminInitialized) {
+      if (not isAdmin(msg.caller)) return #err(#NotAuthorized);
+    } else {
+      if (not Principal.isController(msg.caller)) return #err(#NotAuthorized);
+    };
     if (not isAdmin(newAdmin)) {
       adminListEntries := Array.concat(adminListEntries, [newAdmin]);
     };
