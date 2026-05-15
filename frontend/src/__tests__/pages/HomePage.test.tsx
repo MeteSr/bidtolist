@@ -34,24 +34,23 @@ describe("HomePage", () => {
 
   it("renders headline value prop", () => {
     renderPage();
-    expect(screen.getByText(/let agents compete/i)).toBeInTheDocument();
+    const h1 = screen.getByRole("heading", { level: 1 });
+    expect(h1).toHaveTextContent(/let agents.*compete.*your listing/i);
   });
 
   it("renders Post Your Home CTA", () => {
     renderPage();
-    // Now an anchor in the homeowner section
-    expect(screen.getByRole("link", { name: /post your home/i })).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: /post your home/i }).length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders hero CTAs for homeowners and agents", () => {
     renderPage();
-    expect(screen.getByRole("link", { name: /i'm a homeowner/i })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /i'm a real estate agent/i })).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: /post your home/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole("link", { name: /join as an agent/i }).length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders how it works section with 3 steps", () => {
     renderPage();
-    // Step headings are inside <p> with serif; CTA button also matches "post your home"
     expect(screen.getAllByText(/post your home/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/agents bid blind/i)).toBeInTheDocument();
     expect(screen.getByText(/you pick the winner/i)).toBeInTheDocument();
@@ -59,15 +58,13 @@ describe("HomePage", () => {
 
   it("renders pricing clarity — no subscription", () => {
     renderPage();
-    // $295 appears in trust signals and pricing section; check at least one
     expect(screen.getAllByText(/\$295/).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText(/no subscription/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/no subscription/i).length).toBeGreaterThanOrEqual(1);
   });
 
-  it("shows county badge for Volusia + Flagler", () => {
+  it("shows brokerage band for agents", () => {
     renderPage();
-    // Badge in hero and footer match the pattern; check at least one
-    expect(screen.getAllByText(/volusia.*flagler/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/serving agents from/i)).toBeInTheDocument();
   });
 
   it("shows Dashboard button when authenticated agent", () => {

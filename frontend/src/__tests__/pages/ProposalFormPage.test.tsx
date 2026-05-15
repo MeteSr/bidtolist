@@ -188,7 +188,7 @@ describe("ProposalFormPage — submission", () => {
     });
   });
 
-  it("fires notifyNewProposal with homeowner email after successful submit", async () => {
+  it("fires notifyNewProposal with requestId after successful submit", async () => {
     const user = userEvent.setup();
     renderPage("BID_1");
     await waitFor(() => screen.getByLabelText(/your name/i));
@@ -197,9 +197,7 @@ describe("ProposalFormPage — submission", () => {
     await user.type(screen.getByLabelText(/est\. sale price/i), "350000");
     await user.click(screen.getByRole("button", { name: /submit sealed proposal/i }));
     await waitFor(() => {
-      expect(mockNotifyNewProposal).toHaveBeenCalledWith(
-        expect.objectContaining({ homeownerEmail: "owner@example.com" })
-      );
+      expect(mockNotifyNewProposal).toHaveBeenCalledWith("BID_1");
     });
   });
 

@@ -473,18 +473,27 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── Stats band ──────────────────────────────────────────────────────── */}
-      <div style={{ background: S.yellow, padding: isMobile ? "28px 20px" : "32px 48px" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", gap: isMobile ? 28 : 0, flexWrap: "wrap", justifyContent: isMobile ? "flex-start" : "space-around", alignItems: "center" }}>
+      {/* ── Stats band (floating card) ───────────────────────────────────────── */}
+      <div style={{
+        background:   S.yellow,
+        borderRadius: isMobile ? 16 : 20,
+        boxShadow:    "0 8px 40px rgba(245,200,66,0.4), 0 0 0 1px rgba(0,0,0,0.06)",
+        padding:      isMobile ? "28px 24px" : "28px 56px",
+        maxWidth:     900,
+        marginTop:    isMobile ? -16 : -20,
+        marginBottom: isMobile ? -44 : -56,
+        marginLeft:   isMobile ? 20 : "auto",
+        marginRight:  isMobile ? 20 : "auto",
+        position:     "relative",
+        zIndex:       10,
+      }}>
+        <div style={{ display: "flex", gap: isMobile ? 40 : 0, flexWrap: "wrap", justifyContent: "space-around", alignItems: "center" }}>
           {[
             { val: "$0",   label: "Cost for Homeowners" },
             { val: "$295", label: "Cost For Winning Agent" },
-          ].map(({ val, label, testId }) => (
+          ].map(({ val, label }) => (
             <div key={label} style={{ textAlign: "center" }}>
-              <p
-                data-testid={testId}
-                style={{ fontFamily: S.sans, fontSize: "clamp(1.6rem,3vw,2.4rem)", fontWeight: 800, color: S.dark, marginBottom: 4, letterSpacing: "-0.02em" }}
-              >
+              <p style={{ fontFamily: S.sans, fontSize: "clamp(1.6rem,3vw,2.4rem)", fontWeight: 800, color: S.dark, marginBottom: 4, letterSpacing: "-0.02em" }}>
                 {val}
               </p>
               <p style={{ fontFamily: S.sans, fontSize: "0.78rem", fontWeight: 600, color: "rgba(17,24,39,0.6)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
@@ -496,7 +505,7 @@ export default function HomePage() {
       </div>
 
       {/* ── For Agents ──────────────────────────────────────────────────────── */}
-      <section id="agents" style={{ background: S.white, padding: isMobile ? "72px 20px" : "104px 48px", position: "relative", overflow: "hidden" }}>
+      <section id="agents" style={{ background: S.white, padding: isMobile ? "116px 20px 72px" : "148px 48px 104px", position: "relative", overflow: "hidden" }}>
         {/* Decorative */}
         <div style={{ position: "absolute", top: -80, right: -80, width: 320, height: 320, borderRadius: "50%", background: S.greenLight, opacity: 0.6, pointerEvents: "none" }} />
 

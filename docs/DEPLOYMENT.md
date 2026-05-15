@@ -243,13 +243,34 @@ The email server uses [Resend](https://resend.com) (free tier: 3,000 emails/mont
 ```env
 RESEND_API_KEY=re_...
 RESEND_FROM_ADDRESS=noreply@bidtolist.com
+
+# ICP wiring — needed to fetch the homeowner's email for new-proposal notifications.
+# The identity must be an admin on the listing canister.
+LISTING_CANISTER_ID=...           # local canister ID from icp canister id listing
+ICP_HOST=http://localhost:4943    # https://ic0.app for production
+EMAIL_IDENTITY_SEED=<64-char hex> # 32-byte Ed25519 secret; same generation as WEBHOOK_IDENTITY_SEED
 ```
+
+To generate a seed and add the identity as admin:
+```bash
+node -e "const {randomBytes} = require('crypto'); console.log(randomBytes(32).toString('hex'));"
+# then get its principal:
+node -e "
+const { Ed25519KeyIdentity } = require('@dfinity/identity');
+const seed = Buffer.from('<your-64-char-hex>', 'hex');
+console.log(Ed25519KeyIdentity.fromSecretKey(seed.buffer).getPrincipal().toText());
+"
+dfx canister call listing addAdmin '(principal "<email-server-principal>")' --network ic
+```
+
+If `LISTING_CANISTER_ID` or `EMAIL_IDENTITY_SEED` is not set, `POST /api/email/new-proposal`
+logs a warning and returns `{ ok: true, skipped: true }` — the proposal still succeeds.
 
 Three transactional email routes are available:
 
 | Route | Trigger |
 |---|---|
-| `POST /api/email/new-proposal` | Agent submits a proposal — notify homeowner |
+| `POST /api/email/new-proposal` | Agent submits a proposal — notify homeowner (no bid details sent) |
 | `POST /api/email/proposal-result` | Homeowner accepts/rejects — notify agent |
 | `POST /api/email/agent-verified` | Admin verifies agent account |
 

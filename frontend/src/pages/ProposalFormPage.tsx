@@ -66,15 +66,8 @@ export default function ProposalFormPage() {
       }) as any;
       if ("err" in result) { toast.error(JSON.stringify(result.err)); return; }
 
-      if (bidRequest?.homeownerEmail) {
-        const deadline = new Date(Number(bidRequest.bidDeadline) / 1_000_000).toLocaleDateString();
-        notifyNewProposal({
-          homeownerEmail: bidRequest.homeownerEmail,
-          city: bidRequest.city,
-          county: bidRequest.county,
-          proposalCount: 1,
-          deadlineDate: deadline,
-        });
+      if (requestId) {
+        notifyNewProposal(requestId);
       }
 
       toast.success("Proposal submitted! The homeowner will see it after the deadline.");

@@ -177,7 +177,6 @@ export default function MyBidsPage() {
             agentEmail: p.agentEmail,
             agentName: p.agentName,
             city: req?.city || "",
-            county: req?.county || "",
             won: p.id === proposalId,
           });
         }

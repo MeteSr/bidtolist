@@ -13,30 +13,21 @@ afterEach(() => {
 });
 
 describe("notifyNewProposal", () => {
-  it("POSTs to /api/email/new-proposal with correct body", async () => {
-    notifyNewProposal({
-      homeownerEmail: "owner@example.com",
-      city: "Daytona Beach",
-      county: "Volusia",
-      proposalCount: 3,
-      deadlineDate: "6/1/2026",
-    });
+  it("POSTs to /api/email/new-proposal with requestId", async () => {
+    notifyNewProposal("REQ_abc123");
     await new Promise(r => setTimeout(r, 0));
     expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining("/api/email/new-proposal"),
       expect.objectContaining({
         method: "POST",
-        body: expect.stringContaining("owner@example.com"),
+        body: expect.stringContaining("REQ_abc123"),
       })
     );
   });
 
   it("does not throw when fetch fails", async () => {
     mockFetch.mockRejectedValue(new Error("network error"));
-    expect(() => notifyNewProposal({
-      homeownerEmail: "owner@example.com", city: "Daytona Beach",
-      county: "Volusia", proposalCount: 1, deadlineDate: "6/1/2026",
-    })).not.toThrow();
+    expect(() => notifyNewProposal("REQ_abc123")).not.toThrow();
   });
 });
 
@@ -46,7 +37,6 @@ describe("notifyProposalResult", () => {
       agentEmail: "agent@kw.com",
       agentName: "Jane Smith",
       city: "Palm Coast",
-      county: "Flagler",
       won: true,
     });
     await new Promise(r => setTimeout(r, 0));
@@ -64,7 +54,6 @@ describe("notifyProposalResult", () => {
       agentEmail: "loser@remax.com",
       agentName: "Bob Jones",
       city: "Daytona Beach",
-      county: "Volusia",
       won: false,
     });
     await new Promise(r => setTimeout(r, 0));
@@ -79,7 +68,7 @@ describe("notifyProposalResult", () => {
   it("does not throw when fetch fails", async () => {
     mockFetch.mockRejectedValue(new Error("network error"));
     expect(() => notifyProposalResult({
-      agentEmail: "agent@kw.com", agentName: "Jane", city: "Daytona", county: "Volusia", won: true,
+      agentEmail: "agent@kw.com", agentName: "Jane", city: "Daytona", won: true,
     })).not.toThrow();
   });
 });

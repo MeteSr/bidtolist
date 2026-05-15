@@ -19,13 +19,28 @@ import Principal "mo:core/Principal";
 import Result   "mo:core/Result";
 import Text     "mo:core/Text";
 import Time     "mo:core/Time";
+import Timer    "mo:base/Timer";
 
 persistent actor Listing {
 
   // ─── Types ──────────────────────────────────────────────────────────────────
 
   public type BidRequestStatus = { #Open; #Awarded; #Cancelled };
-  public type ProposalStatus   = { #Pending; #Accepted; #Rejected; #Withdrawn };
+  public type ProposalStatus   = { #Pending; #Accepted; #Rejected; #Withdrawn; #Standby };
+
+  // Cascade state for a single request: payment deadline for the current winner
+  // and the ordered list of backup proposal IDs not yet offered.
+  // deadline = 0 means cascade is inactive (paid or exhausted).
+  public type CascadeState = {
+    deadline : Int;
+    backups  : [Text];
+  };
+
+  public type PendingNotification = {
+    id        : Text;
+    requestId : Text;
+    createdAt : Int;
+  };
 
   public type Error = {
     #NotFound;
@@ -123,6 +138,15 @@ persistent actor Listing {
   private let verifiedHomeowners    = Map.empty<Principal, Bool>();
   private let verificationRequests  = Map.empty<Text, HomeownerVerificationRequest>();
   private var verificationCounter:  Nat = 0;
+
+  // ─── Cascade State ────────────────────────────────────────────────────────────
+
+  private let HOURS_NS : Int = 3_600_000_000_000;
+
+  private let cascadeState          = Map.empty<Text, CascadeState>();
+  private let pendingNotifications  = Map.empty<Text, PendingNotification>();
+  private var notificationCounter : Nat  = 0;
+  private var cascadeTimerSet     : Bool = false;
 
   // ─── Rate Limit ──────────────────────────────────────────────────────────────
 
@@ -269,7 +293,7 @@ persistent actor Listing {
             zipCode = r.zipCode; homeowner = r.homeowner; homeownerEmail = "";
             targetListDate = r.targetListDate; desiredSalePrice = r.desiredSalePrice;
             notes = r.notes; bidDeadline = r.bidDeadline;
-            status = r.status; createdAt = r.createdAt;
+            status = r.status; createdAt = r.createdAt; feePaid = false;
           })
         }
       };
@@ -410,11 +434,111 @@ persistent actor Listing {
     )
   };
 
+  // ─── Cascade Timer ────────────────────────────────────────────────────────────
+
+  private func ensureCascadeTimer<system>() : () {
+    if (not cascadeTimerSet) {
+      ignore Timer.recurringTimer<system>(#seconds(60), _cascadeCheck);
+      cascadeTimerSet := true;
+    };
+  };
+
+  /// Timer callback fired every 60 seconds. Advances cascade for any request
+  /// whose current payment window has expired without feePaid = true.
+  public shared func _cascadeCheck() : async () {
+    let now = Time.now();
+    for ((requestId, state) in Map.entries(cascadeState)) {
+      if (state.deadline > 0 and now >= state.deadline) {
+        switch (Map.get(requests, Text.compare, requestId)) {
+          case null {
+            Map.add(cascadeState, Text.compare, requestId, { deadline = 0; backups = [] });
+          };
+          case (?req) {
+            if (req.feePaid) {
+              Map.add(cascadeState, Text.compare, requestId, { deadline = 0; backups = [] });
+            } else {
+              await advanceCascade(requestId, req, state);
+            };
+          };
+        };
+      };
+    };
+  };
+
+  private func rejectCurrentWinner(requestId: Text) : () {
+    for ((pid, p) in Map.entries(proposals)) {
+      if (p.requestId == requestId and p.status == #Accepted) {
+        Map.add(proposals, Text.compare, pid, {
+          id = p.id; requestId = p.requestId; agentId = p.agentId;
+          agentName = p.agentName; agentEmail = p.agentEmail; agentBrokerage = p.agentBrokerage;
+          commissionBps = p.commissionBps; cmaSummary = p.cmaSummary;
+          marketingPlan = p.marketingPlan; estimatedDaysOnMarket = p.estimatedDaysOnMarket;
+          estimatedSalePrice = p.estimatedSalePrice; includedServices = p.includedServices;
+          validUntil = p.validUntil; coverLetter = p.coverLetter;
+          status = #Rejected; createdAt = p.createdAt;
+        });
+      };
+    };
+  };
+
+  private func advanceCascade(requestId: Text, req: ListingBidRequest, state: CascadeState) : async () {
+    if (state.backups.size() == 0) {
+      // All backups exhausted without payment — reopen the listing and notify homeowner.
+      Map.add(requests, Text.compare, requestId, {
+        id = req.id; address = req.address; city = req.city;
+        county = req.county; zipCode = req.zipCode;
+        homeowner = req.homeowner; homeownerEmail = req.homeownerEmail;
+        targetListDate = req.targetListDate; desiredSalePrice = req.desiredSalePrice;
+        notes = req.notes; bidDeadline = req.bidDeadline;
+        status = #Open; createdAt = req.createdAt; feePaid = false;
+      });
+      notificationCounter += 1;
+      let nid = "NOTIF_" # Nat.toText(notificationCounter);
+      Map.add(pendingNotifications, Text.compare, nid, {
+        id = nid; requestId; createdAt = Time.now();
+      });
+      Map.add(cascadeState, Text.compare, requestId, { deadline = 0; backups = [] });
+    } else {
+      // Promote the next backup to #Accepted.
+      let nextId   = state.backups[0];
+      let remaining = Array.tabulate<Text>(state.backups.size() - 1, func(i) { state.backups[i + 1] });
+      rejectCurrentWinner(requestId);
+      switch (Map.get(proposals, Text.compare, nextId)) {
+        case null {};
+        case (?backup) {
+          Map.add(proposals, Text.compare, nextId, {
+            id = backup.id; requestId = backup.requestId; agentId = backup.agentId;
+            agentName = backup.agentName; agentEmail = backup.agentEmail;
+            agentBrokerage = backup.agentBrokerage; commissionBps = backup.commissionBps;
+            cmaSummary = backup.cmaSummary; marketingPlan = backup.marketingPlan;
+            estimatedDaysOnMarket = backup.estimatedDaysOnMarket;
+            estimatedSalePrice = backup.estimatedSalePrice;
+            includedServices = backup.includedServices; validUntil = backup.validUntil;
+            coverLetter = backup.coverLetter; status = #Accepted; createdAt = backup.createdAt;
+          });
+          if (feeCanisterId != "") {
+            let feeActor = actor(feeCanisterId) : actor {
+              recordFeeOwed : (Text, Text, Principal, Principal, Nat) -> async ();
+            };
+            ignore feeActor.recordFeeOwed(requestId, nextId, backup.agentId, req.homeowner, platformFeeCents);
+          };
+        };
+      };
+      // Next window: 3 h if there is still a backup waiting, 2 h if this is the last.
+      let nextWindowH : Int = if (remaining.size() > 0) { 3 } else { 2 };
+      Map.add(cascadeState, Text.compare, requestId, {
+        deadline = Time.now() + nextWindowH * HOURS_NS;
+        backups  = remaining;
+      });
+    };
+  };
+
   // ─── Accept a Proposal ───────────────────────────────────────────────────────
 
-  /// Accept a proposal: marks winner Accepted, rejects all others, awards the request,
-  /// and records a platform fee in the fee canister.
-  public shared(msg) func acceptProposal(proposalId: Text) : async Result.Result<(), Error> {
+  /// Accept a proposal. `backups` is an ordered list of up to 2 proposal IDs for the
+  /// same request that serve as cascade fallbacks (2nd and 3rd place). Passing [] is
+  /// backwards-compatible and disables the cascade for this acceptance.
+  public shared(msg) func acceptProposal(proposalId: Text, backups: [Text]) : async Result.Result<(), Error> {
     switch (requireActive(msg.caller)) { case (#err(e)) return #err(e); case _ {} };
 
     switch (Map.get(proposals, Text.compare, proposalId)) {
@@ -438,19 +562,34 @@ persistent actor Listing {
               coverLetter = winner.coverLetter; status = #Accepted; createdAt = winner.createdAt;
             });
 
-            // Reject all other pending proposals on this request
+            // Validate backups: must belong to this request, must not be the winner, max 2.
+            if (backups.size() > 2) return #err(#InvalidInput("At most 2 backup proposals allowed"));
+            for (bid in backups.vals()) {
+              if (bid == winner.id) return #err(#InvalidInput("Winner cannot also be a backup"));
+              switch (Map.get(proposals, Text.compare, bid)) {
+                case null    { return #err(#NotFound) };
+                case (?bp)   { if (bp.requestId != winner.requestId) return #err(#InvalidInput("Backup proposal belongs to a different request")) };
+              };
+            };
+
+            // Mark backups as #Standby; reject all other pending proposals.
+            let backupSet = backups;
             for ((pid, p) in Map.entries(proposals)) {
-              if (p.requestId == winner.requestId and p.id != winner.id and p.status == #Pending) {
-                Map.add(proposals, Text.compare, pid, {
-                  id = p.id; requestId = p.requestId; agentId = p.agentId;
-                  agentName = p.agentName; agentEmail = p.agentEmail; agentBrokerage = p.agentBrokerage;
-                  commissionBps = p.commissionBps; cmaSummary = p.cmaSummary;
-                  marketingPlan = p.marketingPlan;
-                  estimatedDaysOnMarket = p.estimatedDaysOnMarket;
-                  estimatedSalePrice = p.estimatedSalePrice;
-                  includedServices = p.includedServices; validUntil = p.validUntil;
-                  coverLetter = p.coverLetter; status = #Rejected; createdAt = p.createdAt;
-                });
+              if (p.requestId == winner.requestId and p.id != winner.id) {
+                let isBackup = Option.isSome(Array.find<Text>(backupSet, func(b) { b == pid }));
+                let newStatus : ProposalStatus = if (isBackup) { #Standby } else if (p.status == #Pending) { #Rejected } else { p.status };
+                if (newStatus != p.status) {
+                  Map.add(proposals, Text.compare, pid, {
+                    id = p.id; requestId = p.requestId; agentId = p.agentId;
+                    agentName = p.agentName; agentEmail = p.agentEmail; agentBrokerage = p.agentBrokerage;
+                    commissionBps = p.commissionBps; cmaSummary = p.cmaSummary;
+                    marketingPlan = p.marketingPlan;
+                    estimatedDaysOnMarket = p.estimatedDaysOnMarket;
+                    estimatedSalePrice = p.estimatedSalePrice;
+                    includedServices = p.includedServices; validUntil = p.validUntil;
+                    coverLetter = p.coverLetter; status = newStatus; createdAt = p.createdAt;
+                  });
+                };
               };
             };
 
@@ -473,6 +612,15 @@ persistent actor Listing {
               ignore feeActor.recordFeeOwed(
                 req.id, winner.id, winner.agentId, req.homeowner, platformFeeCents
               );
+            };
+
+            // Start cascade: winner has 12 h to pay before backups are offered.
+            if (backups.size() > 0) {
+              Map.add(cascadeState, Text.compare, req.id, {
+                deadline = Time.now() + 12 * HOURS_NS;
+                backups  = backups;
+              });
+              ensureCascadeTimer<system>();
             };
 
             #ok(())
@@ -526,9 +674,27 @@ persistent actor Listing {
           bidDeadline = req.bidDeadline; status = req.status; createdAt = req.createdAt;
           feePaid = true;
         });
+        // Deactivate cascade — payment confirmed.
+        Map.add(cascadeState, Text.compare, requestId, { deadline = 0; backups = [] });
         #ok(())
       };
     }
+  };
+
+  // ─── Cascade Notifications ───────────────────────────────────────────────────
+
+  /// Email server polls this (using its admin identity) to find requests where all
+  /// backup agents failed to pay. Returns all pending notifications.
+  public shared(msg) func getPendingNotifications() : async [PendingNotification] {
+    if (not isAdmin(msg.caller)) return [];
+    Iter.toArray(Map.values(pendingNotifications))
+  };
+
+  /// Called by the email server after it has sent the notification email.
+  public shared(msg) func clearNotification(id: Text) : async Result.Result<(), Error> {
+    if (not isAdmin(msg.caller)) return #err(#NotAuthorized);
+    Map.add(pendingNotifications, Text.compare, id, { id = ""; requestId = ""; createdAt = 0 });
+    #ok(())
   };
 
   // ─── Admin Controls ───────────────────────────────────────────────────────────
