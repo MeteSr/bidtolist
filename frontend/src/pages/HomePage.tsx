@@ -244,96 +244,14 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Right — listing UI mockup */}
+          {/* Right — hero illustration */}
           {!isMobile && (
-            <div style={{ display: "flex", justifyContent: "center", position: "relative" }}>
-              {/* Main card */}
-              <div style={{
-                background:   S.white,
-                borderRadius: 20,
-                boxShadow:    "0 20px 60px rgba(0,0,0,0.12)",
-                padding:      "28px 28px 24px",
-                width:        "100%",
-                maxWidth:     360,
-              }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-                  <span style={{ fontFamily: S.sans, fontSize: "0.75rem", fontWeight: 700, color: S.muted, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                    Open Listing
-                  </span>
-                  <span style={{
-                    background:   S.greenLight,
-                    color:        S.green,
-                    fontFamily:   S.sans,
-                    fontSize:     "0.72rem",
-                    fontWeight:   700,
-                    padding:      "4px 12px",
-                    borderRadius: 100,
-                  }}>
-                    ● Active
-                  </span>
-                </div>
-
-                <p style={{ fontFamily: S.sans, fontSize: "1.15rem", fontWeight: 800, color: S.dark, marginBottom: 4, letterSpacing: "-0.01em" }}>
-                  147 Ocean Shore Blvd
-                </p>
-                <p style={{ fontFamily: S.sans, fontSize: "0.85rem", color: S.muted, marginBottom: 20 }}>
-                  Austin, TX · 78701
-                </p>
-
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
-                  {[
-                    { label: "Proposals", val: "4 / 10", color: S.blue },
-                    { label: "Closes in", val: "3 days",  color: S.peach },
-                  ].map(({ label, val, color }) => (
-                    <div key={label} style={{ background: S.bg, borderRadius: 12, padding: "14px 16px" }}>
-                      <p style={{ fontFamily: S.sans, fontSize: "0.7rem", fontWeight: 600, color: S.muted, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</p>
-                      <p style={{ fontFamily: S.sans, fontSize: "1.25rem", fontWeight: 800, color }}>{val}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <div style={{ background: S.blue, borderRadius: 12, padding: "16px 18px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div>
-                    <p style={{ fontFamily: S.sans, fontSize: "0.7rem", fontWeight: 600, color: "rgba(255,255,255,0.6)", marginBottom: 2, textTransform: "uppercase", letterSpacing: "0.06em" }}>Best proposal so far</p>
-                    <p style={{ fontFamily: S.sans, fontSize: "1.1rem", fontWeight: 800, color: S.white }}>2.4% commission</p>
-                  </div>
-                  <span style={{ fontSize: "1.5rem" }}>🏆</span>
-                </div>
-              </div>
-
-              {/* Floating chip — top right */}
-              <div style={{
-                position:     "absolute",
-                top:          -18,
-                right:        -18,
-                background:   S.yellow,
-                borderRadius: 12,
-                padding:      "10px 16px",
-                boxShadow:    "0 8px 24px rgba(245,200,66,0.35)",
-                display:      "flex",
-                alignItems:   "center",
-                gap:          8,
-              }}>
-                <span style={{ fontSize: "1.1rem" }}>$0</span>
-                <span style={{ fontFamily: S.sans, fontSize: "0.72rem", fontWeight: 700, color: S.dark }}>Free for homeowners</span>
-              </div>
-
-              {/* Floating chip — bottom left */}
-              <div style={{
-                position:     "absolute",
-                bottom:       -18,
-                left:         -18,
-                background:   S.white,
-                borderRadius: 12,
-                padding:      "10px 16px",
-                boxShadow:    "0 8px 24px rgba(0,0,0,0.1)",
-                display:      "flex",
-                alignItems:   "center",
-                gap:          8,
-              }}>
-                <span style={{ fontSize: "1.1rem" }}>🔒</span>
-                <span style={{ fontFamily: S.sans, fontSize: "0.72rem", fontWeight: 700, color: S.dark }}>Blind bidding</span>
-              </div>
+            <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+              <img
+                src="/logo_with_hand.png"
+                alt="Agent raising a bid paddle"
+                style={{ width: "100%", maxWidth: 420, height: "auto", display: "block" }}
+              />
             </div>
           )}
         </div>
