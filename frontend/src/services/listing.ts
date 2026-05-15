@@ -17,13 +17,15 @@ export const idlFactory = ({ IDL }: any) => {
   const BidRequestSummary = IDL.Record({
     id: IDL.Text, city: IDL.Text, county: IDL.Text, zipCode: IDL.Text,
     targetListDate: IDL.Int, desiredSalePrice: IDL.Opt(IDL.Nat),
+    beds: IDL.Opt(IDL.Nat), baths: IDL.Opt(IDL.Nat), sqft: IDL.Opt(IDL.Nat),
     notes: IDL.Text, bidDeadline: IDL.Int, status: BidRequestStatus,
     createdAt: IDL.Int, proposalCount: IDL.Nat,
   });
   const ListingBidRequest = IDL.Record({
     id: IDL.Text, address: IDL.Text, city: IDL.Text, county: IDL.Text, zipCode: IDL.Text,
     homeowner: IDL.Principal, homeownerEmail: IDL.Text, targetListDate: IDL.Int,
-    desiredSalePrice: IDL.Opt(IDL.Nat), notes: IDL.Text, bidDeadline: IDL.Int,
+    desiredSalePrice: IDL.Opt(IDL.Nat), beds: IDL.Opt(IDL.Nat), baths: IDL.Opt(IDL.Nat),
+    sqft: IDL.Opt(IDL.Nat), notes: IDL.Text, bidDeadline: IDL.Int,
     status: BidRequestStatus, createdAt: IDL.Int, feePaid: IDL.Bool,
   });
   const ListingProposal = IDL.Record({
@@ -40,7 +42,7 @@ export const idlFactory = ({ IDL }: any) => {
   const Result = (ok: any) => IDL.Variant({ ok, err: Error });
 
   return IDL.Service({
-    createBidRequest:                IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Int, IDL.Opt(IDL.Nat), IDL.Text, IDL.Int, IDL.Text], [Result(ListingBidRequest)], []),
+    createBidRequest:                IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Int, IDL.Opt(IDL.Nat), IDL.Opt(IDL.Nat), IDL.Opt(IDL.Nat), IDL.Opt(IDL.Nat), IDL.Text, IDL.Int, IDL.Text], [Result(ListingBidRequest)], []),
     getMyBidRequests:                IDL.Func([], [IDL.Vec(ListingBidRequest)], ["query"]),
     getBidRequest:                   IDL.Func([IDL.Text], [Result(ListingBidRequest)], ["query"]),
     cancelBidRequest:                IDL.Func([IDL.Text], [Result(IDL.Null)], []),
@@ -70,6 +72,7 @@ async function getActor() {
 export type BidRequestSummary = {
   id: string; city: string; county: string; zipCode: string;
   targetListDate: bigint; desiredSalePrice: [] | [bigint];
+  beds: [] | [bigint]; baths: [] | [bigint]; sqft: [] | [bigint];
   notes: string; bidDeadline: bigint; status: { Open: null } | { Awarded: null } | { Cancelled: null };
   createdAt: bigint; proposalCount: bigint;
 };
@@ -83,8 +86,9 @@ function mockProposals(): any[] { return (typeof window !== "undefined" && (wind
 
 export async function createBidRequest(args: {
   address: string; city: string; county: string; zipCode: string;
-  targetListDate: number; desiredSalePrice?: number; notes: string; bidDeadline: number;
-  homeownerEmail: string;
+  targetListDate: number; desiredSalePrice?: number;
+  beds?: number; baths?: number; sqft?: number;
+  notes: string; bidDeadline: number; homeownerEmail: string;
 }) {
   if (!CANISTER_ID) {
     if (!(window as any).__e2e_requests) (window as any).__e2e_requests = [];
@@ -96,6 +100,7 @@ export async function createBidRequest(args: {
   return a.createBidRequest(
     args.address, args.city, args.county, args.zipCode,
     BigInt(args.targetListDate), args.desiredSalePrice ? [args.desiredSalePrice] : [],
+    args.beds ? [args.beds] : [], args.baths ? [args.baths] : [], args.sqft ? [args.sqft] : [],
     args.notes, BigInt(args.bidDeadline), args.homeownerEmail
   );
 }

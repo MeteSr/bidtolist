@@ -66,6 +66,9 @@ persistent actor Listing {
     zipCode:          Text;
     targetListDate:   Time.Time;
     desiredSalePrice: ?Nat;
+    beds:             ?Nat;
+    baths:            ?Nat;
+    sqft:             ?Nat;
     notes:            Text;
     bidDeadline:      Time.Time;
     status:           BidRequestStatus;
@@ -83,6 +86,9 @@ persistent actor Listing {
     homeownerEmail:   Text;
     targetListDate:   Time.Time;
     desiredSalePrice: ?Nat;
+    beds:             ?Nat;
+    baths:            ?Nat;
+    sqft:             ?Nat;
     notes:            Text;
     bidDeadline:      Time.Time;
     status:           BidRequestStatus;
@@ -227,6 +233,9 @@ persistent actor Listing {
     zipCode:          Text,
     targetListDate:   Int,
     desiredSalePrice: ?Nat,
+    beds:             ?Nat,
+    baths:            ?Nat,
+    sqft:             ?Nat,
     notes:            Text,
     bidDeadline:      Int,
     homeownerEmail:   Text
@@ -257,6 +266,9 @@ persistent actor Listing {
       homeownerEmail;
       targetListDate;
       desiredSalePrice;
+      beds;
+      baths;
+      sqft;
       notes;
       bidDeadline;
       status           = #Open;
@@ -293,6 +305,7 @@ persistent actor Listing {
             id = r.id; address = ""; city = r.city; county = r.county;
             zipCode = r.zipCode; homeowner = r.homeowner; homeownerEmail = "";
             targetListDate = r.targetListDate; desiredSalePrice = r.desiredSalePrice;
+            beds = r.beds; baths = r.baths; sqft = r.sqft;
             notes = r.notes; bidDeadline = r.bidDeadline;
             status = r.status; createdAt = r.createdAt; feePaid = false;
           })
@@ -314,7 +327,9 @@ persistent actor Listing {
           county = req.county; zipCode = req.zipCode;
           homeowner = req.homeowner; homeownerEmail = req.homeownerEmail;
           targetListDate = req.targetListDate;
-          desiredSalePrice = req.desiredSalePrice; notes = req.notes;
+          desiredSalePrice = req.desiredSalePrice;
+          beds = req.beds; baths = req.baths; sqft = req.sqft;
+          notes = req.notes;
           bidDeadline = req.bidDeadline; status = #Cancelled; createdAt = req.createdAt;
           feePaid = req.feePaid;
         });
@@ -339,6 +354,9 @@ persistent actor Listing {
         zipCode          = r.zipCode;
         targetListDate   = r.targetListDate;
         desiredSalePrice = r.desiredSalePrice;
+        beds             = r.beds;
+        baths            = r.baths;
+        sqft             = r.sqft;
         notes            = r.notes;
         bidDeadline      = r.bidDeadline;
         status           = r.status;
@@ -486,6 +504,7 @@ persistent actor Listing {
         county = req.county; zipCode = req.zipCode;
         homeowner = req.homeowner; homeownerEmail = req.homeownerEmail;
         targetListDate = req.targetListDate; desiredSalePrice = req.desiredSalePrice;
+        beds = req.beds; baths = req.baths; sqft = req.sqft;
         notes = req.notes; bidDeadline = req.bidDeadline;
         status = #Open; createdAt = req.createdAt; feePaid = false;
       });
@@ -596,7 +615,9 @@ persistent actor Listing {
               county = req.county; zipCode = req.zipCode;
               homeowner = req.homeowner; homeownerEmail = req.homeownerEmail;
               targetListDate = req.targetListDate;
-              desiredSalePrice = req.desiredSalePrice; notes = req.notes;
+              desiredSalePrice = req.desiredSalePrice;
+              beds = req.beds; baths = req.baths; sqft = req.sqft;
+              notes = req.notes;
               bidDeadline = req.bidDeadline; status = #Awarded; createdAt = req.createdAt;
               feePaid = false;
             });
@@ -666,7 +687,9 @@ persistent actor Listing {
           county = req.county; zipCode = req.zipCode;
           homeowner = req.homeowner; homeownerEmail = req.homeownerEmail;
           targetListDate = req.targetListDate;
-          desiredSalePrice = req.desiredSalePrice; notes = req.notes;
+          desiredSalePrice = req.desiredSalePrice;
+          beds = req.beds; baths = req.baths; sqft = req.sqft;
+          notes = req.notes;
           bidDeadline = req.bidDeadline; status = req.status; createdAt = req.createdAt;
           feePaid = true;
         });

@@ -94,7 +94,13 @@ export default function BrowseListingsPage() {
                   {req.city}, {req.county} County · {req.zipCode}
                 </p>
                 <p style={{ fontFamily: S.mono, fontSize: "0.7rem", color: S.inkLight, letterSpacing: "0.06em" }}>
-                  {req.desiredSalePrice?.length > 0 ? `Target: $${(Number(req.desiredSalePrice[0]) / 100).toLocaleString()} · ` : ""}
+                  {req.desiredSalePrice?.length > 0 ? `$${(Number(req.desiredSalePrice[0]) / 100).toLocaleString()} · ` : ""}
+                  {[
+                    req.beds?.length  > 0 ? `${Number(req.beds[0])} bd`  : null,
+                    req.baths?.length > 0 ? `${Number(req.baths[0])} ba` : null,
+                    req.sqft?.length  > 0 ? `${Number(req.sqft[0]).toLocaleString()} sqft` : null,
+                  ].filter(Boolean).join(" · ")}
+                  {(req.beds?.length > 0 || req.baths?.length > 0 || req.sqft?.length > 0) ? " · " : ""}
                   {formatCountdown(req.bidDeadline)} · {count} / {MAX_PROPOSALS} bids
                 </p>
                 {req.notes && (

@@ -19,8 +19,8 @@ export default function PostListingPage() {
   const [verifiedState, setVerifiedState] = useState<"loading" | "verified" | "unverified">("loading");
   const [form, setForm] = useState({
     address: "", city: "", county: "Volusia", zipCode: "",
-    targetListDate: "", desiredSalePrice: "", notes: "", bidDeadlineHours: "168",
-    contactEmail: "",
+    targetListDate: "", desiredSalePrice: "", beds: "", baths: "", sqft: "",
+    notes: "", bidDeadlineHours: "168", contactEmail: "",
   });
 
   useEffect(() => {
@@ -41,6 +41,9 @@ export default function PostListingPage() {
         address: form.address, city: form.city, county: form.county, zipCode: form.zipCode,
         targetListDate: new Date(form.targetListDate).getTime(),
         desiredSalePrice: form.desiredSalePrice ? parseInt(form.desiredSalePrice) * 100 : undefined,
+        beds:  form.beds  ? parseInt(form.beds)  : undefined,
+        baths: form.baths ? parseInt(form.baths) : undefined,
+        sqft:  form.sqft  ? parseInt(form.sqft)  : undefined,
         notes: form.notes, bidDeadline: deadline,
         homeownerEmail: form.contactEmail,
       }) as any;
@@ -124,6 +127,24 @@ export default function PostListingPage() {
 
           {field("Target List Date", "targetListDate", "date")}
           {field("Desired Sale Price (optional)", "desiredSalePrice", "number", "350000")}
+
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr", gap: 16, marginBottom: 24 }}>
+            <div>
+              <label htmlFor="field-beds" style={LBL}>Bedrooms</label>
+              <input id="field-beds" type="number" min="0" value={form.beds} placeholder="3"
+                onChange={e => set("beds", e.target.value)} style={INP} />
+            </div>
+            <div>
+              <label htmlFor="field-baths" style={LBL}>Bathrooms</label>
+              <input id="field-baths" type="number" min="0" value={form.baths} placeholder="2"
+                onChange={e => set("baths", e.target.value)} style={INP} />
+            </div>
+            <div style={isMobile ? { gridColumn: "1 / -1" } : {}}>
+              <label htmlFor="field-sqft" style={LBL}>Sq Ft</label>
+              <input id="field-sqft" type="number" min="0" value={form.sqft} placeholder="1800"
+                onChange={e => set("sqft", e.target.value)} style={INP} />
+            </div>
+          </div>
 
           <div style={{ marginBottom: 24 }}>
             <label htmlFor="field-notes" style={LBL}>Notes for Agents</label>
