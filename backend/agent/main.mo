@@ -110,10 +110,16 @@ persistent actor Agent {
   // ─── Stable State ─────────────────────────────────────────────────────────────
 
   private func textLower(t: Text) : Text {
-    Text.fromIter(Iter.map(Text.toIter(t), func(c: Char) : Char { Char.toLowercase(c) }))
+    Text.fromIter(Iter.map(Text.toIter(t), func(c: Char) : Char {
+      let n = Char.toNat32(c);
+      if (n >= 65 and n <= 90) { Char.fromNat32(n + 32) } else { c }
+    }))
   };
   private func textUpper(t: Text) : Text {
-    Text.fromIter(Iter.map(Text.toIter(t), func(c: Char) : Char { Char.toUppercase(c) }))
+    Text.fromIter(Iter.map(Text.toIter(t), func(c: Char) : Char {
+      let n = Char.toNat32(c);
+      if (n >= 97 and n <= 122) { Char.fromNat32(n - 32) } else { c }
+    }))
   };
 
   private var isPaused:           Bool        = false;

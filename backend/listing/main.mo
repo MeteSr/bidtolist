@@ -370,7 +370,10 @@ persistent actor Listing {
   /// Returns open listings whose city matches any of the provided cities (case-insensitive).
   public query func getOpenBidRequestsForCities(cities: [Text]) : async [BidRequestSummary] {
     let lower = func(t: Text) : Text {
-      Text.fromIter(Iter.map(Text.toIter(t), func(c: Char) : Char { Char.toLowercase(c) }))
+      Text.fromIter(Iter.map(Text.toIter(t), func(c: Char) : Char {
+        let n = Char.toNat32(c);
+        if (n >= 65 and n <= 90) { Char.fromNat32(n + 32) } else { c }
+      }))
     };
     let normalised = Array.map<Text, Text>(cities, lower);
     let open = Iter.filter(Map.values(requests), func(r: ListingBidRequest) : Bool {
