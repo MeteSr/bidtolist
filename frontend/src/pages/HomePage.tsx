@@ -89,15 +89,9 @@ export default function HomePage() {
         boxShadow:      "0 1px 12px rgba(0,0,0,0.06)",
       }}>
         {/* Logo */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <div style={{ display: "flex", gap: 3 }}>
-            <span style={{ display: "inline-block", width: 4, height: 18, background: S.green, borderRadius: 2 }} />
-            <span style={{ display: "inline-block", width: 4, height: 18, background: S.yellow, borderRadius: 2 }} />
-          </div>
-          <span style={{ fontFamily: S.sans, fontSize: "1.2rem", fontWeight: 800, color: S.dark, letterSpacing: "-0.02em" }}>
-            BidtoList
-          </span>
-        </div>
+        <a href="/" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}>
+          <img src="/bid_to_list_logo.png" alt="BidtoList" style={{ height: 40, width: "auto", display: "block" }} />
+        </a>
 
         <div style={{ display: "flex", gap: isMobile ? 12 : 32, alignItems: "center" }}>
           {!isMobile && (
@@ -489,10 +483,10 @@ export default function HomePage() {
       }}>
         <div style={{ display: "flex", gap: isMobile ? 40 : 0, flexWrap: "wrap", justifyContent: "space-around", alignItems: "center" }}>
           {[
-            { val: "$0",   label: "Cost for Homeowners" },
-            { val: "$295", label: "Cost For Winning Agent" },
-          ].map(({ val, label }) => (
-            <div key={label} style={{ textAlign: "center" }}>
+            { val: "$0",   label: "Cost for Homeowners",  testId: "stat-homeowner-cost" },
+            { val: "$295", label: "Cost For Winning Agent", testId: "stat-agent-fee" },
+          ].map(({ val, label, testId }) => (
+            <div key={label} data-testid={testId} style={{ textAlign: "center" }}>
               <p style={{ fontFamily: S.sans, fontSize: "clamp(1.6rem,3vw,2.4rem)", fontWeight: 800, color: S.dark, marginBottom: 4, letterSpacing: "-0.02em" }}>
                 {val}
               </p>

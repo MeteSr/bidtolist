@@ -117,7 +117,7 @@ export default function AgentRegisterPage() {
   return (
     <div style={{ background: S.paper, minHeight: "100vh" }}>
       <nav style={{ borderBottom: `1px solid ${S.rule}`, padding: navPad }}>
-        <a href="/" style={{ fontFamily: S.serif, fontSize: "1.1rem", fontWeight: 900, color: S.rust, textDecoration: "none" }}>BidtoList</a>
+        <a href="/" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}><img src="/bid_to_list_logo.png" alt="BidtoList" style={{ height: 36, width: "auto", display: "block" }} /></a>
       </nav>
 
       {pageState === "loading" && (

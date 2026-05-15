@@ -19,7 +19,7 @@ import Principal "mo:core/Principal";
 import Result   "mo:core/Result";
 import Text     "mo:core/Text";
 import Time     "mo:core/Time";
-import Timer    "mo:base/Timer";
+
 
 persistent actor Listing {
 
@@ -145,8 +145,9 @@ persistent actor Listing {
 
   private let cascadeState          = Map.empty<Text, CascadeState>();
   private let pendingNotifications  = Map.empty<Text, PendingNotification>();
-  private var notificationCounter : Nat  = 0;
-  private var cascadeTimerSet     : Bool = false;
+  private var notificationCounter : Nat = 0;
+  private var heartbeatTick       : Nat = 0;
+  private let CASCADE_CHECK_INTERVAL : Nat = 60; // ~60 seconds at ~1 tick/sec
 
   // ─── Rate Limit ──────────────────────────────────────────────────────────────
 
@@ -434,18 +435,14 @@ persistent actor Listing {
     )
   };
 
-  // ─── Cascade Timer ────────────────────────────────────────────────────────────
+  // ─── Cascade Heartbeat ───────────────────────────────────────────────────────
+  // Runs on every consensus round (~1 s) but only does real work every
+  // CASCADE_CHECK_INTERVAL rounds (~60 s). Advances the payment cascade for any
+  // request whose current window has expired without feePaid = true.
 
-  private func ensureCascadeTimer<system>() : () {
-    if (not cascadeTimerSet) {
-      ignore Timer.recurringTimer<system>(#seconds(60), _cascadeCheck);
-      cascadeTimerSet := true;
-    };
-  };
-
-  /// Timer callback fired every 60 seconds. Advances cascade for any request
-  /// whose current payment window has expired without feePaid = true.
-  public shared func _cascadeCheck() : async () {
+  system func heartbeat() : async () {
+    heartbeatTick += 1;
+    if (heartbeatTick % CASCADE_CHECK_INTERVAL != 0) return;
     let now = Time.now();
     for ((requestId, state) in Map.entries(cascadeState)) {
       if (state.deadline > 0 and now >= state.deadline) {
@@ -620,7 +617,6 @@ persistent actor Listing {
                 deadline = Time.now() + 12 * HOURS_NS;
                 backups  = backups;
               });
-              ensureCascadeTimer<system>();
             };
 
             #ok(())

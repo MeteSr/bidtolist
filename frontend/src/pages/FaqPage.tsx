@@ -178,14 +178,8 @@ export default function FaqPage() {
         zIndex:       100,
         boxShadow:    "0 1px 12px rgba(0,0,0,0.06)",
       }}>
-        <Link to="/" style={{ display: "flex", alignItems: "center", gap: 6, textDecoration: "none" }}>
-          <div style={{ display: "flex", gap: 3 }}>
-            <span style={{ display: "inline-block", width: 4, height: 18, background: S.green, borderRadius: 2 }} />
-            <span style={{ display: "inline-block", width: 4, height: 18, background: S.yellow, borderRadius: 2 }} />
-          </div>
-          <span style={{ fontFamily: S.sans, fontSize: "1.2rem", fontWeight: 800, color: S.dark, letterSpacing: "-0.02em" }}>
-            BidtoList
-          </span>
+        <Link to="/" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}>
+          <img src="/bid_to_list_logo.png" alt="BidtoList" style={{ height: 40, width: "auto", display: "block" }} />
         </Link>
         <Link
           to="/"
