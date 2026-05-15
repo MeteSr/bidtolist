@@ -10,6 +10,7 @@
  */
 
 import Array    "mo:core/Array";
+import Char     "mo:core/Char";
 import Map      "mo:core/Map";
 import Int      "mo:core/Int";
 import Iter     "mo:core/Iter";
@@ -368,10 +369,13 @@ persistent actor Listing {
 
   /// Returns open listings whose city matches any of the provided cities (case-insensitive).
   public query func getOpenBidRequestsForCities(cities: [Text]) : async [BidRequestSummary] {
-    let normalised = Array.map<Text, Text>(cities, func(c) { Text.toLowercase(c) });
+    let lower = func(t: Text) : Text {
+      Text.fromIter(Iter.map(Text.toIter(t), func(c: Char) : Char { Char.toLowercase(c) }))
+    };
+    let normalised = Array.map<Text, Text>(cities, lower);
     let open = Iter.filter(Map.values(requests), func(r: ListingBidRequest) : Bool {
       r.status == #Open and
-      Option.isSome(Array.find<Text>(normalised, func(c) { c == Text.toLowercase(r.city) }))
+      Option.isSome(Array.find<Text>(normalised, func(c) { c == lower(r.city) }))
     });
     Iter.toArray(Iter.map(open, func(r: ListingBidRequest) : BidRequestSummary {
       let count = Iter.size(Iter.filter(Map.values(proposals), func(p: ListingProposal) : Bool {

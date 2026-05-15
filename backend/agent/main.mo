@@ -6,6 +6,7 @@
  */
 
 import Array     "mo:core/Array";
+import Char      "mo:core/Char";
 import Map       "mo:core/Map";
 import Int       "mo:core/Int";
 import Iter      "mo:core/Iter";
@@ -108,6 +109,13 @@ persistent actor Agent {
 
   // ─── Stable State ─────────────────────────────────────────────────────────────
 
+  private func textLower(t: Text) : Text {
+    Text.fromIter(Iter.map(Text.toIter(t), func(c: Char) : Char { Char.toLowercase(c) }))
+  };
+  private func textUpper(t: Text) : Text {
+    Text.fromIter(Iter.map(Text.toIter(t), func(c: Char) : Char { Char.toUppercase(c) }))
+  };
+
   private var isPaused:           Bool        = false;
   private var pauseExpiryNs:      ?Int        = null;
   private var adminListEntries:   [Principal] = [];
@@ -204,10 +212,10 @@ persistent actor Agent {
       name                 = args.name;
       brokerage            = args.brokerage;
       licenseNumber        = args.licenseNumber;
-      licenseState         = Text.toUppercase(args.licenseState);
+      licenseState         = textUpper(args.licenseState);
       statesLicensed       = args.statesLicensed;
       county               = args.county;
-      serviceCities        = Array.map<Text, Text>(args.serviceCities, func(c) { Text.toLowercase(c) });
+      serviceCities        = Array.map<Text, Text>(args.serviceCities, func(c) { textLower(c)});
       bio                  = args.bio;
       phone                = args.phone;
       email                = args.email;
@@ -257,10 +265,10 @@ persistent actor Agent {
         let updated: AgentProfile = {
           id = existing.id; name = args.name; brokerage = args.brokerage;
           licenseNumber = args.licenseNumber;
-          licenseState  = Text.toUppercase(args.licenseState);
+          licenseState  = textUpper(args.licenseState);
           statesLicensed = args.statesLicensed;
           county = args.county;
-          serviceCities = Array.map<Text, Text>(args.serviceCities, func(c) { Text.toLowercase(c) });
+          serviceCities = Array.map<Text, Text>(args.serviceCities, func(c) { textLower(c)});
           bio = args.bio; phone = args.phone; email = args.email;
           avgDaysOnMarket = existing.avgDaysOnMarket;
           listingsLast12Months = existing.listingsLast12Months;
@@ -275,7 +283,7 @@ persistent actor Agent {
 
   /// Returns up to `limit` verified agents whose serviceCities contains `city` (case-insensitive).
   public query func getAgentsForCity(city: Text, limit: Nat) : async [AgentProfile] {
-    let normalised = Text.toLowercase(city);
+    let normalised = textLower(city);
     let matched = Iter.toArray(
       Iter.filter(Map.values(agents), func(a: AgentProfile) : Bool {
         a.isVerified and
