@@ -1,8 +1,8 @@
-const EMAIL_SERVER = import.meta.env.VITE_EMAIL_SERVER_URL || "http://localhost:3002";
+const AGENT_SERVER = import.meta.env.VITE_AGENT_SERVER_URL || "http://localhost:3001";
 
 async function post(path: string, body: object): Promise<void> {
   try {
-    await fetch(`${EMAIL_SERVER}${path}`, {
+    await fetch(`${AGENT_SERVER}${path}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -13,7 +13,7 @@ async function post(path: string, body: object): Promise<void> {
 }
 
 export function notifyNewProposal(requestId: string): void {
-  void post("/api/email/new-proposal", { requestId });
+  void post("/api/bidtolist/email/new-proposal", { requestId });
 }
 
 export function notifyProposalResult(args: {
@@ -22,16 +22,16 @@ export function notifyProposalResult(args: {
   city: string;
   won: boolean;
 }): void {
-  void post("/api/email/proposal-result", args);
+  void post("/api/bidtolist/email/proposal-result", args);
 }
 
 export function notifyAgentVerified(args: {
   agentEmail: string;
   agentName: string;
 }): void {
-  void post("/api/email/agent-verified", args);
+  void post("/api/bidtolist/email/agent-verified", args);
 }
 
 export function notifyNewListing(requestId: string): void {
-  void post("/api/email/new-listing", { requestId });
+  void post("/api/bidtolist/email/new-listing", { requestId });
 }

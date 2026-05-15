@@ -11,7 +11,7 @@ const S = {
   mono: "'IBM Plex Mono', monospace", sans: "'IBM Plex Sans', sans-serif",
 };
 
-const STRIPE_SERVER = (import.meta as any).env?.VITE_STRIPE_SERVER_URL || "http://localhost:3003";
+const AGENT_SERVER = (import.meta as any).env?.VITE_AGENT_SERVER_URL || "http://localhost:3001";
 
 function feeForProposal(fees: FeeRecord[], proposalId: string): FeeRecord | undefined {
   return fees.find(f => f.proposalId === proposalId);
@@ -75,7 +75,7 @@ export default function AgentDashboardPage() {
     const key = feeId ?? proposalId;
     setPayingFee(key);
     try {
-      const res = await fetch(`${STRIPE_SERVER}/api/stripe/create-checkout-session`, {
+      const res = await fetch(`${AGENT_SERVER}/api/bidtolist/stripe/create-checkout-session`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ feeId: feeId ?? proposalId, proposalId }),

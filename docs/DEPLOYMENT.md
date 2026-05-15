@@ -30,22 +30,40 @@ cd frontend && npm run dev   # Vite at http://localhost:5174
 
 ---
 
-## Agent Servers (Local)
+## Agent Server (Local)
 
-BidtoList runs two Express servers alongside the ICP canisters. Start each in a
-separate terminal:
+BidtoList's email and Stripe routes are hosted by **HomeGentic's shared Express
+server** at `/api/bidtolist/*`. Start it from the HomeGentic repo:
 
 ```bash
-# Email notification server (port 3002)
-cd agents/email && npm install && npm run dev
-
-# Stripe webhook + checkout server (port 3003)
-# Requires @dfinity/agent — run npm install before first use
-cd agents/stripe-webhook && npm install && npm run dev
+cd ~/homegentic/agents/voice && npm install && npm run dev   # port 3001
 ```
 
-> **Issue #43** tracks consolidating these into the HomeGentic shared agent server
-> (namespaced routes at `/api/bidtolist/*`, unified rate limiting and logging).
+Set `VITE_AGENT_SERVER_URL=http://localhost:3001` in BidtoList's `.env` (this is
+the default so no change needed for local dev).
+
+The following BidtoList-specific env vars must be added to the HomeGentic server's
+`.env` to enable email/Stripe/ICP wiring locally (all optional — routes degrade
+gracefully when unset):
+
+```env
+BIDTOLIST_FRONTEND_ORIGIN=http://localhost:5174
+BIDTOLIST_RESEND_API_KEY=re_...
+BIDTOLIST_RESEND_FROM=noreply@bidtolist.com
+BIDTOLIST_STRIPE_SECRET_KEY=sk_test_...
+BIDTOLIST_STRIPE_WEBHOOK_SECRET=whsec_...
+BIDTOLIST_STRIPE_PRICE_PLATFORM_FEE=price_...
+BIDTOLIST_LISTING_CANISTER_ID=<local canister id>
+BIDTOLIST_AGENT_CANISTER_ID=<local canister id>
+BIDTOLIST_FEE_CANISTER_ID=<local canister id>
+BIDTOLIST_IDENTITY_SEED=<64-char hex>
+BIDTOLIST_ICP_HOST=http://localhost:4943
+```
+
+Forward Stripe webhooks locally:
+```bash
+stripe listen --forward-to localhost:3001/api/bidtolist/stripe/webhook
+```
 
 ---
 
@@ -187,8 +205,8 @@ ICP_HOST=http://localhost:4943
 WEBHOOK_IDENTITY_SEED=<64-char hex>  # 32-byte Ed25519 secret for an identity that is admin on the fee canister
 ```
 
-4. Start the Stripe server: `cd agents/stripe-webhook && npm install && npm run dev`
-5. Forward webhooks locally: `stripe listen --forward-to localhost:3003/api/stripe/webhook`
+4. Start the HomeGentic server: `cd ~/homegentic/agents/voice && npm run dev`
+5. Forward webhooks locally: `stripe listen --forward-to localhost:3001/api/bidtolist/stripe/webhook`
 6. Test with card `4242 4242 4242 4242`, any future expiry, any CVC.
 
 ### Production
@@ -196,13 +214,13 @@ WEBHOOK_IDENTITY_SEED=<64-char hex>  # 32-byte Ed25519 secret for an identity th
 1. Switch the Stripe dashboard to **Live mode**.
 2. Create the same $295 product and copy the live `price_xxx` ID.
 3. Set `STRIPE_SECRET_KEY=sk_live_...` and `VITE_STRIPE_PUBLISHABLE_KEY=pk_live_...`.
-4. Configure a Stripe webhook pointing at `https://your-domain/api/stripe/webhook`
+4. Configure a Stripe webhook pointing at `https://homegentic-server.railway.app/api/bidtolist/stripe/webhook`
    for the `checkout.session.completed` event.
-5. Copy the webhook signing secret into `STRIPE_WEBHOOK_SECRET`.
-6. Set the ICP wiring env vars on the server:
-   - `FEE_CANISTER_ID` — mainnet canister ID of the fee canister
-   - `ICP_HOST=https://ic0.app`
-   - `WEBHOOK_IDENTITY_SEED` — 64-char hex for an Ed25519 identity that is admin on the fee canister
+5. Copy the webhook signing secret into `BIDTOLIST_STRIPE_WEBHOOK_SECRET` on the HomeGentic Railway service.
+6. Set the ICP wiring env vars on the HomeGentic Railway service:
+   - `BIDTOLIST_FEE_CANISTER_ID` — mainnet canister ID of the fee canister
+   - `BIDTOLIST_ICP_HOST=https://ic0.app`
+   - `BIDTOLIST_IDENTITY_SEED` — 64-char hex for an Ed25519 identity that is admin on the fee canister
 
 To generate a webhook identity seed:
 ```bash
@@ -219,13 +237,13 @@ dfx canister call fee addAdmin '(principal "<webhook-principal>")' --network ic
 
 ### How payment works
 
-1. Frontend calls `POST /api/stripe/create-checkout-session` with `feeId`.
-2. Server creates a Stripe Checkout session (one-time payment for `STRIPE_PRICE_PLATFORM_FEE`).
+1. Frontend calls `POST /api/bidtolist/stripe/create-checkout-session` with `feeId`.
+2. HomeGentic's server creates a Stripe Checkout session (one-time payment for `BIDTOLIST_STRIPE_PRICE_PLATFORM_FEE`).
 3. Agent is redirected to Stripe's hosted checkout page.
 4. On success, Stripe redirects to `/agents/dashboard?fee_paid=1` and fires
    a `checkout.session.completed` webhook.
 5. The webhook calls `fee.markFeePaid(feeId)` on the ICP fee canister via `@dfinity/agent`
-   using the `WEBHOOK_IDENTITY_SEED` admin identity.
+   using the `BIDTOLIST_IDENTITY_SEED` admin identity.
 6. The fee canister updates the record to `#Paid` and calls back to
    `listing.markListingFeePaid(requestId)`, which flips `feePaid = true`.
 7. The winning agent's next `getBidRequest` call now returns the homeowner's
@@ -238,41 +256,31 @@ dfx canister call fee addAdmin '(principal "<webhook-principal>")' --network ic
 
 ## Email Notifications
 
-The email server uses [Resend](https://resend.com) (free tier: 3,000 emails/month).
+BidtoList email routes are served by the HomeGentic agent server using [Resend](https://resend.com)
+(free tier: 3,000 emails/month). Set these on the HomeGentic Railway service:
 
 ```env
-RESEND_API_KEY=re_...
-RESEND_FROM_ADDRESS=noreply@bidtolist.com
+BIDTOLIST_RESEND_API_KEY=re_...
+BIDTOLIST_RESEND_FROM=noreply@bidtolist.com
 
 # ICP wiring — needed to fetch the homeowner's email for new-proposal notifications.
-# The identity must be an admin on the listing canister.
-LISTING_CANISTER_ID=...           # local canister ID from icp canister id listing
-ICP_HOST=http://localhost:4943    # https://ic0.app for production
-EMAIL_IDENTITY_SEED=<64-char hex> # 32-byte Ed25519 secret; same generation as WEBHOOK_IDENTITY_SEED
+BIDTOLIST_LISTING_CANISTER_ID=...   # canister ID from icp canister id listing
+BIDTOLIST_AGENT_CANISTER_ID=...     # canister ID from icp canister id agent
+BIDTOLIST_ICP_HOST=https://ic0.app
+BIDTOLIST_IDENTITY_SEED=<64-char hex>  # shared with Stripe wiring above
 ```
 
-To generate a seed and add the identity as admin:
-```bash
-node -e "const {randomBytes} = require('crypto'); console.log(randomBytes(32).toString('hex'));"
-# then get its principal:
-node -e "
-const { Ed25519KeyIdentity } = require('@dfinity/identity');
-const seed = Buffer.from('<your-64-char-hex>', 'hex');
-console.log(Ed25519KeyIdentity.fromSecretKey(seed.buffer).getPrincipal().toText());
-"
-dfx canister call listing addAdmin '(principal "<email-server-principal>")' --network ic
-```
+If `BIDTOLIST_LISTING_CANISTER_ID` or `BIDTOLIST_IDENTITY_SEED` is not set, email routes
+log a warning and return `{ ok: true, skipped: true }` — proposals still succeed.
 
-If `LISTING_CANISTER_ID` or `EMAIL_IDENTITY_SEED` is not set, `POST /api/email/new-proposal`
-logs a warning and returns `{ ok: true, skipped: true }` — the proposal still succeeds.
-
-Three transactional email routes are available:
+Transactional email routes (all prefixed `/api/bidtolist/`):
 
 | Route | Trigger |
 |---|---|
-| `POST /api/email/new-proposal` | Agent submits a proposal — notify homeowner (no bid details sent) |
-| `POST /api/email/proposal-result` | Homeowner accepts/rejects — notify agent |
-| `POST /api/email/agent-verified` | Admin verifies agent account |
+| `POST /api/bidtolist/email/new-proposal` | Agent submits a proposal — notify homeowner (no bid details sent) |
+| `POST /api/bidtolist/email/proposal-result` | Homeowner accepts/rejects — notify agent |
+| `POST /api/bidtolist/email/agent-verified` | Admin verifies agent account |
+| `POST /api/bidtolist/email/new-listing` | New listing posted — broadcast to up to 10 matching agents |
 
 ---
 
