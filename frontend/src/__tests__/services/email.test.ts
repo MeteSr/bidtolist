@@ -13,11 +13,11 @@ afterEach(() => {
 });
 
 describe("notifyNewProposal", () => {
-  it("POSTs to /api/email/new-proposal with requestId", async () => {
+  it("POSTs to /api/bidtolist/email/new-proposal with requestId", async () => {
     notifyNewProposal("REQ_abc123");
     await new Promise(r => setTimeout(r, 0));
     expect(mockFetch).toHaveBeenCalledWith(
-      expect.stringContaining("/api/email/new-proposal"),
+      expect.stringContaining("/api/bidtolist/email/new-proposal"),
       expect.objectContaining({
         method: "POST",
         body: expect.stringContaining("REQ_abc123"),
@@ -32,7 +32,7 @@ describe("notifyNewProposal", () => {
 });
 
 describe("notifyProposalResult", () => {
-  it("POSTs to /api/email/proposal-result with won=true for winner", async () => {
+  it("POSTs to /api/bidtolist/email/proposal-result with won=true for winner", async () => {
     notifyProposalResult({
       agentEmail: "agent@kw.com",
       agentName: "Jane Smith",
@@ -41,7 +41,7 @@ describe("notifyProposalResult", () => {
     });
     await new Promise(r => setTimeout(r, 0));
     expect(mockFetch).toHaveBeenCalledWith(
-      expect.stringContaining("/api/email/proposal-result"),
+      expect.stringContaining("/api/bidtolist/email/proposal-result"),
       expect.objectContaining({
         method: "POST",
         body: expect.stringContaining('"won":true'),
@@ -49,7 +49,7 @@ describe("notifyProposalResult", () => {
     );
   });
 
-  it("POSTs to /api/email/proposal-result with won=false for losers", async () => {
+  it("POSTs to /api/bidtolist/email/proposal-result with won=false for losers", async () => {
     notifyProposalResult({
       agentEmail: "loser@remax.com",
       agentName: "Bob Jones",
@@ -58,7 +58,7 @@ describe("notifyProposalResult", () => {
     });
     await new Promise(r => setTimeout(r, 0));
     expect(mockFetch).toHaveBeenCalledWith(
-      expect.stringContaining("/api/email/proposal-result"),
+      expect.stringContaining("/api/bidtolist/email/proposal-result"),
       expect.objectContaining({
         body: expect.stringContaining('"won":false'),
       })
@@ -74,11 +74,11 @@ describe("notifyProposalResult", () => {
 });
 
 describe("notifyAgentVerified", () => {
-  it("POSTs to /api/email/agent-verified with agent email and name", async () => {
+  it("POSTs to /api/bidtolist/email/agent-verified with agent email and name", async () => {
     notifyAgentVerified({ agentEmail: "jane@kw.com", agentName: "Jane Smith" });
     await new Promise(r => setTimeout(r, 0));
     expect(mockFetch).toHaveBeenCalledWith(
-      expect.stringContaining("/api/email/agent-verified"),
+      expect.stringContaining("/api/bidtolist/email/agent-verified"),
       expect.objectContaining({
         method: "POST",
         body: expect.stringContaining("jane@kw.com"),
