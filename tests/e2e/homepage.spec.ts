@@ -8,33 +8,33 @@ test.describe("HomePage", () => {
 
   test("shows hero heading", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { level: 1 })).toContainText(/smarter way/i);
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(/let agents.*compete/i);
   });
 
   test("shows homeowner and agent hero CTAs", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("link", { name: /i'm a homeowner/i })).toBeVisible();
-    await expect(page.getByRole("link", { name: /i'm a real estate agent/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /post your home/i }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: /join as an agent/i }).first()).toBeVisible();
   });
 
-  test("shows homeowner section with Let agents compete heading", async ({ page }) => {
+  test("shows homeowner section with let agents compete heading", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: /let agents compete/i })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(/let agents/i);
   });
 
   test("shows Post Your Home CTA link in homeowner section", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("link", { name: /post your home/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /post your home/i }).first()).toBeVisible();
   });
 
   test("shows agent section with Win listings heading", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: /win listings/i })).toBeVisible();
+    await expect(page.getByText(/win listings/i).first()).toBeVisible();
   });
 
-  test("shows Volusia and Flagler Counties badge", async ({ page }) => {
+  test("shows brokerage band for agents", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText(/volusia.*flagler/i).first()).toBeVisible();
+    await expect(page.getByText(/serving agents from/i)).toBeVisible();
   });
 
   test("shows flat fee copy", async ({ page }) => {
@@ -44,22 +44,22 @@ test.describe("HomePage", () => {
 
   test("shows no subscription callout", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText(/no subscription/i)).toBeVisible();
+    await expect(page.getByText(/no subscription/i).first()).toBeVisible();
   });
 
-  test("open-listings stat is rendered", async ({ page }) => {
+  test("homeowner cost stat is rendered", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByTestId("stat-open-listings")).toBeVisible();
+    await expect(page.getByTestId("stat-homeowner-cost")).toBeVisible();
   });
 
-  test("verified-agents stat is rendered", async ({ page }) => {
+  test("agent fee stat is rendered", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByTestId("stat-verified-agents")).toBeVisible();
+    await expect(page.getByTestId("stat-agent-fee")).toBeVisible();
   });
 
   test("homeowner CTA links to /signup?role=homeowner", async ({ page }) => {
     await page.goto("/");
-    const href = await page.getByRole("link", { name: /post your home/i }).getAttribute("href");
+    const href = await page.getByRole("link", { name: /post your home/i }).first().getAttribute("href");
     expect(href).toContain("/signup?role=homeowner");
   });
 

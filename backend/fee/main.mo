@@ -147,7 +147,19 @@ persistent actor Fee {
   };
 
   public shared(msg) func markFeePaid(feeId: Text) : async Result.Result<FeeRecord, Error> {
-    updateFeeStatus(msg.caller, feeId, #Paid)
+    switch (updateFeeStatus(msg.caller, feeId, #Paid)) {
+      case (#err(e)) { #err(e) };
+      case (#ok(record)) {
+        // Unlock the homeowner's address in the listing canister now that payment is confirmed
+        if (listingCanisterId != "") {
+          let listingActor = actor(listingCanisterId) : actor {
+            markListingFeePaid : (Text) -> async Result.Result<(), { #NotFound; #NotAuthorized; #InvalidInput: Text; #AlreadyCancelled; #DeadlinePassed }>;
+          };
+          ignore listingActor.markListingFeePaid(record.requestId);
+        };
+        #ok(record)
+      };
+    }
   };
 
   public shared(msg) func waiveFee(feeId: Text) : async Result.Result<FeeRecord, Error> {

@@ -62,7 +62,7 @@ describe("BrowseListingsPage — integration (real service, mock fallback)", () 
         id: "BID_INT_1", address: "100 Oak St", city: "Daytona Beach", county: "Volusia",
         zipCode: "32118", homeowner: "owner-principal", homeownerEmail: "owner@test.com",
         targetListDate: BigInt(0), desiredSalePrice: [], notes: "Corner lot",
-        bidDeadline: FUTURE_NS, status: { Open: null }, createdAt: BigInt(0),
+        bidDeadline: FUTURE_NS, status: { Open: null }, createdAt: BigInt(0), feePaid: false,
       },
     ];
     renderPage();
@@ -80,7 +80,7 @@ describe("BrowseListingsPage — integration (real service, mock fallback)", () 
         id: "BID_INT_2", address: "200 Palm Ave", city: "Palm Coast", county: "Flagler",
         zipCode: "32164", homeowner: "owner-principal", homeownerEmail: "owner@test.com",
         targetListDate: BigInt(0), desiredSalePrice: [], notes: "",
-        bidDeadline: FUTURE_NS, status: { Open: null }, createdAt: BigInt(0),
+        bidDeadline: FUTURE_NS, status: { Open: null }, createdAt: BigInt(0), feePaid: false,
       },
     ];
     renderPage();
@@ -95,13 +95,13 @@ describe("BrowseListingsPage — integration (real service, mock fallback)", () 
         id: "BID_INT_3", address: "10 A St", city: "Daytona Beach", county: "Volusia",
         zipCode: "32118", homeowner: "p1", homeownerEmail: "a@test.com",
         targetListDate: BigInt(0), desiredSalePrice: [], notes: "",
-        bidDeadline: FUTURE_NS, status: { Open: null }, createdAt: BigInt(0),
+        bidDeadline: FUTURE_NS, status: { Open: null }, createdAt: BigInt(0), feePaid: false,
       },
       {
         id: "BID_INT_4", address: "20 B St", city: "Palm Coast", county: "Flagler",
         zipCode: "32164", homeowner: "p2", homeownerEmail: "b@test.com",
         targetListDate: BigInt(0), desiredSalePrice: [], notes: "",
-        bidDeadline: FUTURE_NS, status: { Open: null }, createdAt: BigInt(0),
+        bidDeadline: FUTURE_NS, status: { Open: null }, createdAt: BigInt(0), feePaid: false,
       },
     ];
     const user = userEvent.setup();
@@ -119,7 +119,7 @@ describe("BrowseListingsPage — integration (real service, mock fallback)", () 
         id: "BID_INT_5", address: "30 C St", city: "Daytona Beach", county: "Volusia",
         zipCode: "32118", homeowner: "p1", homeownerEmail: "c@test.com",
         targetListDate: BigInt(0), desiredSalePrice: [], notes: "",
-        bidDeadline: FUTURE_NS, status: { Open: null }, createdAt: BigInt(0),
+        bidDeadline: FUTURE_NS, status: { Open: null }, createdAt: BigInt(0), feePaid: false,
       },
     ];
     renderPage();
@@ -133,7 +133,7 @@ describe("BrowseListingsPage — integration (real service, mock fallback)", () 
         id: "BID_INT_6", address: "40 D St", city: "Daytona Beach", county: "Volusia",
         zipCode: "32118", homeowner: "p1", homeownerEmail: "d@test.com",
         targetListDate: BigInt(0), desiredSalePrice: [], notes: "",
-        bidDeadline: FUTURE_NS, status: { Open: null }, createdAt: BigInt(0),
+        bidDeadline: FUTURE_NS, status: { Open: null }, createdAt: BigInt(0), feePaid: false,
       },
     ];
     (window as any).__e2e_proposals = [

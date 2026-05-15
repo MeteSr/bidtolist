@@ -66,15 +66,8 @@ export default function ProposalFormPage() {
       }) as any;
       if ("err" in result) { toast.error(JSON.stringify(result.err)); return; }
 
-      if (bidRequest?.homeownerEmail) {
-        const deadline = new Date(Number(bidRequest.bidDeadline) / 1_000_000).toLocaleDateString();
-        notifyNewProposal({
-          homeownerEmail: bidRequest.homeownerEmail,
-          city: bidRequest.city,
-          county: bidRequest.county,
-          proposalCount: 1,
-          deadlineDate: deadline,
-        });
+      if (requestId) {
+        notifyNewProposal(requestId);
       }
 
       toast.success("Proposal submitted! The homeowner will see it after the deadline.");
@@ -97,7 +90,7 @@ export default function ProposalFormPage() {
   return (
     <div style={{ background: S.paper, minHeight: "100vh" }}>
       <nav style={{ borderBottom: `1px solid ${S.rule}`, padding: isMobile ? "12px 16px" : "16px 40px" }}>
-        <a href="/" style={{ fontFamily: S.serif, fontSize: "1.1rem", fontWeight: 900, color: S.rust, textDecoration: "none" }}>BidtoList</a>
+        <a href="/" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}><img src="/bid_to_list_logo.png" alt="BidtoList" style={{ height: 36, width: "auto", display: "block" }} /></a>
       </nav>
       <div style={{ maxWidth: 640, margin: "0 auto", padding: isMobile ? "32px 16px" : "60px 40px" }}>
         <h1 style={{ fontFamily: S.serif, fontSize: "clamp(1.6rem, 5vw, 2rem)", fontWeight: 900, marginBottom: 8 }}>Submit Proposal</h1>

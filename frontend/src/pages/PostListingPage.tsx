@@ -66,7 +66,7 @@ export default function PostListingPage() {
   return (
     <div style={{ background: S.paper, minHeight: "100vh" }}>
       <nav style={{ borderBottom: `1px solid ${S.rule}`, padding: isMobile ? "12px 16px" : "16px 40px" }}>
-        <a href="/" style={{ fontFamily: S.serif, fontSize: "1.1rem", fontWeight: 900, color: S.rust, textDecoration: "none" }}>BidtoList</a>
+        <a href="/" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}><img src="/bid_to_list_logo.png" alt="BidtoList" style={{ height: 36, width: "auto", display: "block" }} /></a>
       </nav>
       <div style={{ maxWidth: 600, margin: "0 auto", padding: isMobile ? "32px 16px" : "60px 40px" }}>
         <h1 style={{ fontFamily: S.serif, fontSize: "clamp(1.6rem, 5vw, 2rem)", fontWeight: 900, marginBottom: 8 }}>Post Your Listing</h1>

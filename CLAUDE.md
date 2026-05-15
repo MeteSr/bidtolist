@@ -60,8 +60,10 @@ All canisters use `persistent actor` (Motoko mo:core). All variables are implici
 
 - **Free for homeowners** — post a listing bid request at no cost
 - **Free for agents to bid** — no subscription, no per-bid fee
-- **$295 flat fee on bid win** — when a homeowner accepts a proposal, the winning agent owes the platform $295
-- Fee is recorded in the `fee` canister; collected via Stripe one-time payment link (emailed to agent)
+- **$295 win fee** — when a homeowner accepts a proposal, the winning agent owes $295
+- Fee recorded in `fee` canister; collected via Stripe Checkout (one-time payment)
+- **Address gate** — the homeowner's street address and email are hidden from the winning agent until
+  the $295 fee is confirmed paid. Full chain: Stripe webhook → `fee.markFeePaid` → `listing.markListingFeePaid` → `feePaid = true` on the request record → `getBidRequest` returns address
 
 ### Sealed-Bid Mechanic
 
@@ -69,6 +71,16 @@ The `listing` canister stores proposals but does not reveal them until the `bidD
 The frontend enforces this: `getProposalsForRequest` returns all proposals, but the UI hides them
 until `Date.now() > bidDeadline`. This is intentional — the canister is the source of truth for
 data; the deadline reveal logic lives in the service layer.
+
+### Address Privacy
+
+`getBidRequest` redacts `address` and `homeownerEmail` for all callers except:
+- The homeowner themselves
+- Admins
+- The winning agent **and** `feePaid == true` on the request record
+
+The `feePaid` flag is set only by `markListingFeePaid`, callable by the fee canister or admin.
+Never short-circuit this gate — it is the payment enforcement boundary.
 
 ### Frontend Service Layer
 
@@ -81,26 +93,38 @@ Each service file (listing.ts, agent.ts, fee.ts) contains the Candid IDL factory
 if (!CANISTER_ID) return mockData;
 ```
 
-### Design System (inherited from HomeGentic)
+### Design System
 
-Same editorial "blueprint" aesthetic — no CSS framework, all inline React styles.
+Agency-style rounded-card aesthetic — no CSS framework, all inline React styles.
+Public pages (HomePage, SignUpPage, FaqPage) share these tokens:
 
 ```typescript
-const ink    = "#0E0E0C";   // near-black
-const paper  = "#F4F1EB";   // warm off-white
-const rule   = "#C8C3B8";   // warm gray border
-const rust   = "#C94C2E";   // primary accent
-const serif  = "'Playfair Display', Georgia, serif";
-const mono   = "'IBM Plex Mono', monospace";
-const sans   = "'IBM Plex Sans', sans-serif";
+const S = {
+  bg:        "#F4F6F8",   // light gray page background
+  white:     "#FFFFFF",
+  dark:      "#111827",
+  muted:     "#6B7280",
+  border:    "#E5E7EB",
+  green:     "#2A8B57",   // primary CTA
+  greenLight:"#E6F4ED",
+  yellow:    "#F5C842",   // stats band, accents
+  blue:      "#1B3266",   // featured card background
+  blueLight: "#EBF0FF",
+  peach:     "#F07858",   // decorative, step 3 accent
+  peachLight:"#FEF0EB",
+  sans:  "'IBM Plex Sans', sans-serif",
+};
 ```
 
-Rules: no border-radius, 1px solid borders, mono uppercase section labels.
+Rules: **rounded corners** (12–20px), `boxShadow` on cards, pill buttons (`borderRadius: 100`),
+bold IBM Plex Sans headings (weight 800), no Playfair Display or IBM Plex Mono on public pages.
+Nav: white background, logo mark = two colored bars (green + yellow), "Get Started →" as outlined pill.
 
 ### IDL Maintenance Rule
 
-Whenever you add or rename a variant in a `.mo` file, update the matching IDL in:
+Whenever you add or rename a field or variant in a `.mo` file, update the matching IDL in:
 1. `frontend/src/services/<canister>.ts` — inline `idlFactory` function
+2. Integration test mock objects in `frontend/src/__tests__/integration/` — add any new required fields
 
 ### E2E Test Pattern (inherited from HomeGentic)
 

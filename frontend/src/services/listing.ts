@@ -12,7 +12,7 @@ export const idlFactory = ({ IDL }: any) => {
     DeadlinePassed: IDL.Null,
   });
   const BidRequestStatus = IDL.Variant({ Open: IDL.Null, Awarded: IDL.Null, Cancelled: IDL.Null });
-  const ProposalStatus   = IDL.Variant({ Pending: IDL.Null, Accepted: IDL.Null, Rejected: IDL.Null, Withdrawn: IDL.Null });
+  const ProposalStatus   = IDL.Variant({ Pending: IDL.Null, Accepted: IDL.Null, Rejected: IDL.Null, Withdrawn: IDL.Null, Standby: IDL.Null });
 
   const BidRequestSummary = IDL.Record({
     id: IDL.Text, city: IDL.Text, county: IDL.Text, zipCode: IDL.Text,
@@ -24,7 +24,7 @@ export const idlFactory = ({ IDL }: any) => {
     id: IDL.Text, address: IDL.Text, city: IDL.Text, county: IDL.Text, zipCode: IDL.Text,
     homeowner: IDL.Principal, homeownerEmail: IDL.Text, targetListDate: IDL.Int,
     desiredSalePrice: IDL.Opt(IDL.Nat), notes: IDL.Text, bidDeadline: IDL.Int,
-    status: BidRequestStatus, createdAt: IDL.Int,
+    status: BidRequestStatus, createdAt: IDL.Int, feePaid: IDL.Bool,
   });
   const ListingProposal = IDL.Record({
     id: IDL.Text, requestId: IDL.Text, agentId: IDL.Principal, agentName: IDL.Text,
@@ -48,7 +48,7 @@ export const idlFactory = ({ IDL }: any) => {
     submitProposal:                  IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Nat, IDL.Text, IDL.Text, IDL.Nat, IDL.Nat, IDL.Vec(IDL.Text), IDL.Int, IDL.Text], [Result(ListingProposal)], []),
     getProposalsForRequest:          IDL.Func([IDL.Text], [IDL.Vec(ListingProposal)], ["query"]),
     getMyProposals:                  IDL.Func([], [IDL.Vec(ListingProposal)], ["query"]),
-    acceptProposal:                  IDL.Func([IDL.Text], [Result(IDL.Null)], []),
+    acceptProposal:                  IDL.Func([IDL.Text, IDL.Vec(IDL.Text)], [Result(IDL.Null)], []),
     requestHomeownerVerification:    IDL.Func([IDL.Text, IDL.Text, IDL.Text], [Result(HomeownerVerificationRequest)], []),
     isHomeownerVerified:             IDL.Func([], [IDL.Bool], ["query"]),
     getPendingVerificationRequests:  IDL.Func([], [IDL.Vec(HomeownerVerificationRequest)], ["query"]),
@@ -162,10 +162,10 @@ export async function getMyProposals(): Promise<any[]> {
   return a.getMyProposals() as Promise<any[]>;
 }
 
-export async function acceptProposal(proposalId: string) {
+export async function acceptProposal(proposalId: string, backups: string[] = []) {
   if (!CANISTER_ID) return { ok: null };
   const a = await getActor();
-  return a.acceptProposal(proposalId);
+  return a.acceptProposal(proposalId, backups);
 }
 
 export async function requestHomeownerVerification(address: string, parcelNumber: string, contactEmail: string) {
