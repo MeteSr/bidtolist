@@ -119,7 +119,7 @@ export default function HomePage() {
               href="/signup"
               style={{ display: "inline-block", background: "transparent", border: `2px solid ${S.green}`, color: S.green, fontFamily: S.sans, fontSize: "0.88rem", fontWeight: 700, padding: "10px 22px", borderRadius: 100, textDecoration: "none" }}
             >
-              Get Started →
+              Sign Up
             </a>
           )}
         </div>
@@ -204,7 +204,7 @@ export default function HomePage() {
 
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
               <a
-                href="#homeowners"
+                href="/signup?role=homeowner"
                 style={{
                   display:        "inline-flex",
                   alignItems:     "center",
