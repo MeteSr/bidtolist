@@ -66,6 +66,9 @@ persistent actor Listing {
     zipCode:          Text;
     targetListDate:   Time.Time;
     desiredSalePrice: ?Nat;
+    beds:             ?Nat;
+    baths:            ?Nat;
+    sqft:             ?Nat;
     notes:            Text;
     bidDeadline:      Time.Time;
     status:           BidRequestStatus;
@@ -83,6 +86,9 @@ persistent actor Listing {
     homeownerEmail:   Text;
     targetListDate:   Time.Time;
     desiredSalePrice: ?Nat;
+    beds:             ?Nat;
+    baths:            ?Nat;
+    sqft:             ?Nat;
     notes:            Text;
     bidDeadline:      Time.Time;
     status:           BidRequestStatus;
@@ -227,6 +233,9 @@ persistent actor Listing {
     zipCode:          Text,
     targetListDate:   Int,
     desiredSalePrice: ?Nat,
+    beds:             ?Nat,
+    baths:            ?Nat,
+    sqft:             ?Nat,
     notes:            Text,
     bidDeadline:      Int,
     homeownerEmail:   Text
@@ -257,6 +266,9 @@ persistent actor Listing {
       homeownerEmail;
       targetListDate;
       desiredSalePrice;
+      beds;
+      baths;
+      sqft;
       notes;
       bidDeadline;
       status           = #Open;
@@ -339,6 +351,9 @@ persistent actor Listing {
         zipCode          = r.zipCode;
         targetListDate   = r.targetListDate;
         desiredSalePrice = r.desiredSalePrice;
+        beds             = r.beds;
+        baths            = r.baths;
+        sqft             = r.sqft;
         notes            = r.notes;
         bidDeadline      = r.bidDeadline;
         status           = r.status;
