@@ -6,6 +6,7 @@ const PORT = process.env.EMAIL_SERVER_PORT || 3002;
 const FROM = process.env.RESEND_FROM_ADDRESS || "noreply@bidtolist.com";
 
 const LISTING_CANISTER_ID = process.env.LISTING_CANISTER_ID || "";
+const AGENT_CANISTER_ID   = process.env.AGENT_CANISTER_ID   || "";
 const ICP_HOST            = process.env.ICP_HOST || "http://localhost:4943";
 const EMAIL_IDENTITY_SEED = process.env.EMAIL_IDENTITY_SEED || "";
 
@@ -40,6 +41,32 @@ const listingIdlFactory = ({ IDL }: any) => {
     getBidRequest: IDL.Func([IDL.Text], [IDL.Variant({ ok: ListingBidRequest, err: Error })], ["query"]),
   });
 };
+
+const agentIdlFactory = ({ IDL }: any) => {
+  const AgentProfile = IDL.Record({
+    id: IDL.Principal, name: IDL.Text, brokerage: IDL.Text, licenseNumber: IDL.Text,
+    licenseState: IDL.Text, statesLicensed: IDL.Vec(IDL.Text), county: IDL.Text,
+    serviceCities: IDL.Vec(IDL.Text), bio: IDL.Text, phone: IDL.Text, email: IDL.Text,
+    avgDaysOnMarket: IDL.Nat, listingsLast12Months: IDL.Nat, isVerified: IDL.Bool,
+    createdAt: IDL.Int, updatedAt: IDL.Int,
+  });
+  return IDL.Service({
+    getAgentsForCity: IDL.Func([IDL.Text, IDL.Nat], [IDL.Vec(AgentProfile)], ["query"]),
+  });
+};
+
+async function createAgentActor() {
+  if (!AGENT_CANISTER_ID || !EMAIL_IDENTITY_SEED) return null;
+  const { HttpAgent, Actor } = await import("@dfinity/agent");
+  const { Ed25519KeyIdentity } = await import("@dfinity/identity");
+  const seed = Buffer.from(EMAIL_IDENTITY_SEED, "hex");
+  const identity = Ed25519KeyIdentity.fromSecretKey(seed.buffer as ArrayBuffer);
+  const agent = await HttpAgent.create({ identity, host: ICP_HOST });
+  if (ICP_HOST.includes("localhost")) {
+    await agent.fetchRootKey().catch(() => {});
+  }
+  return Actor.createActor(agentIdlFactory, { agent, canisterId: AGENT_CANISTER_ID });
+}
 
 async function createListingActor() {
   if (!LISTING_CANISTER_ID || !EMAIL_IDENTITY_SEED) return null;
@@ -233,6 +260,78 @@ app.post("/api/email/agent-verified", async (req, res) => {
     console.error("[email] Resend error (agent-verified):", err);
     res.status(500).json({ error: "email send failed" });
   }
+});
+
+// POST /api/email/new-listing
+// Broadcast a new listing to up to 10 verified agents whose serviceCities includes the listing city.
+// Accepts { requestId } — server fetches listing + matching agents via admin identity.
+// No homeowner PII (address / email) is included in agent notification emails.
+app.post("/api/email/new-listing", async (req, res) => {
+  const { requestId } = req.body as { requestId: string };
+  if (!requestId) return res.status(400).json({ error: "requestId required" });
+
+  const listingActor = await createListingActor();
+  if (!listingActor) {
+    console.warn("[email] ICP not wired — skipping new-listing broadcast");
+    return res.json({ ok: true, skipped: true });
+  }
+
+  let city: string;
+  let deadlineDate: string;
+  try {
+    const result = await listingActor.getBidRequest(requestId) as any;
+    if ("err" in result) {
+      console.warn("[email] getBidRequest error:", result.err);
+      return res.status(404).json({ error: "request not found" });
+    }
+    city         = result.ok.city;
+    deadlineDate = new Date(Number(result.ok.bidDeadline) / 1_000_000).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  } catch (err) {
+    console.error("[email] ICP listing call failed:", err);
+    return res.status(502).json({ error: "canister call failed" });
+  }
+
+  const agentActor = await createAgentActor();
+  if (!agentActor) {
+    console.warn("[email] Agent canister not wired — skipping new-listing broadcast");
+    return res.json({ ok: true, skipped: true });
+  }
+
+  let agents: any[];
+  try {
+    agents = await agentActor.getAgentsForCity(city, 10) as any[];
+  } catch (err) {
+    console.error("[email] getAgentsForCity failed:", err);
+    return res.status(502).json({ error: "agent canister call failed" });
+  }
+
+  if (agents.length === 0) {
+    console.log(`[email] No matching agents for city "${city}" — no broadcast sent`);
+    return res.json({ ok: true, sent: 0 });
+  }
+
+  const results = await Promise.allSettled(
+    agents.map((agent: any) =>
+      resend.emails.send({
+        from: FROM,
+        to: agent.email,
+        subject: `New listing in ${city} — BidtoList`,
+        html: `
+          <p>Hi ${agent.name},</p>
+          <p>A homeowner in <strong>${city}</strong> has posted a new listing on BidtoList.</p>
+          <p>Proposals are accepted until <strong>${deadlineDate}</strong>. As a verified agent serving ${city}, you have been selected to submit a sealed bid.</p>
+          <p><a href="https://bidtolist.com/agents/browse">View and submit your proposal →</a></p>
+          <p style="color:#6B7280;font-size:0.85em">You're receiving this because ${city} is in your service area on BidtoList.</p>
+        `,
+      })
+    )
+  );
+
+  const sent = results.filter(r => r.status === "fulfilled").length;
+  const failed = results.length - sent;
+  if (failed > 0) console.warn(`[email] new-listing broadcast: ${failed}/${results.length} emails failed`);
+  console.log(`[email] Broadcast sent for "${city}" listing ${requestId} to ${sent} agents`);
+  res.json({ ok: true, sent });
 });
 
 const icpStatus = LISTING_CANISTER_ID && EMAIL_IDENTITY_SEED ? "wired" : "no-op (LISTING_CANISTER_ID / EMAIL_IDENTITY_SEED not set)";

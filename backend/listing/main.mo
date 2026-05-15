@@ -366,6 +366,36 @@ persistent actor Listing {
     }))
   };
 
+  /// Returns open listings whose city matches any of the provided cities (case-insensitive).
+  public query func getOpenBidRequestsForCities(cities: [Text]) : async [BidRequestSummary] {
+    let normalised = Array.map<Text, Text>(cities, func(c) { Text.toLowercase(c) });
+    let open = Iter.filter(Map.values(requests), func(r: ListingBidRequest) : Bool {
+      r.status == #Open and
+      Option.isSome(Array.find<Text>(normalised, func(c) { c == Text.toLowercase(r.city) }))
+    });
+    Iter.toArray(Iter.map(open, func(r: ListingBidRequest) : BidRequestSummary {
+      let count = Iter.size(Iter.filter(Map.values(proposals), func(p: ListingProposal) : Bool {
+        p.requestId == r.id
+      }));
+      {
+        id               = r.id;
+        city             = r.city;
+        county           = r.county;
+        zipCode          = r.zipCode;
+        targetListDate   = r.targetListDate;
+        desiredSalePrice = r.desiredSalePrice;
+        beds             = r.beds;
+        baths            = r.baths;
+        sqft             = r.sqft;
+        notes            = r.notes;
+        bidDeadline      = r.bidDeadline;
+        status           = r.status;
+        createdAt        = r.createdAt;
+        proposalCount    = count;
+      }
+    }))
+  };
+
   // ─── Agent: Proposal Lifecycle ────────────────────────────────────────────────
 
   /// Submit a proposal. Sealed until bidDeadline — server enforces the reveal gate in getProposalsForRequest.

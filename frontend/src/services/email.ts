@@ -31,3 +31,7 @@ export function notifyAgentVerified(args: {
 }): void {
   void post("/api/email/agent-verified", args);
 }
+
+export function notifyNewListing(requestId: string): void {
+  void post("/api/email/new-listing", { requestId });
+}
