@@ -147,6 +147,66 @@ app.post("/api/email/proposal-result", async (req, res) => {
   }
 });
 
+// POST /api/email/homeowner-code
+// After an agent pays the platform fee, send the homeowner a HomeGentic promo code.
+// Accepts { requestId, homegentic_code }.
+app.post("/api/email/homeowner-code", async (req, res) => {
+  const { requestId, homegentic_code } = req.body as { requestId: string; homegentic_code: string };
+  if (!requestId)       return res.status(400).json({ error: "requestId required" });
+  if (!homegentic_code) return res.status(400).json({ error: "homegentic_code required" });
+
+  const actor = await createListingActor();
+  if (!actor) {
+    console.warn("[email] ICP not wired — skipping homeowner-code notification");
+    return res.json({ ok: true, skipped: true });
+  }
+
+  let homeownerEmail: string;
+  let city: string;
+  try {
+    const result = await actor.getBidRequest(requestId) as any;
+    if ("err" in result) {
+      console.warn("[email] getBidRequest error:", result.err);
+      return res.status(404).json({ error: "request not found" });
+    }
+    homeownerEmail = result.ok.homeownerEmail;
+    city           = result.ok.city;
+  } catch (err) {
+    console.error("[email] ICP call failed:", err);
+    return res.status(502).json({ error: "canister call failed" });
+  }
+
+  if (!homeownerEmail) return res.status(422).json({ error: "homeownerEmail empty on record" });
+
+  const checkoutUrl = `https://homegentic.com/checkout?bidtolist_code=${encodeURIComponent(homegentic_code)}`;
+
+  try {
+    await resend.emails.send({
+      from: FROM,
+      to: homeownerEmail,
+      subject: "Your HomeGentic discount — compliments of BidtoList",
+      html: `
+        <p>Congratulations on finding your agent for the <strong>${city}</strong> listing!</p>
+        <p>As a BidtoList homeowner, you're entitled to a discount on your first month of HomeGentic — the property management platform that helps you stay on top of maintenance, records, and repairs at your next home.</p>
+        <p style="margin:24px 0">
+          <a href="${checkoutUrl}" style="background:#1B4332;color:#fff;padding:14px 28px;text-decoration:none;font-weight:600;display:inline-block">
+            Claim your discount →
+          </a>
+        </p>
+        <p style="font-size:0.85em;color:#6B7280">
+          Or enter code <strong>${homegentic_code}</strong> at homegentic.com/checkout.
+          Code is valid for 90 days and can only be used once.
+        </p>
+        <p style="color:#6B7280;font-size:0.85em">You're receiving this because you recently completed a listing on BidtoList.</p>
+      `,
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[email] Resend error (homeowner-code):", err);
+    res.status(500).json({ error: "email send failed" });
+  }
+});
+
 // POST /api/email/agent-verified
 // Notify agent that their account has been verified by admin.
 app.post("/api/email/agent-verified", async (req, res) => {

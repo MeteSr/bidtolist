@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { getMyProposals } from "../services/listing";
 import { getMyFees, FeeRecord } from "../services/fee";
 import { useBreakpoint } from "../hooks/useBreakpoint";
+import { useAuth } from "../contexts/AuthContext";
 
 const S = {
   ink: "#0E0E0C", paper: "#F4F1EB", rule: "#C8C3B8", rust: "#C94C2E",
@@ -42,16 +43,33 @@ function statusLabel(status: any): string {
   return "Unknown";
 }
 
+const HOMEGENTIC_URL = (import.meta as any).env?.VITE_HOMEGENTIC_URL || "https://homegentic.com";
+
+function referralLink(principal: string): string {
+  const short = principal.split("-")[0] ?? principal.slice(0, 8);
+  return `${HOMEGENTIC_URL}/checkout?ref=AGENT_${short}`;
+}
+
 export default function AgentDashboardPage() {
   const { isMobile } = useBreakpoint();
+  const { principal } = useAuth();
   const [proposals, setProposals] = useState<any[]>([]);
   const [fees, setFees] = useState<FeeRecord[]>([]);
   const [payingFee, setPayingFee] = useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   useEffect(() => {
     getMyProposals().then(setProposals).catch(console.error);
     getMyFees().then(setFees).catch(console.error);
   }, []);
+
+  function handleCopyLink() {
+    if (!principal) return;
+    navigator.clipboard.writeText(referralLink(principal)).then(() => {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    });
+  }
 
   async function handlePayNow(proposalId: string, feeId?: string) {
     const key = feeId ?? proposalId;
@@ -131,11 +149,37 @@ export default function AgentDashboardPage() {
                   )}
 
                   {feeStatus === "paid" && (
-                    <div style={{ background: "#E8F5E9", border: "1px solid #A5D6A7", padding: "12px 16px" }}>
-                      <p style={{ fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.08em", color: "#2E7D32" }}>
-                        PLATFORM FEE: $295.00 — PAID
-                      </p>
-                    </div>
+                    <>
+                      <div style={{ background: "#E8F5E9", border: "1px solid #A5D6A7", padding: "12px 16px", marginBottom: 12 }}>
+                        <p style={{ fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.08em", color: "#2E7D32" }}>
+                          PLATFORM FEE: $295.00 — PAID
+                        </p>
+                      </div>
+
+                      {/* Referral card — visible once fee is paid */}
+                      {principal && (
+                        <div style={{ border: `1px solid ${S.rule}`, padding: "16px", background: S.paper }}>
+                          <p style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.10em", textTransform: "uppercase", color: S.inkLight, marginBottom: 6 }}>
+                            Share HomeGentic with your clients
+                          </p>
+                          <p style={{ fontFamily: S.sans, fontSize: "0.85rem", color: S.inkLight, marginBottom: 12 }}>
+                            Your buyer clients get 1&nbsp;month free on HomeGentic — the property management app they'll need after they close. You get referral credit once they subscribe.
+                          </p>
+                          <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 8, alignItems: isMobile ? "stretch" : "center" }}>
+                            <code style={{ flex: 1, fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.05em", background: "#F4F1EB", border: `1px solid ${S.rule}`, padding: "10px 12px", wordBreak: "break-all", color: S.ink }}>
+                              {referralLink(principal)}
+                            </code>
+                            <button
+                              data-testid="copy-referral-link"
+                              onClick={handleCopyLink}
+                              style={{ background: copiedLink ? "#2E7D32" : S.ink, border: `1px solid ${copiedLink ? "#2E7D32" : S.ink}`, color: S.paper, fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", padding: "10px 20px", cursor: "pointer", whiteSpace: "nowrap", minHeight: 40, flexShrink: 0 }}
+                            >
+                              {copiedLink ? "Copied!" : "Copy Link"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
 
                   {feeStatus === "waived" && (
