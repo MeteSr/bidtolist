@@ -47,6 +47,7 @@ export const idlFactory = ({ IDL }: any) => {
     getBidRequest:                   IDL.Func([IDL.Text], [Result(ListingBidRequest)], ["query"]),
     cancelBidRequest:                IDL.Func([IDL.Text], [Result(IDL.Null)], []),
     getOpenBidRequests:              IDL.Func([], [IDL.Vec(BidRequestSummary)], ["query"]),
+    getOpenBidRequestsForCities:     IDL.Func([IDL.Vec(IDL.Text)], [IDL.Vec(BidRequestSummary)], ["query"]),
     submitProposal:                  IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Nat, IDL.Text, IDL.Text, IDL.Nat, IDL.Nat, IDL.Vec(IDL.Text), IDL.Int, IDL.Text], [Result(ListingProposal)], []),
     getProposalsForRequest:          IDL.Func([IDL.Text], [IDL.Vec(ListingProposal)], ["query"]),
     getMyProposals:                  IDL.Func([], [IDL.Vec(ListingProposal)], ["query"]),
@@ -103,6 +104,16 @@ export async function createBidRequest(args: {
     args.beds ? [args.beds] : [], args.baths ? [args.baths] : [], args.sqft ? [args.sqft] : [],
     args.notes, BigInt(args.bidDeadline), args.homeownerEmail
   );
+}
+
+export async function getOpenBidRequestsForCities(cities: string[]): Promise<BidRequestSummary[]> {
+  if (!CANISTER_ID) {
+    const all = await getOpenBidRequests();
+    const lower = cities.map(c => c.toLowerCase());
+    return all.filter(r => lower.includes(r.city.toLowerCase()));
+  }
+  const a = await getActor();
+  return a.getOpenBidRequestsForCities(cities) as Promise<BidRequestSummary[]>;
 }
 
 export async function getBidRequest(requestId: string) {

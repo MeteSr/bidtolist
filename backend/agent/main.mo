@@ -6,6 +6,7 @@
  */
 
 import Array     "mo:core/Array";
+import Char      "mo:core/Char";
 import Map       "mo:core/Map";
 import Int       "mo:core/Int";
 import Iter      "mo:core/Iter";
@@ -25,8 +26,10 @@ persistent actor Agent {
     name:                 Text;
     brokerage:            Text;
     licenseNumber:        Text;
+    licenseState:         Text;   // primary license state, e.g. "FL"
     statesLicensed:       [Text];
     county:               Text;   // "Volusia" | "Flagler" | "Both"
+    serviceCities:        [Text]; // lowercased city names this agent serves (1–10)
     bio:                  Text;
     phone:                Text;
     email:                Text;
@@ -41,8 +44,10 @@ persistent actor Agent {
     name:           Text;
     brokerage:      Text;
     licenseNumber:  Text;
+    licenseState:   Text;
     statesLicensed: [Text];
     county:         Text;
+    serviceCities:  [Text];
     bio:            Text;
     phone:          Text;
     email:          Text;
@@ -54,8 +59,10 @@ persistent actor Agent {
     name:           Text;
     brokerage:      Text;
     licenseNumber:  Text;
+    licenseState:   Text;
     statesLicensed: [Text];
     county:         Text;
+    serviceCities:  [Text];
     bio:            Text;
     phone:          Text;
     email:          Text;
@@ -101,6 +108,19 @@ persistent actor Agent {
   };
 
   // ─── Stable State ─────────────────────────────────────────────────────────────
+
+  private func textLower(t: Text) : Text {
+    Text.fromIter(Iter.map(Text.toIter(t), func(c: Char) : Char {
+      let n = Char.toNat32(c);
+      if (n >= 65 and n <= 90) { Char.fromNat32(n + 32) } else { c }
+    }))
+  };
+  private func textUpper(t: Text) : Text {
+    Text.fromIter(Iter.map(Text.toIter(t), func(c: Char) : Char {
+      let n = Char.toNat32(c);
+      if (n >= 97 and n <= 122) { Char.fromNat32(n - 32) } else { c }
+    }))
+  };
 
   private var isPaused:           Bool        = false;
   private var pauseExpiryNs:      ?Int        = null;
@@ -182,6 +202,9 @@ persistent actor Agent {
     if (Text.size(args.name)          == 0)   return #err(#InvalidInput("name cannot be empty"));
     if (Text.size(args.brokerage)     == 0)   return #err(#InvalidInput("brokerage cannot be empty"));
     if (Text.size(args.licenseNumber) == 0)   return #err(#InvalidInput("licenseNumber cannot be empty"));
+    if (Text.size(args.licenseState)  != 2)   return #err(#InvalidInput("licenseState must be a 2-letter state code"));
+    if (args.serviceCities.size()     == 0)   return #err(#InvalidInput("at least 1 service city required"));
+    if (args.serviceCities.size()     > 10)   return #err(#InvalidInput("maximum 10 service cities"));
     if (Text.size(args.email)          > 256) return #err(#InvalidInput("email too long"));
     if (Text.size(args.bio)            > 2000) return #err(#InvalidInput("bio exceeds 2000 characters"));
     if (args.photoIdDoc.size()        == 0)   return #err(#InvalidInput("photoIdDoc cannot be empty"));
@@ -195,8 +218,10 @@ persistent actor Agent {
       name                 = args.name;
       brokerage            = args.brokerage;
       licenseNumber        = args.licenseNumber;
+      licenseState         = textUpper(args.licenseState);
       statesLicensed       = args.statesLicensed;
       county               = args.county;
+      serviceCities        = Array.map<Text, Text>(args.serviceCities, func(c) { textLower(c)});
       bio                  = args.bio;
       phone                = args.phone;
       email                = args.email;
@@ -240,11 +265,17 @@ persistent actor Agent {
         if (Text.size(args.name)          == 0) return #err(#InvalidInput("name cannot be empty"));
         if (Text.size(args.brokerage)     == 0) return #err(#InvalidInput("brokerage cannot be empty"));
         if (Text.size(args.licenseNumber) == 0) return #err(#InvalidInput("licenseNumber cannot be empty"));
+        if (Text.size(args.licenseState)  != 2) return #err(#InvalidInput("licenseState must be a 2-letter state code"));
+        if (args.serviceCities.size()     > 10) return #err(#InvalidInput("maximum 10 service cities"));
         if (Text.size(args.bio)           > 2000) return #err(#InvalidInput("bio exceeds 2000 characters"));
         let updated: AgentProfile = {
           id = existing.id; name = args.name; brokerage = args.brokerage;
-          licenseNumber = args.licenseNumber; statesLicensed = args.statesLicensed;
-          county = args.county; bio = args.bio; phone = args.phone; email = args.email;
+          licenseNumber = args.licenseNumber;
+          licenseState  = textUpper(args.licenseState);
+          statesLicensed = args.statesLicensed;
+          county = args.county;
+          serviceCities = Array.map<Text, Text>(args.serviceCities, func(c) { textLower(c)});
+          bio = args.bio; phone = args.phone; email = args.email;
           avgDaysOnMarket = existing.avgDaysOnMarket;
           listingsLast12Months = existing.listingsLast12Months;
           isVerified = existing.isVerified;
@@ -254,6 +285,19 @@ persistent actor Agent {
         #ok(updated)
       };
     }
+  };
+
+  /// Returns up to `limit` verified agents whose serviceCities contains `city` (case-insensitive).
+  public query func getAgentsForCity(city: Text, limit: Nat) : async [AgentProfile] {
+    let normalised = textLower(city);
+    let matched = Iter.toArray(
+      Iter.filter(Map.values(agents), func(a: AgentProfile) : Bool {
+        a.isVerified and
+        Option.isSome(Array.find<Text>(a.serviceCities, func(c) { c == normalised }))
+      })
+    );
+    let cap = if (matched.size() < limit) matched.size() else limit;
+    Array.tabulate<AgentProfile>(cap, func(i) { matched[i] })
   };
 
   // ─── Reviews ──────────────────────────────────────────────────────────────────
@@ -313,9 +357,11 @@ persistent actor Agent {
       case (?existing) {
         Map.add(agents, Principal.compare, agentId, {
           id = existing.id; name = existing.name; brokerage = existing.brokerage;
-          licenseNumber = existing.licenseNumber; statesLicensed = existing.statesLicensed;
-          county = existing.county; bio = existing.bio; phone = existing.phone;
-          email = existing.email; avgDaysOnMarket = existing.avgDaysOnMarket;
+          licenseNumber = existing.licenseNumber; licenseState = existing.licenseState;
+          statesLicensed = existing.statesLicensed; county = existing.county;
+          serviceCities = existing.serviceCities;
+          bio = existing.bio; phone = existing.phone; email = existing.email;
+          avgDaysOnMarket = existing.avgDaysOnMarket;
           listingsLast12Months = existing.listingsLast12Months; isVerified = true;
           createdAt = existing.createdAt; updatedAt = Time.now();
         });
@@ -333,9 +379,11 @@ persistent actor Agent {
         let newAvg = (existing.avgDaysOnMarket * existing.listingsLast12Months + daysOnMarket) / newListings;
         Map.add(agents, Principal.compare, agentId, {
           id = existing.id; name = existing.name; brokerage = existing.brokerage;
-          licenseNumber = existing.licenseNumber; statesLicensed = existing.statesLicensed;
-          county = existing.county; bio = existing.bio; phone = existing.phone;
-          email = existing.email; avgDaysOnMarket = newAvg;
+          licenseNumber = existing.licenseNumber; licenseState = existing.licenseState;
+          statesLicensed = existing.statesLicensed; county = existing.county;
+          serviceCities = existing.serviceCities;
+          bio = existing.bio; phone = existing.phone; email = existing.email;
+          avgDaysOnMarket = newAvg;
           listingsLast12Months = newListings; isVerified = existing.isVerified;
           createdAt = existing.createdAt; updatedAt = Time.now();
         });

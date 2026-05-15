@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { createBidRequest, isHomeownerVerified } from "../services/listing";
+import { notifyNewListing } from "../services/email";
 import { useAuth } from "../contexts/AuthContext";
 import { useBreakpoint } from "../hooks/useBreakpoint";
+import { FLORIDA_CITIES } from "../data/floridaCities";
 
 const S = {
   ink: "#0E0E0C", paper: "#F4F1EB", rule: "#C8C3B8", rust: "#C94C2E",
@@ -48,6 +50,7 @@ export default function PostListingPage() {
         homeownerEmail: form.contactEmail,
       }) as any;
       if ("err" in result) { toast.error(JSON.stringify(result.err)); return; }
+      notifyNewListing((result as any).ok.id);
       toast.success("Listing posted! Agents can now submit proposals.");
       navigate("/my-bids");
     } finally {
@@ -106,10 +109,16 @@ export default function PostListingPage() {
         {verifiedState === "verified" && <form onSubmit={handleSubmit}>
           {field("Street Address", "address", "text", "123 Main St")}
 
+          <datalist id="fl-cities-post">
+            {FLORIDA_CITIES.map(c => <option key={c} value={c} />)}
+          </datalist>
+
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 24 }}>
             <div>
               <label htmlFor="field-city" style={LBL}>City</label>
-              <input id="field-city" value={form.city} onChange={e => set("city", e.target.value)} placeholder="Daytona Beach" style={INP} />
+              <input id="field-city" value={form.city} onChange={e => set("city", e.target.value)}
+                placeholder="Daytona Beach" style={INP}
+                list="fl-cities-post" autoComplete="off" />
             </div>
             <div>
               <label htmlFor="field-zipCode" style={LBL}>Zip Code</label>

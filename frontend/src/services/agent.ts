@@ -11,7 +11,8 @@ export const idlFactory = ({ IDL }: any) => {
   });
   const AgentProfile = IDL.Record({
     id: IDL.Principal, name: IDL.Text, brokerage: IDL.Text, licenseNumber: IDL.Text,
-    statesLicensed: IDL.Vec(IDL.Text), county: IDL.Text, bio: IDL.Text,
+    licenseState: IDL.Text, statesLicensed: IDL.Vec(IDL.Text), county: IDL.Text,
+    serviceCities: IDL.Vec(IDL.Text), bio: IDL.Text,
     phone: IDL.Text, email: IDL.Text, avgDaysOnMarket: IDL.Nat,
     listingsLast12Months: IDL.Nat, isVerified: IDL.Bool, createdAt: IDL.Int, updatedAt: IDL.Int,
   });
@@ -25,7 +26,8 @@ export const idlFactory = ({ IDL }: any) => {
   });
   const RegisterArgs = IDL.Record({
     name: IDL.Text, brokerage: IDL.Text, licenseNumber: IDL.Text,
-    statesLicensed: IDL.Vec(IDL.Text), county: IDL.Text, bio: IDL.Text,
+    licenseState: IDL.Text, statesLicensed: IDL.Vec(IDL.Text),
+    county: IDL.Text, serviceCities: IDL.Vec(IDL.Text), bio: IDL.Text,
     phone: IDL.Text, email: IDL.Text,
     photoIdDoc: IDL.Vec(IDL.Nat8),
     licenseDoc:  IDL.Vec(IDL.Nat8),
@@ -38,6 +40,7 @@ export const idlFactory = ({ IDL }: any) => {
     getProfile:           IDL.Func([IDL.Principal], [IDL.Opt(AgentProfile)], ["query"]),
     getAllProfiles:        IDL.Func([], [IDL.Vec(AgentProfile)], ["query"]),
     getProfilesByCounty:  IDL.Func([IDL.Text], [IDL.Vec(AgentProfile)], ["query"]),
+    getAgentsForCity:     IDL.Func([IDL.Text, IDL.Nat], [IDL.Vec(AgentProfile)], ["query"]),
     updateProfile:        IDL.Func([RegisterArgs], [Result(AgentProfile)], []),
     addReview:            IDL.Func([IDL.Record({ agentId: IDL.Principal, rating: IDL.Nat, comment: IDL.Text, transactionId: IDL.Text })], [Result(AgentReview)], []),
     getReviews:           IDL.Func([IDL.Principal], [IDL.Vec(AgentReview)], ["query"]),
@@ -54,7 +57,8 @@ async function getActor() {
 
 export async function registerAgent(args: {
   name: string; brokerage: string; licenseNumber: string;
-  statesLicensed: string[]; county: string; bio: string; phone: string; email: string;
+  licenseState: string; statesLicensed: string[]; county: string;
+  serviceCities: string[]; bio: string; phone: string; email: string;
   photoIdDoc: Uint8Array; licenseDoc: Uint8Array;
 }) {
   if (!CANISTER_ID) return { ok: { ...args, id: "mock", isVerified: false, avgDaysOnMarket: 0, listingsLast12Months: 0, createdAt: Date.now(), updatedAt: Date.now() } };
@@ -83,11 +87,18 @@ export async function getAgentProfilesByCounty(county: string): Promise<any[]> {
 
 export async function updateAgentProfile(args: {
   name: string; brokerage: string; licenseNumber: string;
-  statesLicensed: string[]; county: string; bio: string; phone: string; email: string;
+  licenseState: string; statesLicensed: string[]; county: string;
+  serviceCities: string[]; bio: string; phone: string; email: string;
 }) {
   if (!CANISTER_ID) return { ok: { ...args, id: "mock", isVerified: false, avgDaysOnMarket: 0, listingsLast12Months: 0, createdAt: Date.now(), updatedAt: Date.now() } };
   const a = await getActor();
   return a.updateProfile(args);
+}
+
+export async function getAgentsForCity(city: string, limit: number): Promise<any[]> {
+  if (!CANISTER_ID) return [];
+  const a = await getActor();
+  return a.getAgentsForCity(city, limit) as Promise<any[]>;
 }
 
 export async function isVerifiedAgent(principal: string): Promise<boolean> {

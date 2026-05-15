@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getOpenBidRequests, type BidRequestSummary } from "../services/listing";
+import { getOpenBidRequests, getOpenBidRequestsForCities, type BidRequestSummary } from "../services/listing";
 import { getMyAgentProfile } from "../services/agent";
 import { useAuth } from "../contexts/AuthContext";
 import { useBreakpoint } from "../hooks/useBreakpoint";
@@ -30,19 +30,35 @@ export default function BrowseListingsPage() {
   const [requests, setRequests] = useState<BidRequestSummary[]>([]);
   const [county, setCounty] = useState<"All" | "Volusia" | "Flagler">("All");
   const [isVerified, setIsVerified] = useState(false);
+  const [serviceCities, setServiceCities] = useState<string[] | null>(null); // null = not yet loaded
 
   useEffect(() => {
-    getOpenBidRequests().then(setRequests).catch(console.error);
-  }, []);
-
-  useEffect(() => {
-    if (!isAuthenticated) { setIsVerified(false); return; }
+    if (!isAuthenticated) {
+      // Unauthenticated visitors see all listings
+      getOpenBidRequests().then(setRequests).catch(console.error);
+      setServiceCities([]);
+      return;
+    }
     getMyAgentProfile()
-      .then((profile: any) => setIsVerified(profile?.isVerified === true))
-      .catch(() => setIsVerified(false));
+      .then((profile: any) => {
+        setIsVerified(profile?.isVerified === true);
+        const cities: string[] = profile?.serviceCities ?? [];
+        setServiceCities(cities);
+        if (cities.length > 0) {
+          getOpenBidRequestsForCities(cities).then(setRequests).catch(console.error);
+        } else {
+          setRequests([]);
+        }
+      })
+      .catch(() => {
+        setIsVerified(false);
+        setServiceCities([]);
+        setRequests([]);
+      });
   }, [isAuthenticated]);
 
   const filtered = county === "All" ? requests : requests.filter(r => r.county === county);
+  const noCitiesSet = isAuthenticated && serviceCities !== null && serviceCities.length === 0;
 
   return (
     <div style={{ background: S.paper, minHeight: "100vh" }}>
@@ -56,7 +72,11 @@ export default function BrowseListingsPage() {
         <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "flex-end", gap: 16, marginBottom: 32 }}>
           <div>
             <h1 style={{ fontFamily: S.serif, fontSize: "clamp(1.6rem, 5vw, 2rem)", fontWeight: 900, marginBottom: 4 }}>Open Listings</h1>
-            <p style={{ fontFamily: S.sans, color: S.inkLight, fontSize: "0.9rem" }}>Submit a blind proposal — homeowners see all bids at once after the deadline.</p>
+            <p style={{ fontFamily: S.sans, color: S.inkLight, fontSize: "0.9rem" }}>
+              {serviceCities && serviceCities.length > 0
+                ? `Showing listings in your service area: ${serviceCities.join(", ")}`
+                : "Submit a blind proposal — homeowners see all bids at once after the deadline."}
+            </p>
           </div>
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
             {(["All", "Volusia", "Flagler"] as const).map(c => (
@@ -79,9 +99,23 @@ export default function BrowseListingsPage() {
           </div>
         )}
 
-        {filtered.length === 0 && (
+        {/* Empty state: no service cities configured */}
+        {noCitiesSet && (
           <div style={{ border: `1px solid ${S.rule}`, padding: 40, textAlign: "center" }}>
-            <p style={{ fontFamily: S.sans, color: S.inkLight }}>No open listings right now. Check back soon.</p>
+            <p style={{ fontFamily: S.serif, fontSize: "1.1rem", fontWeight: 700, marginBottom: 12 }}>No service cities on your profile</p>
+            <p style={{ fontFamily: S.sans, color: S.inkLight, marginBottom: 24, fontSize: "0.9rem" }}>
+              Add the cities you serve to your agent profile so we can show you relevant listings and broadcast new ones to you.
+            </p>
+            <a href="/agents/register"
+              style={{ display: "inline-block", background: S.rust, border: `1px solid ${S.rust}`, color: S.paper, fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", padding: "14px 24px", textDecoration: "none" }}>
+              Update Profile
+            </a>
+          </div>
+        )}
+
+        {!noCitiesSet && filtered.length === 0 && serviceCities !== null && (
+          <div style={{ border: `1px solid ${S.rule}`, padding: 40, textAlign: "center" }}>
+            <p style={{ fontFamily: S.sans, color: S.inkLight }}>No open listings in your service area right now. Check back soon.</p>
           </div>
         )}
 

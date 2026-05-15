@@ -33,7 +33,7 @@ const VERIFIED_PROFILE = {
   name: "Jane Smith", brokerage: "KW Realty", licenseNumber: "SL3001",
   county: "Volusia", bio: "Bio text", phone: "3865550100", email: "jane@kw.com",
   isVerified: true, avgDaysOnMarket: 0, listingsLast12Months: 0,
-  createdAt: 0, updatedAt: 0,
+  createdAt: 0, updatedAt: 0, serviceCities: ["daytona beach"],
 };
 const PENDING_PROFILE = { ...VERIFIED_PROFILE, isVerified: false };
 
@@ -61,6 +61,13 @@ async function uploadBothFiles() {
   const user = userEvent.setup();
   await user.upload(screen.getByLabelText(/photo.?id/i),        SMALL_PHOTO);
   await user.upload(screen.getByLabelText(/agent.*license/i),   SMALL_LICENSE);
+}
+
+async function addServiceCity(city = "Daytona Beach") {
+  const user = userEvent.setup();
+  const input = screen.getByPlaceholderText(/type a city/i);
+  await user.type(input, city);
+  await user.keyboard("{Enter}");
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -250,6 +257,7 @@ describe("AgentRegisterPage", () => {
     await waitFor(() => screen.getByText("Agent Sign Up"));
 
     await fillTextFields();
+    await addServiceCity();
     await uploadBothFiles();
 
     await act(async () => {
@@ -270,6 +278,7 @@ describe("AgentRegisterPage", () => {
     await waitFor(() => screen.getByText("Agent Sign Up"));
 
     await fillTextFields();
+    await addServiceCity();
     await uploadBothFiles();
 
     await act(async () => {
@@ -290,6 +299,7 @@ describe("AgentRegisterPage", () => {
     render(<AgentRegisterPage />);
     await waitFor(() => screen.getByText("Agent Sign Up"));
 
+    await addServiceCity();
     await uploadBothFiles();
 
     await act(async () => {
@@ -307,6 +317,7 @@ describe("AgentRegisterPage", () => {
     render(<AgentRegisterPage />);
     await waitFor(() => screen.getByText("Agent Sign Up"));
 
+    await addServiceCity();
     await uploadBothFiles();
 
     await act(async () => {

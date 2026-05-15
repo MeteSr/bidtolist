@@ -19,6 +19,7 @@ vi.mock("../../contexts/AuthContext", () => ({
 
 vi.mock("../../services/listing", () => ({
   getOpenBidRequests: vi.fn(),
+  getOpenBidRequestsForCities: vi.fn(),
 }));
 
 vi.mock("../../services/agent", () => ({
@@ -29,6 +30,7 @@ import * as listingService from "../../services/listing";
 import * as agentService from "../../services/agent";
 
 const mockGetOpenBidRequests = listingService.getOpenBidRequests as ReturnType<typeof vi.fn>;
+const mockGetOpenBidRequestsForCities = listingService.getOpenBidRequestsForCities as ReturnType<typeof vi.fn>;
 const mockGetMyAgentProfile = agentService.getMyAgentProfile as ReturnType<typeof vi.fn>;
 
 const FUTURE_NS = BigInt(Date.now() + 7 * 24 * 60 * 60 * 1000) * BigInt(1_000_000);
@@ -63,7 +65,13 @@ beforeEach(() => {
     isLoading: false, login: vi.fn(), logout: vi.fn(),
   });
   mockGetOpenBidRequests.mockResolvedValue(MOCK_LISTINGS as any);
-  mockGetMyAgentProfile.mockResolvedValue({ isVerified: true } as any);
+  mockGetOpenBidRequestsForCities.mockResolvedValue(MOCK_LISTINGS as any);
+  // Use cities that don't match MOCK_LISTINGS cities to avoid getByText finding both the
+  // service-area subtext and the listing card heading for the same city.
+  mockGetMyAgentProfile.mockResolvedValue({
+    isVerified: true,
+    serviceCities: ["ormond beach", "deltona"],
+  } as any);
 });
 
 describe("BrowseListingsPage — listings display", () => {
@@ -89,7 +97,7 @@ describe("BrowseListingsPage — listings display", () => {
   });
 
   it("renders empty state when no listings", async () => {
-    mockGetOpenBidRequests.mockResolvedValue([]);
+    mockGetOpenBidRequestsForCities.mockResolvedValue([]);
     renderPage();
     await waitFor(() => {
       expect(screen.getByText(/no open listings/i)).toBeInTheDocument();
@@ -149,7 +157,7 @@ describe("BrowseListingsPage — county filter", () => {
 
 describe("BrowseListingsPage — verified agent gate", () => {
   it("enables Submit Proposal button for verified agent", async () => {
-    mockGetMyAgentProfile.mockResolvedValue({ isVerified: true } as any);
+    mockGetMyAgentProfile.mockResolvedValue({ isVerified: true, serviceCities: ["ormond beach", "deltona"] } as any);
     renderPage();
     await waitFor(() => screen.getAllByRole("button", { name: /submit proposal/i }));
     const btns = screen.getAllByRole("button", { name: /submit proposal/i });
@@ -157,7 +165,7 @@ describe("BrowseListingsPage — verified agent gate", () => {
   });
 
   it("disables Submit Proposal button for unverified agent", async () => {
-    mockGetMyAgentProfile.mockResolvedValue({ isVerified: false } as any);
+    mockGetMyAgentProfile.mockResolvedValue({ isVerified: false, serviceCities: ["ormond beach", "deltona"] } as any);
     renderPage();
     await waitFor(() => screen.getAllByRole("button", { name: /submit proposal/i }));
     const btns = screen.getAllByRole("button", { name: /submit proposal/i });
@@ -165,7 +173,7 @@ describe("BrowseListingsPage — verified agent gate", () => {
   });
 
   it("shows tooltip/label explaining disabled state for unverified agent", async () => {
-    mockGetMyAgentProfile.mockResolvedValue({ isVerified: false } as any);
+    mockGetMyAgentProfile.mockResolvedValue({ isVerified: false, serviceCities: ["ormond beach", "deltona"] } as any);
     renderPage();
     await waitFor(() => screen.getByText(/verification pending/i));
     expect(screen.getByText(/verification pending/i)).toBeInTheDocument();
@@ -176,7 +184,8 @@ describe("BrowseListingsPage — verified agent gate", () => {
       isAuthenticated: false, principal: null, role: null,
       isLoading: false, login: vi.fn(), logout: vi.fn(),
     });
-    mockGetMyAgentProfile.mockResolvedValue(null);
+    // Unauthenticated path uses getOpenBidRequests directly
+    mockGetOpenBidRequests.mockResolvedValue(MOCK_LISTINGS as any);
     renderPage();
     await waitFor(() => screen.getAllByRole("button", { name: /submit proposal/i }));
     const btns = screen.getAllByRole("button", { name: /submit proposal/i });
