@@ -31,9 +31,12 @@ const WEBHOOK_SECRET  = process.env.STRIPE_WEBHOOK_SECRET || "";
 const PRICE_ID        = process.env.STRIPE_PRICE_PLATFORM_FEE || "";
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || "http://localhost:3000";
 
-const FEE_CANISTER_ID       = process.env.FEE_CANISTER_ID       || "";
-const ICP_HOST              = process.env.ICP_HOST              || "https://ic0.app";
-const WEBHOOK_IDENTITY_SEED = process.env.WEBHOOK_IDENTITY_SEED || "";
+const FEE_CANISTER_ID        = process.env.FEE_CANISTER_ID        || "";
+const ICP_HOST               = process.env.ICP_HOST               || "https://ic0.app";
+const WEBHOOK_IDENTITY_SEED  = process.env.WEBHOOK_IDENTITY_SEED  || "";
+const HOMEGENTIC_CANISTER_ID = process.env.HOMEGENTIC_CANISTER_ID || "";
+const HOMEGENTIC_ICP_HOST    = process.env.HOMEGENTIC_ICP_HOST    || "https://ic0.app";
+const EMAIL_SERVER_URL       = process.env.EMAIL_SERVER_URL       || "http://localhost:3002";
 
 const stripe = STRIPE_SECRET
   ? new Stripe(STRIPE_SECRET, { apiVersion: "2024-11-20.acacia" })
@@ -64,15 +67,62 @@ function createFeeActor() {
   return Actor.createActor(feeIdlFactory, { agent, canisterId: FEE_CANISTER_ID });
 }
 
-async function markFeePaidOnChain(feeId: string): Promise<void> {
+async function markFeePaidOnChain(feeId: string): Promise<{ requestId: string; agentId: string } | null> {
   const actor = createFeeActor();
   if (!actor) {
     console.warn("ICP not configured — skipping on-chain markFeePaid");
-    return;
+    return null;
   }
-  const result = await (actor as any).markFeePaid(feeId) as { ok?: unknown; err?: unknown };
+  const result = await (actor as any).markFeePaid(feeId) as { ok?: any; err?: unknown };
   if (result.err) {
     throw new Error(`fee canister returned error: ${JSON.stringify(result.err)}`);
+  }
+  return {
+    requestId: result.ok?.requestId ?? "",
+    agentId:   result.ok?.agentId ? result.ok.agentId.toText?.() ?? String(result.ok.agentId) : "",
+  };
+}
+
+// ── HomeGentic payment actor ───────────────────────────────────────────────────
+
+const homegenticIdlFactory = ({ IDL: I }: { IDL: typeof IDL }) => {
+  const Error = I.Variant({ NotFound: I.Null, NotAuthorized: I.Null, InvalidInput: I.Text, RateLimited: I.Null, PaymentFailed: I.Text });
+  return I.Service({
+    createDiscountCode: I.Func([I.Text, I.Nat, I.Int], [I.Variant({ ok: I.Null, err: Error })], []),
+  });
+};
+
+function createHomegentic() {
+  if (!HOMEGENTIC_CANISTER_ID || !WEBHOOK_IDENTITY_SEED) return null;
+  const seed     = Buffer.from(WEBHOOK_IDENTITY_SEED, "hex");
+  const identity = Ed25519KeyIdentity.fromSecretKey(seed.buffer as ArrayBuffer);
+  const agent    = new HttpAgent({ identity, host: HOMEGENTIC_ICP_HOST });
+  if (HOMEGENTIC_ICP_HOST.includes("localhost")) {
+    agent.fetchRootKey().catch(() => {});
+  }
+  return Actor.createActor(homegenticIdlFactory, { agent, canisterId: HOMEGENTIC_CANISTER_ID });
+}
+
+function generateDiscountCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "BIDTOLIST-";
+  for (let i = 0; i < 6; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
+
+async function createHomegenticCode(code: string): Promise<void> {
+  const actor = createHomegentic();
+  if (!actor) {
+    console.warn("HomeGentic ICP not configured — skipping discount code creation");
+    return;
+  }
+  const ninetyDaysNs = BigInt(90) * BigInt(24 * 60 * 60 * 1_000_000_000);
+  const expiresAt = BigInt(Date.now()) * BigInt(1_000_000) + ninetyDaysNs;
+  const result = await (actor as any).createDiscountCode(code, 50, expiresAt) as { ok?: unknown; err?: unknown };
+  if (result.err) {
+    console.warn("createDiscountCode returned error:", JSON.stringify(result.err));
   }
 }
 
@@ -142,8 +192,25 @@ app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), async
 
     if (feeId) {
       try {
-        await markFeePaidOnChain(feeId);
+        const feeRecord = await markFeePaidOnChain(feeId);
         console.log(`Fee ${feeId} marked paid — homeowner address unlocked`);
+
+        if (feeRecord?.requestId) {
+          // Generate a HomeGentic promo code for the homeowner (fire-and-forget)
+          const code = generateDiscountCode();
+          createHomegenticCode(code).catch((e) =>
+            console.error("createHomegenticCode failed:", e?.message)
+          );
+
+          // Email the homeowner their promo code
+          fetch(`${EMAIL_SERVER_URL}/api/email/homeowner-code`, {
+            method:  "POST",
+            headers: { "Content-Type": "application/json" },
+            body:    JSON.stringify({ requestId: feeRecord.requestId, homegentic_code: code }),
+          }).catch((e) => console.error("homeowner-code email failed:", e?.message));
+
+          console.log(`Cross-market promo ${code} generated for request ${feeRecord.requestId}`);
+        }
       } catch (err: any) {
         // Log but don't fail the webhook — Stripe will retry if we return non-2xx
         console.error(`markFeePaid failed for ${feeId}:`, err.message);
