@@ -11,6 +11,7 @@ import AgentDashboardPage from "./pages/AgentDashboardPage";
 import HomeownerVerifyPage from "./pages/HomeownerVerifyPage";
 import AdminPage from "./pages/AdminPage";
 import AgentProfilePage from "./pages/AgentProfilePage";
+import AgentListingPage from "./pages/AgentListingPage";
 import FaqPage from "./pages/FaqPage";
 
 export default function App() {
@@ -25,8 +26,9 @@ export default function App() {
         <Route path="/admin"                     element={<AdminPage />} />
         <Route path="/agents/register"           element={<AgentRegisterPage />} />
         <Route path="/agents/browse"             element={<BrowseListingsPage />} />
-        <Route path="/agents/propose/:requestId" element={<ProposalFormPage />} />
-        <Route path="/agents/dashboard"          element={<AgentDashboardPage />} />
+        <Route path="/agents/propose/:requestId"   element={<ProposalFormPage />} />
+        <Route path="/agents/listings/:requestId" element={<AgentListingPage />} />
+        <Route path="/agents/dashboard"           element={<AgentDashboardPage />} />
         <Route path="/agents/profile/:agentId"   element={<AgentProfilePage />} />
         <Route path="/faq"                        element={<FaqPage />} />
       </Routes>
