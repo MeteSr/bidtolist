@@ -4,160 +4,228 @@ import { useAuth } from "../contexts/AuthContext";
 import { useBreakpoint } from "../hooks/useBreakpoint";
 
 const S = {
-  // Base
-  bg:        "#F4F6F8",
   white:     "#FFFFFF",
   dark:      "#111827",
   muted:     "#6B7280",
   border:    "#E5E7EB",
-
-  // Green (primary)
+  heroBg:    "#F0F7FF",
   green:     "#2A8B57",
   greenMid:  "#35A86A",
   greenLight:"#E6F4ED",
-
-  // Yellow
   yellow:    "#F5C842",
-  yellowDeep:"#D4A800",
-  yellowPale:"#FFFBEA",
-
-  // Blue (dark featured)
   blue:      "#1B3266",
   blueMid:   "#2E4FA3",
-  blueLight: "#EBF0FF",
-
-  // Peach
-  peach:     "#F07858",
-  peachMid:  "#F5967A",
-  peachLight:"#FEF0EB",
-
-  // Typography
-  sans:   "'IBM Plex Sans', sans-serif",
-  serif:  "'Playfair Display', Georgia, serif",
-  mono:   "'IBM Plex Mono', monospace",
+  sans:      "'IBM Plex Sans', sans-serif",
 };
 
-function StarRow({ count = 5 }: { count?: number }) {
+// ── Icons ──────────────────────────────────────────────────────────────────────
+
+function IcHouse() {
   return (
-    <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
-      {Array.from({ length: count }).map((_, i) => (
-        <svg key={i} width="16" height="16" viewBox="0 0 20 20" fill={S.yellow}>
-          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-        </svg>
-      ))}
-    </div>
+    <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke={S.green} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+      <polyline points="9 22 9 12 15 12 15 22"/>
+    </svg>
   );
 }
+
+function IcTrophy() {
+  return (
+    <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke={S.yellow} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="8 21 12 17 16 21"/>
+      <line x1="12" y1="17" x2="12" y2="11"/>
+      <path d="M7 4H4a1 1 0 00-1 1v3a4 4 0 004 4"/>
+      <path d="M17 4h3a1 1 0 011 1v3a4 4 0 01-4 4"/>
+      <path d="M7 4h10v7a5 5 0 01-10 0V4z"/>
+    </svg>
+  );
+}
+
+function IcTrend() {
+  return (
+    <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke={S.blueMid} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
+      <polyline points="16 7 22 7 22 13"/>
+    </svg>
+  );
+}
+
+function IcShield() {
+  return (
+    <svg width={36} height={36} viewBox="0 0 24 24" fill="none" stroke="#60A5FA" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    </svg>
+  );
+}
+
+// ── House silhouette SVG (hero background) ─────────────────────────────────────
+
+function HouseOutline() {
+  return (
+    <svg
+      width={440}
+      height={380}
+      viewBox="0 0 440 380"
+      fill="none"
+      stroke={S.blue}
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ opacity: 0.07 }}
+    >
+      {/* Main walls */}
+      <rect x="40" y="190" width="360" height="170" />
+      {/* Roof */}
+      <polyline points="20,190 220,40 420,190" />
+      {/* Chimney */}
+      <rect x="300" y="70" width="36" height="60" />
+      {/* Front door */}
+      <rect x="178" y="280" width="84" height="80" />
+      <circle cx="254" cy="322" r="5" fill={S.blue} stroke="none" />
+      {/* Left window */}
+      <rect x="68" y="230" width="80" height="64" />
+      <line x1="68" y1="262" x2="148" y2="262" />
+      <line x1="108" y1="230" x2="108" y2="294" />
+      {/* Right window */}
+      <rect x="292" y="230" width="80" height="64" />
+      <line x1="292" y1="262" x2="372" y2="262" />
+      <line x1="332" y1="230" x2="332" y2="294" />
+      {/* Garage */}
+      <rect x="68" y="310" width="88" height="50" />
+      <line x1="68" y1="335" x2="156" y2="335" />
+      {/* Pathway */}
+      <polyline points="178,360 160,380 280,380 262,360" />
+      {/* Bushes (circles) */}
+      <circle cx="56" cy="360" r="20" />
+      <circle cx="384" cy="360" r="20" />
+      <circle cx="36" cy="360" r="14" />
+      <circle cx="404" cy="360" r="14" />
+    </svg>
+  );
+}
+
+// ── Curved wave separator ──────────────────────────────────────────────────────
+
+function HeroWave() {
+  return (
+    <svg
+      viewBox="0 0 1440 80"
+      preserveAspectRatio="none"
+      style={{ position: "absolute", bottom: -1, left: 0, width: "100%", height: 80, display: "block" }}
+    >
+      <path d="M0,0 C360,80 1080,80 1440,0 L1440,80 L0,80 Z" fill={S.white} />
+    </svg>
+  );
+}
+
+// ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
   const { isAuthenticated, role, login } = useAuth();
   const navigate = useNavigate();
   const { isMobile } = useBreakpoint();
+
   async function handleSignIn() {
     if (!isAuthenticated) await login();
     if (role === "agent") navigate("/agents/dashboard");
     else navigate("/my-bids");
   }
 
+  const navLinks = [
+    { label: "How It Works", href: "#how-it-works" },
+    { label: "Features",     href: "#features" },
+    { label: "For Realtors", href: "#realtors" },
+    { label: "Pricing",      href: "#pricing" },
+    { label: "FAQ",          href: "/faq" },
+  ];
+
   return (
-    <div style={{ background: S.bg, minHeight: "100vh", overflowX: "hidden" }}>
+    <div style={{ background: S.white, minHeight: "100vh", overflowX: "hidden" }}>
       <Helmet>
-        <title>BidtoList — Let Agents Compete for Your Listing</title>
-        <meta name="description" content="Sell your home anywhere in the USA. Post once — licensed realtors submit blind proposals with commission rate, marketing plan, and CMA. Free for homeowners." />
-        <meta name="keywords" content="sell your home, find a realtor, real estate agent, listing agent, FSBO, home sale" />
+        <title>BidToList — Listings. Competition. Better Results.</title>
+        <meta name="description" content="BidToList is the modern way for real estate agents to win more listings through competitive bidding. Secure. Transparent. Professional." />
+        <meta name="keywords" content="real estate agent bidding, win listings, competitive bidding, realtor platform" />
         <link rel="canonical" href="https://bidtolist.com/" />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://bidtolist.com/" />
-        <meta property="og:title" content="BidtoList — Let Agents Compete for Your Listing" />
-        <meta property="og:description" content="Post your home once. Licensed agents submit blind proposals. You pick the winner. Free for homeowners across the USA." />
+        <meta property="og:title" content="BidToList — Listings. Competition. Better Results." />
+        <meta property="og:description" content="The modern way for real estate agents to win more listings through competitive bidding." />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="BidtoList — Let Agents Compete for Your Listing" />
-        <meta name="twitter:description" content="Post your home once. Licensed agents submit blind proposals. You pick the winner." />
+        <meta name="twitter:title" content="BidToList — Listings. Competition. Better Results." />
+        <meta name="twitter:description" content="The modern way for real estate agents to win more listings through competitive bidding." />
       </Helmet>
 
       {/* ── Nav ─────────────────────────────────────────────────────────────── */}
       <nav style={{
         background:     S.white,
         borderBottom:   `1px solid ${S.border}`,
-        padding:        isMobile ? "14px 20px" : "16px 48px",
+        padding:        isMobile ? "14px 20px" : "0 48px",
+        height:         isMobile ? "auto" : 64,
         display:        "flex",
         justifyContent: "space-between",
         alignItems:     "center",
         position:       "sticky",
         top:            0,
         zIndex:         100,
-        boxShadow:      "0 1px 12px rgba(0,0,0,0.06)",
+        boxShadow:      "0 1px 8px rgba(0,0,0,0.06)",
       }}>
-        {/* Logo */}
-        <a href="/" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}>
-          <img src="/bid_to_list_logo.png" alt="BidtoList" style={{ height: 40, width: "auto", display: "block" }} />
+        <a href="/" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", flexShrink: 0 }}>
+          <img src="/bid_to_list_logo.png" alt="BidToList" style={{ height: 36, width: "auto", display: "block" }} />
         </a>
 
-        <div style={{ display: "flex", gap: isMobile ? 12 : 32, alignItems: "center" }}>
-          {!isMobile && (
-            <>
-              <a href="#homeowners" style={{ fontFamily: S.sans, fontSize: "0.88rem", fontWeight: 500, color: S.muted, textDecoration: "none" }}>
-                Homeowners
+        {!isMobile && (
+          <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
+            {navLinks.map(({ label, href }) => (
+              <a
+                key={label}
+                href={href}
+                style={{ fontFamily: S.sans, fontSize: "0.875rem", fontWeight: 500, color: S.muted, textDecoration: "none" }}
+              >
+                {label}
               </a>
-              <a href="#agents" style={{ fontFamily: S.sans, fontSize: "0.88rem", fontWeight: 500, color: S.muted, textDecoration: "none" }}>
-                Agents
-              </a>
-              <a href="#how-it-works" style={{ fontFamily: S.sans, fontSize: "0.88rem", fontWeight: 500, color: S.muted, textDecoration: "none" }}>
-                How It Works
-              </a>
-            </>
-          )}
+            ))}
+          </div>
+        )}
+
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           {isAuthenticated ? (
             <button
               onClick={handleSignIn}
-              style={{ background: S.green, border: "none", color: S.white, fontFamily: S.sans, fontSize: "0.88rem", fontWeight: 700, padding: "10px 22px", borderRadius: 100, cursor: "pointer" }}
+              style={{ background: S.blue, border: "none", color: S.white, fontFamily: S.sans, fontSize: "0.875rem", fontWeight: 600, padding: "9px 22px", borderRadius: 8, cursor: "pointer" }}
             >
               Dashboard →
             </button>
           ) : (
-            <a
-              href="/signup"
-              style={{ display: "inline-block", background: "transparent", border: `2px solid ${S.green}`, color: S.green, fontFamily: S.sans, fontSize: "0.88rem", fontWeight: 700, padding: "10px 22px", borderRadius: 100, textDecoration: "none" }}
-            >
-              Sign Up
-            </a>
+            <>
+              <button
+                onClick={handleSignIn}
+                style={{ background: "none", border: "none", fontFamily: S.sans, fontSize: "0.875rem", fontWeight: 500, color: S.dark, cursor: "pointer", padding: "9px 12px" }}
+              >
+                Log In
+              </button>
+              <a
+                href="/signup"
+                style={{ display: "inline-block", background: S.blue, color: S.white, fontFamily: S.sans, fontSize: "0.875rem", fontWeight: 600, padding: "9px 22px", borderRadius: 8, textDecoration: "none" }}
+              >
+                Sign Up
+              </a>
+            </>
           )}
         </div>
       </nav>
 
       {/* ── Hero ────────────────────────────────────────────────────────────── */}
       <section style={{
-        background: S.bg,
-        padding:    isMobile ? "56px 20px 48px" : "80px 48px 68px",
+        background: S.heroBg,
+        padding:    isMobile ? "56px 20px 100px" : "72px 48px 120px",
         position:   "relative",
         overflow:   "hidden",
       }}>
-        {/* Decorative circles */}
-        <div style={{
-          position: "absolute", top: -60, left: -60,
-          width: 280, height: 280,
-          borderRadius: "50%",
-          background: S.peach,
-          opacity: 0.18,
-          pointerEvents: "none",
-        }} />
-        <div style={{
-          position: "absolute", top: 40, left: 80,
-          width: 140, height: 140,
-          borderRadius: "50%",
-          background: S.yellow,
-          opacity: 0.3,
-          pointerEvents: "none",
-        }} />
+        {/* House outline watermark */}
         {!isMobile && (
-          <div style={{
-            position: "absolute", bottom: -80, right: -40,
-            width: 300, height: 300,
-            borderRadius: "50%",
-            background: S.green,
-            opacity: 0.08,
-            pointerEvents: "none",
-          }} />
+          <div style={{ position: "absolute", right: "8%", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", zIndex: 0 }}>
+            <HouseOutline />
+          </div>
         )}
 
         <div style={{
@@ -165,7 +233,7 @@ export default function HomePage() {
           margin:              "0 auto",
           display:             "grid",
           gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-          gap:                 isMobile ? 48 : 80,
+          gap:                 isMobile ? 48 : 64,
           alignItems:          "center",
           position:            "relative",
           zIndex:              1,
@@ -173,23 +241,27 @@ export default function HomePage() {
           {/* Left — copy */}
           <div>
             <h1 style={{
-              fontFamily:   S.sans,
-              fontSize:     "clamp(2.2rem, 5vw, 3.6rem)",
-              fontWeight:   800,
-              lineHeight:   1.1,
-              color:        S.dark,
-              marginBottom: 20,
+              fontFamily:    S.sans,
+              fontSize:      "clamp(2.4rem, 5vw, 3.8rem)",
+              fontWeight:    800,
+              lineHeight:    1.1,
+              color:         S.dark,
+              marginBottom:  8,
               letterSpacing: "-0.02em",
             }}>
-              Let agents<br />
-              <span style={{ color: S.green }}>compete</span> for<br />
-              your listing.
+              Listings. Competition.
             </h1>
-
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-              <StarRow />
-              <span style={{ fontFamily: S.sans, fontSize: "0.85rem", fontWeight: 600, color: S.dark }}>5.0</span>
-            </div>
+            <h1 style={{
+              fontFamily:    S.sans,
+              fontSize:      "clamp(2.4rem, 5vw, 3.8rem)",
+              fontWeight:    800,
+              lineHeight:    1.1,
+              color:         S.green,
+              marginBottom:  24,
+              letterSpacing: "-0.02em",
+            }}>
+              Better Results.
+            </h1>
 
             <p style={{
               fontFamily:   S.sans,
@@ -197,300 +269,254 @@ export default function HomePage() {
               color:        S.muted,
               lineHeight:   1.75,
               marginBottom: 40,
-              maxWidth:     440,
+              maxWidth:     420,
             }}>
-              Post your home once. Licensed agents submit blind proposals — commission rate, marketing plan, and CMA. You compare and pick the winner. Free for homeowners, always.
+              BidToList is the modern way for real estate agents to win more listings through competitive bidding.
             </p>
 
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
               <a
-                href="/signup?role=homeowner"
+                href="/signup"
                 style={{
                   display:        "inline-flex",
                   alignItems:     "center",
-                  gap:            6,
-                  padding:        "14px 28px",
+                  padding:        "13px 28px",
                   background:     S.green,
                   color:          S.white,
                   fontFamily:     S.sans,
                   fontSize:       "0.9rem",
                   fontWeight:     700,
-                  borderRadius:   100,
+                  borderRadius:   8,
                   textDecoration: "none",
-                  flex:           isMobile ? "1 1 100%" : "0 0 auto",
                 }}
               >
-                Post Your Home
+                Get Started
               </a>
               <a
-                href="#agents"
+                href="#how-it-works"
                 style={{
                   display:        "inline-flex",
                   alignItems:     "center",
-                  padding:        "14px 28px",
-                  border:         `2px solid ${S.border}`,
+                  gap:            8,
+                  padding:        "13px 28px",
+                  border:         `1.5px solid ${S.border}`,
                   background:     S.white,
                   color:          S.dark,
                   fontFamily:     S.sans,
                   fontSize:       "0.9rem",
                   fontWeight:     600,
-                  borderRadius:   100,
+                  borderRadius:   8,
                   textDecoration: "none",
-                  flex:           isMobile ? "1 1 100%" : "0 0 auto",
                 }}
               >
-                Join as an Agent
+                <svg width={16} height={16} viewBox="0 0 24 24" fill={S.dark}><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                How It Works
               </a>
             </div>
           </div>
 
-          {/* Right — hero illustration */}
+          {/* Right — BID paddle */}
           {!isMobile && (
             <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
               <img
                 src="/logo_with_hand.png"
                 alt="Agent raising a bid paddle"
-                style={{ width: "100%", maxWidth: 420, height: "auto", display: "block" }}
+                style={{ width: "100%", maxWidth: 400, height: "auto", display: "block", position: "relative", zIndex: 1 }}
               />
             </div>
           )}
         </div>
+
+        {/* Curved bottom */}
+        <HeroWave />
       </section>
 
-      {/* ── Trusted-by band (floating card) ─────────────────────────────────── */}
-      <div style={{
-        background:   S.white,
-        borderRadius: isMobile ? 16 : 20,
-        boxShadow:    "0 8px 40px rgba(0,0,0,0.10), 0 0 0 1px rgba(0,0,0,0.04)",
-        padding:      isMobile ? "20px 20px" : "22px 40px",
-        maxWidth:     1100,
-        marginTop:    isMobile ? -16 : -20,
-        marginBottom: isMobile ? -44 : -56,
-        marginLeft:   isMobile ? 20 : "auto",
-        marginRight:  isMobile ? 20 : "auto",
-        position:     "relative",
-        zIndex:       10,
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 20 : 48, flexWrap: "wrap", justifyContent: "center" }}>
-          <span style={{ fontFamily: S.sans, fontSize: "0.78rem", fontWeight: 600, color: S.muted, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-            Serving agents from
-          </span>
-          {[
-            { name: "Coldwell Banker", color: "#003087" },
-            { name: "RE/MAX",          color: "#DC1C2E" },
-            { name: "Keller Williams", color: "#B40101" },
-            { name: "EXP Realty",      color: "#0C2340" },
-            { name: "Century 21",      color: "#B08A2E" },
-          ].map(({ name, color }) => (
-            <span key={name} style={{ fontFamily: S.sans, fontSize: "0.88rem", fontWeight: 700, color }}>
-              {name}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* ── How it works ────────────────────────────────────────────────────── */}
-      <section id="how-it-works" style={{ background: "#FAFBFC", padding: isMobile ? "116px 20px 72px" : "148px 48px 104px" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 2fr", gap: isMobile ? 40 : 80, alignItems: "start" }}>
-            {/* Left */}
-            <div>
-              <div style={{
-                display:      "inline-flex",
-                alignItems:   "center",
-                gap:          8,
-                background:   S.peachLight,
-                borderRadius: 100,
-                padding:      "6px 16px",
-                marginBottom: 20,
-              }}>
-                <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: S.peach }} />
-                <span style={{ fontFamily: S.sans, fontSize: "0.78rem", fontWeight: 600, color: S.peach }}>
-                  For Homeowners
-                </span>
-              </div>
-
-              <h2 style={{ fontFamily: S.sans, fontSize: "clamp(1.6rem, 3vw, 2.4rem)", fontWeight: 800, color: S.dark, lineHeight: 1.15, marginBottom: 20, letterSpacing: "-0.02em" }}>
-                Simple and<br />Easy Process
-              </h2>
-              <p style={{ fontFamily: S.sans, fontSize: "0.95rem", color: S.muted, lineHeight: 1.75, marginBottom: 32, maxWidth: 320 }}>
-                No cold calls. No pressure. Post once and let licensed agents bring their best offer to you.
-              </p>
-              <a
-                href="/signup?role=homeowner"
-                style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: S.sans, fontSize: "0.88rem", fontWeight: 700, color: S.green, textDecoration: "none", border: `2px solid ${S.green}`, borderRadius: 100, padding: "10px 22px" }}
-              >
-                Get Started →
-              </a>
-            </div>
-
-            {/* Right — 3 step cards */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
-              {[
-                {
-                  n: "1",
-                  t: "Post Your Home",
-                  d: "Enter your address, target list date, and notes. Set a bid deadline — typically 5–7 days.",
-                  featured: false,
-                  bg: S.white,
-                  numBg: S.greenLight,
-                  numColor: S.green,
-                },
-                {
-                  n: "2",
-                  t: "Agents Bid Blind",
-                  d: "Licensed local agents submit sealed proposals. They can't see each other's bids — ever.",
-                  featured: true,
-                  bg: S.blue,
-                  numBg: S.yellow,
-                  numColor: S.dark,
-                },
-                {
-                  n: "3",
-                  t: "You Pick the Winner",
-                  d: "Compare proposals side by side — commission, marketing plan, track record. You decide.",
-                  featured: false,
-                  bg: S.white,
-                  numBg: S.peachLight,
-                  numColor: S.peach,
-                },
-              ].map(({ n, t, d, featured, bg, numBg, numColor }) => (
-                <div key={n} style={{
-                  background:   bg,
-                  borderRadius: 20,
-                  padding:      "28px 24px",
-                  boxShadow:    featured ? "0 16px 48px rgba(27,50,102,0.25)" : "0 4px 24px rgba(0,0,0,0.06)",
-                  border:       featured ? "none" : `1px solid ${S.border}`,
-                  transform:    featured ? "translateY(-12px)" : "none",
-                  transition:   "transform 0.2s",
-                }}>
-                  <div style={{
-                    width:        36,
-                    height:       36,
-                    borderRadius: 10,
-                    background:   numBg,
-                    display:      "flex",
-                    alignItems:   "center",
-                    justifyContent: "center",
-                    marginBottom: 20,
-                  }}>
-                    <span style={{ fontFamily: S.sans, fontSize: "1rem", fontWeight: 800, color: numColor }}>{n}</span>
-                  </div>
-                  <p style={{ fontFamily: S.sans, fontSize: "1rem", fontWeight: 700, color: featured ? S.white : S.dark, marginBottom: 10, lineHeight: 1.3 }}>{t}</p>
-                  <p style={{ fontFamily: S.sans, fontSize: "0.85rem", color: featured ? "rgba(255,255,255,0.65)" : S.muted, lineHeight: 1.7 }}>{d}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Stats band (floating card) ───────────────────────────────────────── */}
-      <div style={{
-        background:   S.yellow,
-        borderRadius: isMobile ? 16 : 20,
-        boxShadow:    "0 8px 40px rgba(245,200,66,0.4), 0 0 0 1px rgba(0,0,0,0.06)",
-        padding:      isMobile ? "28px 24px" : "28px 56px",
-        maxWidth:     900,
-        marginTop:    isMobile ? -16 : -20,
-        marginBottom: isMobile ? -44 : -56,
-        marginLeft:   isMobile ? 20 : "auto",
-        marginRight:  isMobile ? 20 : "auto",
-        position:     "relative",
-        zIndex:       10,
-      }}>
-        <div style={{ display: "flex", gap: isMobile ? 40 : 0, flexWrap: "wrap", justifyContent: "space-around", alignItems: "center" }}>
-          {[
-            { val: "$0",   label: "Cost for Homeowners",  testId: "stat-homeowner-cost" },
-            { val: "$295", label: "Cost For Winning Agent", testId: "stat-agent-fee" },
-          ].map(({ val, label, testId }) => (
-            <div key={label} data-testid={testId} style={{ textAlign: "center" }}>
-              <p style={{ fontFamily: S.sans, fontSize: "clamp(1.6rem,3vw,2.4rem)", fontWeight: 800, color: S.dark, marginBottom: 4, letterSpacing: "-0.02em" }}>
-                {val}
-              </p>
-              <p style={{ fontFamily: S.sans, fontSize: "0.78rem", fontWeight: 600, color: "rgba(17,24,39,0.6)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                {label}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── For Agents ──────────────────────────────────────────────────────── */}
-      <section id="agents" style={{ background: S.white, padding: isMobile ? "116px 20px 72px" : "148px 48px 104px", position: "relative", overflow: "hidden" }}>
-        {/* Decorative */}
-        <div style={{ position: "absolute", top: -80, right: -80, width: 320, height: 320, borderRadius: "50%", background: S.greenLight, opacity: 0.6, pointerEvents: "none" }} />
-
-        <div style={{ maxWidth: 1200, margin: "0 auto", position: "relative", zIndex: 1 }}>
-          <div style={{ textAlign: "center", marginBottom: 60 }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: S.greenLight, borderRadius: 100, padding: "6px 16px", marginBottom: 20 }}>
-              <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: S.green }} />
-              <span style={{ fontFamily: S.sans, fontSize: "0.78rem", fontWeight: 600, color: S.green }}>For Real Estate Agents</span>
-            </div>
-            <h2 style={{ fontFamily: S.sans, fontSize: "clamp(1.8rem, 3.5vw, 2.8rem)", fontWeight: 800, color: S.dark, lineHeight: 1.15, letterSpacing: "-0.02em", marginBottom: 16 }}>
-              Win listings on merit,<br />not referrals.
+      {/* ── How BidToList Works ──────────────────────────────────────────────── */}
+      <section id="how-it-works" style={{ background: S.white, padding: isMobile ? "56px 20px 64px" : "80px 48px 88px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: 48 }}>
+            <h2 style={{ fontFamily: S.sans, fontSize: "clamp(1.8rem, 3vw, 2.4rem)", fontWeight: 800, color: S.dark, marginBottom: 12, letterSpacing: "-0.02em" }}>
+              How BidToList Works
             </h2>
-            <p style={{ fontFamily: S.sans, fontSize: "1rem", color: S.muted, lineHeight: 1.75, maxWidth: 480, margin: "0 auto" }}>
-              Browse open bid requests from verified homeowners. If selected, pay a flat $295 — no monthly fees, no per-bid charges, ever.
+            <p style={{ fontFamily: S.sans, fontSize: "1rem", color: S.muted, maxWidth: 480, margin: "0 auto", lineHeight: 1.7 }}>
+              A simple, transparent process that puts agents and sellers first.
             </p>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 20, marginBottom: 48 }}>
+          {/* Feature cards */}
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 24 }}>
             {[
-              { icon: "💸", t: "No Monthly Fees",     d: "Register free. You only pay $295 when your proposal is accepted — no subscriptions, no per-bid charges.", color: S.yellow,    pale: S.yellowPale },
-              { icon: "🔒", t: "Level Playing Field", d: "Blind bidding means your proposal wins on quality — not on who you know.", color: S.green,     pale: S.greenLight },
-              { icon: "✅", t: "Verified Homeowners", d: "Every listing comes from a verified property owner. No wasted proposals.",       color: S.peach,     pale: S.peachLight },
-            ].map(({ icon, t, d, color, pale }) => (
-              <div key={t} style={{ background: pale, borderRadius: 20, padding: "32px 28px", border: `1px solid ${color}22` }}>
-                <div style={{ width: 52, height: 52, borderRadius: 14, background: S.white, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20, fontSize: "1.4rem", boxShadow: `0 4px 16px ${color}22` }}>
+              {
+                icon:  <IcHouse />,
+                iconBg: "#E6F4ED",
+                title: "More Opportunities",
+                desc:  "Access exclusive listings from motivated sellers.",
+              },
+              {
+                icon:  <IcTrophy />,
+                iconBg: "#FFFBEA",
+                title: "Fair & Transparent",
+                desc:  "Competitive bidding ensures sellers get the best value.",
+              },
+              {
+                icon:  <IcTrend />,
+                iconBg: "#EBF0FF",
+                title: "Grow Your Business",
+                desc:  "Win more listings and close more deals.",
+              },
+            ].map(({ icon, iconBg, title, desc }) => (
+              <div
+                key={title}
+                style={{
+                  background:   "#FAFBFC",
+                  border:       `1px solid ${S.border}`,
+                  borderRadius: 16,
+                  padding:      "36px 28px",
+                  textAlign:    "center",
+                }}
+              >
+                <div style={{
+                  width:          56,
+                  height:         56,
+                  borderRadius:   14,
+                  background:     iconBg,
+                  display:        "flex",
+                  alignItems:     "center",
+                  justifyContent: "center",
+                  margin:         "0 auto 20px",
+                }}>
                   {icon}
                 </div>
-                <p style={{ fontFamily: S.sans, fontSize: "1.05rem", fontWeight: 700, color: S.dark, marginBottom: 10 }}>{t}</p>
-                <p style={{ fontFamily: S.sans, fontSize: "0.88rem", color: S.muted, lineHeight: 1.7 }}>{d}</p>
+                <p style={{ fontFamily: S.sans, fontSize: "1.05rem", fontWeight: 700, color: S.dark, marginBottom: 10 }}>{title}</p>
+                <p style={{ fontFamily: S.sans, fontSize: "0.875rem", color: S.muted, lineHeight: 1.7 }}>{desc}</p>
               </div>
             ))}
-          </div>
-
-          <div style={{ textAlign: "center" }}>
-            <a
-              href="/signup?role=agent"
-              style={{ display: "inline-flex", alignItems: "center", padding: "14px 36px", background: S.blue, color: S.white, fontFamily: S.sans, fontSize: "0.9rem", fontWeight: 700, borderRadius: 100, textDecoration: "none" }}
-            >
-              Join as an Agent →
-            </a>
           </div>
         </div>
       </section>
 
-      {/* ── CTA banner ──────────────────────────────────────────────────────── */}
-      <section style={{ background: S.green, padding: isMobile ? "64px 20px" : "88px 48px", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", top: -60, right: -40, width: 240, height: 240, borderRadius: "50%", background: "rgba(255,255,255,0.06)", pointerEvents: "none" }} />
-        <div style={{ position: "absolute", bottom: -80, left: -40, width: 300, height: 300, borderRadius: "50%", background: "rgba(255,255,255,0.04)", pointerEvents: "none" }} />
+      {/* ── 4-Step Process ───────────────────────────────────────────────────── */}
+      <section id="features" style={{ background: "#F8FAFB", padding: isMobile ? "56px 20px 64px" : "72px 48px 88px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <div style={{
+            display:             "grid",
+            gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)",
+            gap:                 isMobile ? 32 : 0,
+            position:            "relative",
+          }}>
+            {/* Connecting line (desktop only) */}
+            {!isMobile && (
+              <div style={{
+                position:   "absolute",
+                top:        28,
+                left:       "12.5%",
+                right:      "12.5%",
+                height:     2,
+                background: `linear-gradient(to right, ${S.green}, ${S.green})`,
+                opacity:    0.2,
+                zIndex:     0,
+              }} />
+            )}
 
-        <div style={{ maxWidth: 680, margin: "0 auto", textAlign: "center", position: "relative", zIndex: 1 }}>
-          <p style={{ fontFamily: S.sans, fontSize: "0.78rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em", color: "rgba(255,255,255,0.7)", marginBottom: 18 }}>
-            No subscription. No catch.
+            {[
+              { n: "1", title: "New Listing Added",  desc: "Sellers post their property and set reserve terms." },
+              { n: "2", title: "Agents Bid",         desc: "Licensed agents place competitive bids to win the listing." },
+              { n: "3", title: "Best Bid Wins",      desc: "Sellers choose the best offer with confidence." },
+              { n: "4", title: "Close More Deals",   desc: "Winning agents get the listing and grow their business." },
+            ].map(({ n, title, desc }) => (
+              <div key={n} style={{ textAlign: "center", padding: isMobile ? 0 : "0 24px", position: "relative", zIndex: 1 }}>
+                <div style={{
+                  width:          56,
+                  height:         56,
+                  borderRadius:   "50%",
+                  background:     S.green,
+                  color:          S.white,
+                  display:        "flex",
+                  alignItems:     "center",
+                  justifyContent: "center",
+                  fontFamily:     S.sans,
+                  fontSize:       "1.2rem",
+                  fontWeight:     800,
+                  margin:         "0 auto 20px",
+                  boxShadow:      "0 4px 16px rgba(42,139,87,0.3)",
+                }}>
+                  {n}
+                </div>
+                <p style={{ fontFamily: S.sans, fontSize: "0.95rem", fontWeight: 700, color: S.dark, marginBottom: 8 }}>{title}</p>
+                <p style={{ fontFamily: S.sans, fontSize: "0.825rem", color: S.muted, lineHeight: 1.65 }}>{desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Trust bar ────────────────────────────────────────────────────────── */}
+      <section id="realtors" style={{ background: S.blue, padding: isMobile ? "40px 20px" : "48px 64px" }}>
+        <div style={{
+          maxWidth:      1100,
+          margin:        "0 auto",
+          display:       "flex",
+          alignItems:    "center",
+          justifyContent:"space-between",
+          gap:           24,
+          flexWrap:      "wrap",
+        }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 20 }}>
+            <div style={{ flexShrink: 0, marginTop: 2 }}>
+              <IcShield />
+            </div>
+            <div>
+              <p style={{ fontFamily: S.sans, fontSize: "1.1rem", fontWeight: 700, color: S.white, marginBottom: 6 }}>
+                Built for Realtors. Backed by Trust.
+              </p>
+              <p style={{ fontFamily: S.sans, fontSize: "0.875rem", color: "rgba(255,255,255,0.65)", lineHeight: 1.65, maxWidth: 480 }}>
+                Secure. Transparent. Professional. We protect your data and ensure a fair process for everyone.
+              </p>
+            </div>
+          </div>
+          <a
+            href="/signup?role=agent"
+            style={{
+              display:        "inline-flex",
+              alignItems:     "center",
+              padding:        "11px 28px",
+              background:     S.white,
+              color:          S.blue,
+              fontFamily:     S.sans,
+              fontSize:       "0.875rem",
+              fontWeight:     700,
+              borderRadius:   8,
+              textDecoration: "none",
+              flexShrink:     0,
+            }}
+          >
+            Learn More
+          </a>
+        </div>
+      </section>
+
+      {/* ── Trusted by Agents ────────────────────────────────────────────────── */}
+      <section style={{ background: S.white, padding: isMobile ? "48px 20px" : "64px 48px", borderTop: `1px solid ${S.border}` }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", textAlign: "center" }}>
+          <p style={{ fontFamily: S.sans, fontSize: "0.78rem", fontWeight: 600, color: S.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 36 }}>
+            Trusted by Agents
           </p>
-          <h2 style={{ fontFamily: S.sans, fontSize: "clamp(1.8rem, 3.5vw, 2.8rem)", fontWeight: 800, color: S.white, lineHeight: 1.15, marginBottom: 20, letterSpacing: "-0.02em" }}>
-            Free for homeowners.<br />
-            <span style={{ color: S.yellow }}>$295 win fee</span> for agents.
-          </h2>
-          <p style={{ fontFamily: S.sans, fontSize: "0.95rem", color: "rgba(255,255,255,0.7)", lineHeight: 1.75, marginBottom: 44 }}>
-            BidtoList earns only when an agent wins a listing — so our incentives are perfectly aligned with yours.
-          </p>
-          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-            <a
-              href="/signup?role=homeowner"
-              style={{ display: "inline-flex", alignItems: "center", padding: "14px 32px", background: S.yellow, color: S.dark, fontFamily: S.sans, fontSize: "0.9rem", fontWeight: 700, borderRadius: 100, textDecoration: "none" }}
-            >
-              Post your home free →
-            </a>
-            <a
-              href="/signup?role=agent"
-              style={{ display: "inline-flex", alignItems: "center", padding: "14px 32px", border: "2px solid rgba(255,255,255,0.4)", color: S.white, fontFamily: S.sans, fontSize: "0.9rem", fontWeight: 600, borderRadius: 100, textDecoration: "none" }}
-            >
-              Join as an agent
-            </a>
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: isMobile ? 24 : 56, flexWrap: "wrap" }}>
+            {[
+              { name: "Coldwell Banker", color: "#003087" },
+              { name: "RE/MAX",          color: "#DC1C2E" },
+              { name: "Keller Williams", color: "#B40101" },
+              { name: "EXP Realty",      color: "#0C2340" },
+              { name: "Century 21",      color: "#B08A2E" },
+              { name: "Compass",         color: "#000000" },
+            ].map(({ name, color }) => (
+              <span
+                key={name}
+                style={{ fontFamily: S.sans, fontSize: "0.9rem", fontWeight: 700, color, opacity: 0.7, letterSpacing: "0.01em" }}
+              >
+                {name}
+              </span>
+            ))}
           </div>
         </div>
       </section>
@@ -510,7 +536,7 @@ export default function HomePage() {
             <span style={{ display: "inline-block", width: 3, height: 14, background: S.green, borderRadius: 2 }} />
             <span style={{ display: "inline-block", width: 3, height: 14, background: S.yellow, borderRadius: 2 }} />
           </div>
-          <span style={{ fontFamily: S.sans, fontSize: "0.78rem", fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.04em" }}>BidtoList</span>
+          <span style={{ fontFamily: S.sans, fontSize: "0.78rem", fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.04em" }}>BidToList</span>
           <span style={{ fontFamily: S.sans, fontSize: "0.72rem", color: "rgba(255,255,255,0.3)" }}>© 2026</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
