@@ -66,7 +66,7 @@ export async function registerAgent(args: {
   return a.register(args);
 }
 
-export async function getMyProfile(): Promise<any | null> {
+export async function getMyAgentProfile(): Promise<any | null> {
   if (!CANISTER_ID) return (typeof window !== "undefined" && (window as any).__e2e_agent_profile) ?? null;
   const a = await getActor();
   const result = await a.getMyProfile() as any[];
