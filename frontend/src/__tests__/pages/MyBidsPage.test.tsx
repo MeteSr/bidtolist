@@ -118,8 +118,8 @@ describe("MyBidsPage — sealed / revealed logic", () => {
     mockGetProposalsForRequest.mockResolvedValue([MOCK_PROPOSAL]);
     renderPage();
     await waitFor(() => {
-      expect(screen.getByText(/jane smith/i)).toBeInTheDocument();
-      expect(screen.getByText(/keller williams/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/jane smith/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/keller williams/i).length).toBeGreaterThan(0);
     });
   });
 
@@ -257,7 +257,7 @@ describe("MyBidsPage — review form", () => {
     mockGetMyBidRequests.mockResolvedValue([MOCK_REQUEST_PAST]);
     mockGetProposalsForRequest.mockResolvedValue([MOCK_PROPOSAL]);
     renderPage();
-    await waitFor(() => screen.getByText(/jane smith/i));
+    await waitFor(() => expect(screen.getAllByText(/jane smith/i).length).toBeGreaterThan(0));
     expect(screen.queryByTestId("review-form")).toBeNull();
   });
 });

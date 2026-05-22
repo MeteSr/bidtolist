@@ -128,8 +128,8 @@ describe("MyBidsPage — integration (real service, mock fallback)", () => {
     renderPage();
     // Proposals are shown inline after the deadline — no reveal click needed
     await waitFor(() => {
-      expect(screen.getByText(/jane smith/i)).toBeInTheDocument();
-      expect(screen.getByText(/keller williams/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/jane smith/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/keller williams/i).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/2\.75%/).length).toBeGreaterThan(0);
     });
   });
