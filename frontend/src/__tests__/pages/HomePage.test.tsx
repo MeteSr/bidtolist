@@ -34,37 +34,39 @@ describe("HomePage", () => {
 
   it("renders headline value prop", () => {
     renderPage();
-    const h1 = screen.getByRole("heading", { level: 1 });
-    expect(h1).toHaveTextContent(/let agents.*compete.*your listing/i);
+    const h1s = screen.getAllByRole("heading", { level: 1 });
+    expect(h1s.length).toBeGreaterThanOrEqual(1);
+    const combined = h1s.map(h => h.textContent ?? "").join(" ");
+    expect(combined).toMatch(/listings.*competition/i);
   });
 
-  it("renders Post Your Home CTA", () => {
+  it("renders hero Get Started CTA", () => {
     renderPage();
-    expect(screen.getAllByRole("link", { name: /post your home/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole("link", { name: /get started/i }).length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders hero CTAs for homeowners and agents", () => {
     renderPage();
-    expect(screen.getAllByRole("link", { name: /post your home/i }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole("link", { name: /join as an agent/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole("link", { name: /get started/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole("link", { name: /learn more/i }).length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renders how it works section with 3 steps", () => {
+  it("renders how it works section with steps", () => {
     renderPage();
-    expect(screen.getAllByText(/post your home/i).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText(/agents bid blind/i)).toBeInTheDocument();
-    expect(screen.getByText(/you pick the winner/i)).toBeInTheDocument();
+    expect(screen.getByText(/new listing added/i)).toBeInTheDocument();
+    expect(screen.getByText(/agents bid/i)).toBeInTheDocument();
+    expect(screen.getByText(/best bid wins/i)).toBeInTheDocument();
   });
 
-  it("renders pricing clarity — no subscription", () => {
+  it("renders trust band for realtors", () => {
     renderPage();
-    expect(screen.getAllByText(/\$295/).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText(/no subscription/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/built for realtors/i)).toBeInTheDocument();
   });
 
-  it("shows brokerage band for agents", () => {
+  it("shows brokerage names for agents", () => {
     renderPage();
-    expect(screen.getByText(/serving agents from/i)).toBeInTheDocument();
+    expect(screen.getByText(/trusted by agents/i)).toBeInTheDocument();
+    expect(screen.getByText(/keller williams/i)).toBeInTheDocument();
   });
 
   it("shows Dashboard button when authenticated agent", () => {

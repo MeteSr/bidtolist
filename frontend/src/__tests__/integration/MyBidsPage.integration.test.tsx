@@ -6,7 +6,6 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import MyBidsPage from "../../pages/MyBidsPage";
 
@@ -57,7 +56,7 @@ describe("MyBidsPage — integration (real service, mock fallback)", () => {
   it("shows empty state when no requests are injected", async () => {
     renderPage();
     await waitFor(() => {
-      expect(screen.getByText(/no listing requests yet/i)).toBeInTheDocument();
+      expect(screen.getByText(/no active listings yet/i)).toBeInTheDocument();
     });
   });
 
@@ -77,7 +76,7 @@ describe("MyBidsPage — integration (real service, mock fallback)", () => {
     });
   });
 
-  it("shows Sealed button for open request (bid window still open)", async () => {
+  it("shows bids-sealed message for open request (bid window still open)", async () => {
     (window as any).__e2e_requests = [
       {
         id: "BID_MY_2", address: "456 Elm St", city: "Palm Coast", county: "Flagler",
@@ -88,11 +87,11 @@ describe("MyBidsPage — integration (real service, mock fallback)", () => {
     ];
     renderPage();
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /^sealed$/i })).toBeInTheDocument();
+      expect(screen.getByText(/bids are sealed until the deadline/i)).toBeInTheDocument();
     });
   });
 
-  it("shows View Proposals button when deadline has passed", async () => {
+  it("shows no-proposals message when deadline has passed and no proposals received", async () => {
     (window as any).__e2e_requests = [
       {
         id: "BID_MY_3", address: "789 Pine Ave", city: "Daytona Beach", county: "Volusia",
@@ -103,11 +102,11 @@ describe("MyBidsPage — integration (real service, mock fallback)", () => {
     ];
     renderPage();
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /view.*proposals/i })).toBeInTheDocument();
+      expect(screen.getByText(/no proposals received/i)).toBeInTheDocument();
     });
   });
 
-  it("reveals proposals and shows agent name on View Proposals click", async () => {
+  it("shows agent name and commission after deadline when proposals are injected", async () => {
     (window as any).__e2e_requests = [
       {
         id: "BID_MY_4", address: "1 Bid Rd", city: "Daytona Beach", county: "Volusia",
@@ -126,14 +125,12 @@ describe("MyBidsPage — integration (real service, mock fallback)", () => {
         coverLetter: "I know this area.", status: { Pending: null }, createdAt: BigInt(0),
       },
     ];
-    const user = userEvent.setup();
     renderPage();
-    await waitFor(() => screen.getByRole("button", { name: /view.*proposals/i }));
-    await user.click(screen.getByRole("button", { name: /view.*proposals/i }));
+    // Proposals are shown inline after the deadline — no reveal click needed
     await waitFor(() => {
       expect(screen.getByText(/jane smith/i)).toBeInTheDocument();
       expect(screen.getByText(/keller williams/i)).toBeInTheDocument();
-      expect(screen.getByText(/2\.75%/)).toBeInTheDocument();
+      expect(screen.getAllByText(/2\.75%/).length).toBeGreaterThan(0);
     });
   });
 
@@ -146,10 +143,7 @@ describe("MyBidsPage — integration (real service, mock fallback)", () => {
         bidDeadline: PAST_NS, status: { Open: null }, createdAt: BigInt(0), feePaid: false,
       },
     ];
-    const user = userEvent.setup();
     renderPage();
-    await waitFor(() => screen.getByRole("button", { name: /view.*proposals/i }));
-    await user.click(screen.getByRole("button", { name: /view.*proposals/i }));
     await waitFor(() => {
       expect(screen.getByText(/no proposals received/i)).toBeInTheDocument();
     });
