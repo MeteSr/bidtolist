@@ -308,29 +308,42 @@ persistent actor Agent {
     if (args.rating < 1 or args.rating > 5) return #err(#InvalidInput("rating must be 1–5"));
     if (Text.size(args.transactionId) == 0) return #err(#InvalidInput("transactionId cannot be empty"));
 
-    // Vuln 5 fix: verify the transactionId corresponds to a real accepted proposal
-    // where msg.caller is the homeowner and args.agentId is the winning agent.
-    if (listingCanisterId == "") return #err(#InvalidInput("Reviews are not available until the listing canister is wired"));
+    // Write sentinel before the first await so concurrent calls for the same (caller, transactionId)
+    // see the key already set and return #DuplicateReview before the validation round-trip.
+    let compositeKey = Principal.toText(msg.caller) # "|" # args.transactionId;
+    if (Map.get(reviewKeys, Text.compare, compositeKey) != null) return #err(#DuplicateReview);
+    Map.add(reviewKeys, Text.compare, compositeKey, "pending");
+
+    if (listingCanisterId == "") {
+      Map.remove(reviewKeys, Text.compare, compositeKey);
+      return #err(#InvalidInput("Reviews are not available until the listing canister is wired"));
+    };
     let listingActor = actor(listingCanisterId) : actor {
       validateReviewTransaction : (Text, Principal, Principal) -> async Bool;
     };
-    let valid = await listingActor.validateReviewTransaction(args.transactionId, msg.caller, args.agentId);
-    if (not valid) return #err(#InvalidInput("transactionId does not correspond to a completed transaction you were party to"));
+    let result = label exit : Result.Result<AgentReview, Error> {
+      let valid = await listingActor.validateReviewTransaction(args.transactionId, msg.caller, args.agentId);
+      if (not valid) break exit (#err(#InvalidInput("transactionId does not correspond to a completed transaction you were party to")));
 
-    let compositeKey = Principal.toText(msg.caller) # "|" # args.transactionId;
-    if (Map.get(reviewKeys, Text.compare, compositeKey) != null) return #err(#DuplicateReview);
-    if (not tryConsumeReviewSlot(msg.caller)) return #err(#RateLimitExceeded);
+      if (not tryConsumeReviewSlot(msg.caller)) break exit (#err(#RateLimitExceeded));
 
-    reviewCounter += 1;
-    let id = "AGREV_" # Nat.toText(reviewCounter);
-    let review: AgentReview = {
-      id; agentId = args.agentId; reviewerPrincipal = msg.caller;
-      rating = args.rating; comment = args.comment;
-      transactionId = args.transactionId; createdAt = Time.now();
+      reviewCounter += 1;
+      let id = "AGREV_" # Nat.toText(reviewCounter);
+      let review: AgentReview = {
+        id; agentId = args.agentId; reviewerPrincipal = msg.caller;
+        rating = args.rating; comment = args.comment;
+        transactionId = args.transactionId; createdAt = Time.now();
+      };
+      Map.add(reviews, Text.compare, id, review);
+      Map.add(reviewKeys, Text.compare, compositeKey, id);
+      #ok(review)
     };
-    Map.add(reviews, Text.compare, id, review);
-    Map.add(reviewKeys, Text.compare, compositeKey, id);
-    #ok(review)
+    // Clear sentinel on error so the caller can retry with a corrected request
+    switch (result) {
+      case (#err(_)) { Map.remove(reviewKeys, Text.compare, compositeKey) };
+      case (#ok(_))  {};
+    };
+    result
   };
 
   public query func getReviews(agentId: Principal) : async [AgentReview] {

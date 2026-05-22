@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { getOpenBidRequests, getMyProposals, submitProposal, getProposalsForRequest, type BidRequestSummary } from "../services/listing";
-import { getMyProfile } from "../services/agent";
+import { getMyAgentProfile } from "../services/agent";
 import { useAuth } from "../contexts/AuthContext";
 import toast from "react-hot-toast";
 import {
@@ -42,7 +42,7 @@ export default function AgentListingPage() {
     Promise.all([
       getOpenBidRequests(),
       getMyProposals(),
-      getMyProfile(),
+      getMyAgentProfile(),
     ]).then(([listings, myProps, profile]) => {
       const found = (listings as BidRequestSummary[]).find(l => l.id === requestId);
       setListing(found ?? null);

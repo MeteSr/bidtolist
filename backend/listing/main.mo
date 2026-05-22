@@ -152,6 +152,8 @@ persistent actor Listing {
 
   private let cascadeState          = Map.empty<Text, CascadeState>();
   private let pendingNotifications  = Map.empty<Text, PendingNotification>();
+  /// requestId → true while a submitProposal await is in flight; transient so it clears on upgrade
+  private transient let inFlightProposals = Map.empty<Text, Bool>();
   private var notificationCounter : Nat = 0;
   private var heartbeatTick       : Nat = 0;
   private let CASCADE_CHECK_INTERVAL : Nat = 60; // ~60 seconds at ~1 tick/sec
@@ -422,40 +424,52 @@ persistent actor Listing {
   ) : async Result.Result<ListingProposal, Error> {
     switch (requireActive(msg.caller)) { case (#err(e)) return #err(e); case _ {} };
 
-    // Verify agent if agent canister is wired
-    if (agentCanisterId != "") {
-      let agentActor = actor(agentCanisterId) : actor {
-        isVerifiedAgent : (Principal) -> async Bool;
-      };
-      let verified = await agentActor.isVerifiedAgent(msg.caller);
-      if (not verified) return #err(#NotAuthorized);
+    // Guard: only one submission per request at a time to prevent concurrent callers from
+    // both passing the existingCount < MAX check before either write lands.
+    switch (Map.get(inFlightProposals, Text.compare, requestId)) {
+      case (?_) { return #err(#InvalidInput("Another proposal is being processed for this request; please retry shortly")) };
+      case null {};
     };
+    Map.add(inFlightProposals, Text.compare, requestId, true);
 
-    switch (Map.get(requests, Text.compare, requestId)) {
-      case null    { #err(#NotFound) };
-      case (?req) {
-        if (req.status != #Open)          return #err(#InvalidInput("Request is not accepting proposals"));
-        if (req.bidDeadline <= Time.now()) return #err(#DeadlinePassed);
-        let existingCount = Iter.size(Iter.filter(Map.values(proposals), func(p: ListingProposal) : Bool { p.requestId == requestId }));
-        if (existingCount >= MAX_PROPOSALS_PER_REQUEST) return #err(#InvalidInput("This listing has reached its maximum of 10 proposals"));
-        if (commissionBps == 0)           return #err(#InvalidInput("commissionBps must be greater than 0"));
-        if (estimatedSalePrice == 0)      return #err(#InvalidInput("estimatedSalePrice must be greater than 0"));
-        if (Text.size(agentName) == 0)    return #err(#InvalidInput("agentName cannot be empty"));
-
-        let id = nextProposalId();
-        let proposal: ListingProposal = {
-          id; requestId;
-          agentId               = msg.caller;
-          agentName; agentEmail; agentBrokerage; commissionBps; cmaSummary;
-          marketingPlan; estimatedDaysOnMarket; estimatedSalePrice;
-          includedServices; validUntil; coverLetter;
-          status    = #Pending;
-          createdAt = Time.now();
+    let result = label exit : Result.Result<ListingProposal, Error> {
+      // Verify agent if agent canister is wired
+      if (agentCanisterId != "") {
+        let agentActor = actor(agentCanisterId) : actor {
+          isVerifiedAgent : (Principal) -> async Bool;
         };
-        Map.add(proposals, Text.compare, id, proposal);
-        #ok(proposal)
+        let verified = await agentActor.isVerifiedAgent(msg.caller);
+        if (not verified) break exit (#err(#NotAuthorized));
       };
-    }
+
+      switch (Map.get(requests, Text.compare, requestId)) {
+        case null    { break exit (#err(#NotFound)) };
+        case (?req) {
+          if (req.status != #Open)          break exit (#err(#InvalidInput("Request is not accepting proposals")));
+          if (req.bidDeadline <= Time.now()) break exit (#err(#DeadlinePassed));
+          let existingCount = Iter.size(Iter.filter(Map.values(proposals), func(p: ListingProposal) : Bool { p.requestId == requestId }));
+          if (existingCount >= MAX_PROPOSALS_PER_REQUEST) break exit (#err(#InvalidInput("This listing has reached its maximum of 10 proposals")));
+          if (commissionBps == 0)           break exit (#err(#InvalidInput("commissionBps must be greater than 0")));
+          if (estimatedSalePrice == 0)      break exit (#err(#InvalidInput("estimatedSalePrice must be greater than 0")));
+          if (Text.size(agentName) == 0)    break exit (#err(#InvalidInput("agentName cannot be empty")));
+
+          let id = nextProposalId();
+          let proposal: ListingProposal = {
+            id; requestId;
+            agentId               = msg.caller;
+            agentName; agentEmail; agentBrokerage; commissionBps; cmaSummary;
+            marketingPlan; estimatedDaysOnMarket; estimatedSalePrice;
+            includedServices; validUntil; coverLetter;
+            status    = #Pending;
+            createdAt = Time.now();
+          };
+          Map.add(proposals, Text.compare, id, proposal);
+          #ok(proposal)
+        };
+      }
+    };
+    Map.remove(inFlightProposals, Text.compare, requestId);
+    result
   };
 
   /// Vuln 3 fix: server-side deadline gate enforces the sealed-bid guarantee.
@@ -749,7 +763,7 @@ persistent actor Listing {
   /// Called by the email server after it has sent the notification email.
   public shared(msg) func clearNotification(id: Text) : async Result.Result<(), Error> {
     if (not isAdmin(msg.caller)) return #err(#NotAuthorized);
-    Map.add(pendingNotifications, Text.compare, id, { id = ""; requestId = ""; createdAt = 0 });
+    Map.remove(pendingNotifications, Text.compare, id);
     #ok(())
   };
 

@@ -9,7 +9,7 @@
 - [ ] Documentation
 
 ## Testing
-- [ ] Motoko compile check passes (`make check-motoko`)
+- [ ] motoko-compile-check passes (`make check-motoko`)
 - [ ] Frontend unit tests pass (`make test`)
 - [ ] Tested locally (`make dev`)
 - [ ] Backend smoke tests pass if canisters changed (`make test-canister`)
