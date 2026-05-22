@@ -76,7 +76,7 @@ export async function login(): Promise<void> {
 
 export async function logout(): Promise<void> {
   const client = getAuthClient();
-  await client.signOut();
+  await client.logout();
   resetAgent();
   _authClient = null;
 }

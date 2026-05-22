@@ -439,19 +439,19 @@ persistent actor Listing {
           isVerifiedAgent : (Principal) -> async Bool;
         };
         let verified = await agentActor.isVerifiedAgent(msg.caller);
-        if (not verified) break exit #err(#NotAuthorized);
+        if (not verified) break exit (#err(#NotAuthorized));
       };
 
       switch (Map.get(requests, Text.compare, requestId)) {
-        case null    { break exit #err(#NotFound) };
+        case null    { break exit (#err(#NotFound)) };
         case (?req) {
-          if (req.status != #Open)          break exit #err(#InvalidInput("Request is not accepting proposals"));
-          if (req.bidDeadline <= Time.now()) break exit #err(#DeadlinePassed);
+          if (req.status != #Open)          break exit (#err(#InvalidInput("Request is not accepting proposals")));
+          if (req.bidDeadline <= Time.now()) break exit (#err(#DeadlinePassed));
           let existingCount = Iter.size(Iter.filter(Map.values(proposals), func(p: ListingProposal) : Bool { p.requestId == requestId }));
-          if (existingCount >= MAX_PROPOSALS_PER_REQUEST) break exit #err(#InvalidInput("This listing has reached its maximum of 10 proposals"));
-          if (commissionBps == 0)           break exit #err(#InvalidInput("commissionBps must be greater than 0"));
-          if (estimatedSalePrice == 0)      break exit #err(#InvalidInput("estimatedSalePrice must be greater than 0"));
-          if (Text.size(agentName) == 0)    break exit #err(#InvalidInput("agentName cannot be empty"));
+          if (existingCount >= MAX_PROPOSALS_PER_REQUEST) break exit (#err(#InvalidInput("This listing has reached its maximum of 10 proposals")));
+          if (commissionBps == 0)           break exit (#err(#InvalidInput("commissionBps must be greater than 0")));
+          if (estimatedSalePrice == 0)      break exit (#err(#InvalidInput("estimatedSalePrice must be greater than 0")));
+          if (Text.size(agentName) == 0)    break exit (#err(#InvalidInput("agentName cannot be empty")));
 
           let id = nextProposalId();
           let proposal: ListingProposal = {
