@@ -323,9 +323,9 @@ persistent actor Agent {
     };
     let result = label exit : Result.Result<AgentReview, Error> {
       let valid = await listingActor.validateReviewTransaction(args.transactionId, msg.caller, args.agentId);
-      if (not valid) break exit #err(#InvalidInput("transactionId does not correspond to a completed transaction you were party to"));
+      if (not valid) break exit (#err(#InvalidInput("transactionId does not correspond to a completed transaction you were party to")));
 
-      if (not tryConsumeReviewSlot(msg.caller)) break exit #err(#RateLimitExceeded);
+      if (not tryConsumeReviewSlot(msg.caller)) break exit (#err(#RateLimitExceeded));
 
       reviewCounter += 1;
       let id = "AGREV_" # Nat.toText(reviewCounter);
