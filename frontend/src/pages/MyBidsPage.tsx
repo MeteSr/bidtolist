@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { getMyBidRequests, getProposalsForRequest, acceptProposal } from "../services/listing";
+import { getMyBidRequests, getProposalsForRequest, acceptProposal, cancelBidRequest, markRevealNotified } from "../services/listing";
 import { addReview } from "../services/agent";
-import { notifyProposalResult } from "../services/email";
+import { notifyProposalResult, notifyRevealOpened, notifyListingCancelled } from "../services/email";
 import { useAuth } from "../contexts/AuthContext";
 import toast from "react-hot-toast";
 import {
@@ -95,8 +95,16 @@ export default function MyBidsPage() {
       setRequests(list);
       const active = list.find((r: any) => r.status && "Open" in r.status);
       if (active) {
+        const deadlineMs = Number(active.bidDeadline) / 1_000_000;
         getProposalsForRequest(active.id)
-          .then(props => setProposals(p => ({ ...p, [active.id]: props })))
+          .then(props => {
+            setProposals(p => ({ ...p, [active.id]: props }));
+            if (Date.now() >= deadlineMs) {
+              markRevealNotified(active.id).then(wasFirst => {
+                if (wasFirst) notifyRevealOpened(active.id);
+              }).catch(() => {});
+            }
+          })
           .catch(console.error);
       }
     }).catch(console.error);
@@ -123,6 +131,19 @@ export default function MyBidsPage() {
       toast.success("Proposal accepted! The agent will receive a platform fee invoice.");
       setRequests(await getMyBidRequests());
     } finally { setAccepting(null); }
+  }
+
+  async function handleCancel(requestId: string) {
+    if (!window.confirm("Cancel this listing? All agents who submitted proposals will be notified.")) return;
+    const result = await cancelBidRequest(requestId) as any;
+    if ("err" in result) { toast.error(JSON.stringify(result.err)); return; }
+    const req      = requests.find((r: any) => r.id === requestId);
+    const allProps = proposals[requestId] || [];
+    for (const p of allProps) {
+      if (p.agentEmail) notifyListingCancelled({ agentEmail: p.agentEmail, agentName: p.agentName, city: req?.city || "" });
+    }
+    toast.success("Listing cancelled.");
+    setRequests(await getMyBidRequests());
   }
 
   const sidebarItems: SidebarItem[] = [
@@ -204,6 +225,14 @@ export default function MyBidsPage() {
                         <p style={{ fontFamily: DC.mono, fontSize: "0.75rem", color: DC.textSub, marginBottom: 16 }}>
                           Closes in {deadline ? formatCountdown(deadline) : "—"}
                         </p>
+                        {biddingOpen && (
+                          <button
+                            onClick={() => handleCancel(activeReq.id)}
+                            style={{ fontFamily: DC.sans, fontSize: "0.75rem", color: "#DC2626", background: "transparent", border: "1px solid #FCA5A5", borderRadius: 6, padding: "4px 10px", cursor: "pointer", marginBottom: 12 }}
+                          >
+                            Cancel listing
+                          </button>
+                        )}
                         <HousePlaceholder label={`${activeReq?.city}, ${activeReq?.county}`} />
                       </div>
 

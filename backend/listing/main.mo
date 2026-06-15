@@ -143,6 +143,7 @@ persistent actor Listing {
 
   private let requests              = Map.empty<Text, ListingBidRequest>();
   private let proposals             = Map.empty<Text, ListingProposal>();
+  private let revealNotifiedSet     = Map.empty<Text, Bool>();
   private let verifiedHomeowners    = Map.empty<Principal, Bool>();
   private let verificationRequests  = Map.empty<Text, HomeownerVerificationRequest>();
   private var verificationCounter:  Nat = 0;
@@ -364,6 +365,42 @@ persistent actor Listing {
       });
     };
     stale.size()
+  };
+
+  /// Atomically marks a listing's reveal notification as sent. Returns true only on the
+  /// first call; subsequent calls return false so the Worker skips the duplicate send.
+  public shared(msg) func markRevealNotified(requestId: Text) : async Bool {
+    switch (requireActive(msg.caller)) { case (#err(_)) return false; case _ {} };
+    switch (Map.get(revealNotifiedSet, Text.compare, requestId)) {
+      case (?_) { false };
+      case null {
+        Map.add(revealNotifiedSet, Text.compare, requestId, true);
+        true
+      };
+    }
+  };
+
+  /// Returns open listings whose bid deadline falls within the next `windowNs` nanoseconds.
+  /// Used by the Cloudflare Worker cron to identify listings needing deadline reminders.
+  public shared query(msg) func getListingsNearDeadline(windowNs: Int) : async [BidRequestSummary] {
+    if (Principal.isAnonymous(msg.caller)) return [];
+    let now    = Time.now();
+    let cutoff = now + windowNs;
+    let near   = Iter.filter(Map.values(requests), func(r: ListingBidRequest) : Bool {
+      r.status == #Open and r.bidDeadline > now and r.bidDeadline <= cutoff
+    });
+    Iter.toArray(Iter.map(near, func(r: ListingBidRequest) : BidRequestSummary {
+      let count = Iter.size(Iter.filter(Map.values(proposals), func(p: ListingProposal) : Bool {
+        p.requestId == r.id
+      }));
+      {
+        id = r.id; city = r.city; county = r.county; zipCode = r.zipCode;
+        targetListDate = r.targetListDate; desiredSalePrice = r.desiredSalePrice;
+        beds = r.beds; baths = r.baths; sqft = r.sqft;
+        notes = r.notes; bidDeadline = r.bidDeadline;
+        status = r.status; createdAt = r.createdAt; proposalCount = count;
+      }
+    }))
   };
 
   /// Agents browse open bid requests. Requires a non-anonymous caller (must be logged in).

@@ -35,3 +35,15 @@ export function notifyAgentVerified(args: {
 export function notifyNewListing(requestId: string): void {
   void post("/api/bidtolist/email/new-listing", { requestId });
 }
+
+export function notifyRevealOpened(requestId: string): void {
+  void post("/api/bidtolist/email/reveal-opened", { requestId });
+}
+
+export function notifyListingCancelled(args: {
+  agentEmail: string;
+  agentName: string;
+  city: string;
+}): void {
+  void post("/api/bidtolist/email/listing-cancelled", args);
+}

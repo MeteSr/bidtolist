@@ -47,6 +47,8 @@ export const idlFactory = ({ IDL }: any) => {
     getBidRequest:                   IDL.Func([IDL.Text], [Result(ListingBidRequest)], ["query"]),
     cancelBidRequest:                IDL.Func([IDL.Text], [Result(IDL.Null)], []),
     expireStaleListings:             IDL.Func([], [IDL.Nat], []),
+    markRevealNotified:              IDL.Func([IDL.Text], [IDL.Bool], []),
+    getListingsNearDeadline:         IDL.Func([IDL.Int], [IDL.Vec(BidRequestSummary)], ["query"]),
     getOpenBidRequests:              IDL.Func([], [IDL.Vec(BidRequestSummary)], ["query"]),
     getOpenBidRequestsForCities:     IDL.Func([IDL.Vec(IDL.Text)], [IDL.Vec(BidRequestSummary)], ["query"]),
     submitProposal:                  IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Nat, IDL.Text, IDL.Text, IDL.Nat, IDL.Nat, IDL.Vec(IDL.Text), IDL.Int, IDL.Text], [Result(ListingProposal)], []),
@@ -186,6 +188,12 @@ export async function acceptProposal(proposalId: string, backups: string[] = [])
   return a.acceptProposal(proposalId, backups);
 }
 
+export async function cancelBidRequest(requestId: string) {
+  if (!CANISTER_ID) return { ok: null };
+  const a = await getActor();
+  return a.cancelBidRequest(requestId);
+}
+
 export async function requestHomeownerVerification(address: string, parcelNumber: string, contactEmail: string) {
   if (!CANISTER_ID) return { ok: { id: "VER_mock", principal: "mock", address, parcelNumber, contactEmail, submittedAt: BigInt(Date.now()) } };
   const a = await getActor();
@@ -216,6 +224,12 @@ export async function revokeHomeowner(principal: string) {
   const a = await getActor();
   const { Principal } = await import("@dfinity/principal");
   return a.revokeHomeowner(Principal.fromText(principal));
+}
+
+export async function markRevealNotified(requestId: string): Promise<boolean> {
+  if (!CANISTER_ID) return true;
+  const a = await getActor();
+  return Boolean(await a.markRevealNotified(requestId));
 }
 
 export async function withdrawProposal(proposalId: string) {
