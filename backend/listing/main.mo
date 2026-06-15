@@ -26,7 +26,7 @@ persistent actor Listing {
 
   // ─── Types ──────────────────────────────────────────────────────────────────
 
-  public type BidRequestStatus = { #Open; #Awarded; #Cancelled };
+  public type BidRequestStatus = { #Open; #Awarded; #Cancelled; #Expired };
   public type ProposalStatus   = { #Pending; #Accepted; #Rejected; #Withdrawn; #Standby };
 
   // Cascade state for a single request: payment deadline for the current winner
@@ -117,11 +117,12 @@ persistent actor Listing {
   };
 
   public type Metrics = {
-    totalRequests:   Nat;
-    openRequests:    Nat;
-    awardedRequests: Nat;
-    totalProposals:  Nat;
-    isPaused:        Bool;
+    totalRequests:    Nat;
+    openRequests:     Nat;
+    awardedRequests:  Nat;
+    expiredRequests:  Nat;
+    totalProposals:   Nat;
+    isPaused:         Bool;
   };
 
   // ─── Stable State ────────────────────────────────────────────────────────────
@@ -341,8 +342,33 @@ persistent actor Listing {
     }
   };
 
-  /// Public — agents browse open bid requests (summary view, address omitted for privacy).
-  public query func getOpenBidRequests() : async [BidRequestSummary] {
+  /// Mark #Open listings whose deadline has passed with zero proposals as #Expired.
+  /// Anyone may call; this only advances the lifecycle, never reverses it.
+  public shared func expireStaleListings() : async Nat {
+    let now = Time.now();
+    let stale = Iter.toArray(Iter.filter(Map.values(requests), func(r: ListingBidRequest) : Bool {
+      r.status == #Open and r.bidDeadline < now and
+      Iter.size(Iter.filter(Map.values(proposals), func(p: ListingProposal) : Bool {
+        p.requestId == r.id
+      })) == 0
+    }));
+    for (req in stale.vals()) {
+      Map.add(requests, Text.compare, req.id, {
+        id = req.id; address = req.address; city = req.city;
+        county = req.county; zipCode = req.zipCode;
+        homeowner = req.homeowner; homeownerEmail = req.homeownerEmail;
+        targetListDate = req.targetListDate; desiredSalePrice = req.desiredSalePrice;
+        beds = req.beds; baths = req.baths; sqft = req.sqft;
+        notes = req.notes; bidDeadline = req.bidDeadline;
+        status = #Expired; createdAt = req.createdAt; feePaid = req.feePaid;
+      });
+    };
+    stale.size()
+  };
+
+  /// Agents browse open bid requests. Requires a non-anonymous caller (must be logged in).
+  public shared query(msg) func getOpenBidRequests() : async [BidRequestSummary] {
+    if (Principal.isAnonymous(msg.caller)) return [];
     let open = Iter.filter(Map.values(requests), func(r: ListingBidRequest) : Bool {
       r.status == #Open
     });
@@ -369,8 +395,9 @@ persistent actor Listing {
     }))
   };
 
-  /// Returns open listings whose city matches any of the provided cities (case-insensitive).
-  public query func getOpenBidRequestsForCities(cities: [Text]) : async [BidRequestSummary] {
+  /// Returns open listings filtered by city. Requires a non-anonymous caller.
+  public shared query(msg) func getOpenBidRequestsForCities(cities: [Text]) : async [BidRequestSummary] {
+    if (Principal.isAnonymous(msg.caller)) return [];
     let lower = func(t: Text) : Text {
       Text.fromIter(Iter.map(Text.toIter(t), func(c: Char) : Char {
         let n = Char.toNat32(c);
@@ -474,6 +501,34 @@ persistent actor Listing {
     };
     Map.remove(inFlightProposals, Text.compare, requestId);
     result
+  };
+
+  /// Agents may retract their own pending proposal before the bid deadline.
+  public shared(msg) func withdrawProposal(proposalId: Text) : async Result.Result<(), Error> {
+    switch (requireActive(msg.caller)) { case (#err(e)) return #err(e); case _ {} };
+    switch (Map.get(proposals, Text.compare, proposalId)) {
+      case null { #err(#NotFound) };
+      case (?p) {
+        if (p.agentId != msg.caller)  return #err(#NotAuthorized);
+        if (p.status != #Pending)      return #err(#InvalidInput("Only pending proposals can be withdrawn"));
+        switch (Map.get(requests, Text.compare, p.requestId)) {
+          case null { #err(#NotFound) };
+          case (?req) {
+            if (req.bidDeadline <= Time.now()) return #err(#DeadlinePassed);
+            Map.add(proposals, Text.compare, proposalId, {
+              id = p.id; requestId = p.requestId; agentId = p.agentId;
+              agentName = p.agentName; agentEmail = p.agentEmail; agentBrokerage = p.agentBrokerage;
+              commissionBps = p.commissionBps; cmaSummary = p.cmaSummary;
+              marketingPlan = p.marketingPlan; estimatedDaysOnMarket = p.estimatedDaysOnMarket;
+              estimatedSalePrice = p.estimatedSalePrice; includedServices = p.includedServices;
+              validUntil = p.validUntil; coverLetter = p.coverLetter;
+              status = #Withdrawn; createdAt = p.createdAt;
+            });
+            #ok(())
+          }
+        }
+      }
+    }
   };
 
   /// Vuln 3 fix: server-side deadline gate enforces the sealed-bid guarantee.
@@ -880,12 +935,14 @@ persistent actor Listing {
   };
 
   public query func metrics() : async Metrics {
-    var open = 0; var awarded = 0;
+    var open = 0; var awarded = 0; var expired = 0;
     for (r in Map.values(requests)) {
       if (r.status == #Open)    { open    += 1 };
       if (r.status == #Awarded) { awarded += 1 };
+      if (r.status == #Expired) { expired += 1 };
     };
     { totalRequests = Map.size(requests); openRequests = open;
-      awardedRequests = awarded; totalProposals = Map.size(proposals); isPaused }
+      awardedRequests = awarded; expiredRequests = expired;
+      totalProposals = Map.size(proposals); isPaused }
   };
 }

@@ -11,7 +11,7 @@ export const idlFactory = ({ IDL }: any) => {
     AlreadyCancelled: IDL.Null,
     DeadlinePassed: IDL.Null,
   });
-  const BidRequestStatus = IDL.Variant({ Open: IDL.Null, Awarded: IDL.Null, Cancelled: IDL.Null });
+  const BidRequestStatus = IDL.Variant({ Open: IDL.Null, Awarded: IDL.Null, Cancelled: IDL.Null, Expired: IDL.Null });
   const ProposalStatus   = IDL.Variant({ Pending: IDL.Null, Accepted: IDL.Null, Rejected: IDL.Null, Withdrawn: IDL.Null, Standby: IDL.Null });
 
   const BidRequestSummary = IDL.Record({
@@ -46,9 +46,11 @@ export const idlFactory = ({ IDL }: any) => {
     getMyBidRequests:                IDL.Func([], [IDL.Vec(ListingBidRequest)], ["query"]),
     getBidRequest:                   IDL.Func([IDL.Text], [Result(ListingBidRequest)], ["query"]),
     cancelBidRequest:                IDL.Func([IDL.Text], [Result(IDL.Null)], []),
+    expireStaleListings:             IDL.Func([], [IDL.Nat], []),
     getOpenBidRequests:              IDL.Func([], [IDL.Vec(BidRequestSummary)], ["query"]),
     getOpenBidRequestsForCities:     IDL.Func([IDL.Vec(IDL.Text)], [IDL.Vec(BidRequestSummary)], ["query"]),
     submitProposal:                  IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Nat, IDL.Text, IDL.Text, IDL.Nat, IDL.Nat, IDL.Vec(IDL.Text), IDL.Int, IDL.Text], [Result(ListingProposal)], []),
+    withdrawProposal:                IDL.Func([IDL.Text], [Result(IDL.Null)], []),
     getProposalsForRequest:          IDL.Func([IDL.Text], [IDL.Vec(ListingProposal)], ["query"]),
     getMyProposals:                  IDL.Func([], [IDL.Vec(ListingProposal)], ["query"]),
     acceptProposal:                  IDL.Func([IDL.Text, IDL.Vec(IDL.Text)], [Result(IDL.Null)], []),
@@ -60,7 +62,7 @@ export const idlFactory = ({ IDL }: any) => {
     enableVerification:              IDL.Func([], [Result(IDL.Null)], []),
     setAgentCanisterId:              IDL.Func([IDL.Text], [Result(IDL.Null)], []),
     validateReviewTransaction:       IDL.Func([IDL.Text, IDL.Principal, IDL.Principal], [IDL.Bool], ["query"]),
-    metrics:                         IDL.Func([], [IDL.Record({ totalRequests: IDL.Nat, openRequests: IDL.Nat, awardedRequests: IDL.Nat, totalProposals: IDL.Nat, isPaused: IDL.Bool })], ["query"]),
+    metrics:                         IDL.Func([], [IDL.Record({ totalRequests: IDL.Nat, openRequests: IDL.Nat, awardedRequests: IDL.Nat, expiredRequests: IDL.Nat, totalProposals: IDL.Nat, isPaused: IDL.Bool })], ["query"]),
   });
 };
 
@@ -74,7 +76,7 @@ export type BidRequestSummary = {
   id: string; city: string; county: string; zipCode: string;
   targetListDate: bigint; desiredSalePrice: [] | [bigint];
   beds: [] | [bigint]; baths: [] | [bigint]; sqft: [] | [bigint];
-  notes: string; bidDeadline: bigint; status: { Open: null } | { Awarded: null } | { Cancelled: null };
+  notes: string; bidDeadline: bigint; status: { Open: null } | { Awarded: null } | { Cancelled: null } | { Expired: null };
   createdAt: bigint; proposalCount: bigint;
 };
 
@@ -216,14 +218,27 @@ export async function revokeHomeowner(principal: string) {
   return a.revokeHomeowner(Principal.fromText(principal));
 }
 
-export async function getListingMetrics(): Promise<{ totalRequests: number; openRequests: number; awardedRequests: number; totalProposals: number }> {
-  if (!CANISTER_ID) return { totalRequests: 0, openRequests: 0, awardedRequests: 0, totalProposals: 0 };
+export async function withdrawProposal(proposalId: string) {
+  if (!CANISTER_ID) return { ok: null };
+  const a = await getActor();
+  return a.withdrawProposal(proposalId);
+}
+
+export async function expireStaleListings(): Promise<number> {
+  if (!CANISTER_ID) return 0;
+  const a = await getActor();
+  return Number(await a.expireStaleListings());
+}
+
+export async function getListingMetrics(): Promise<{ totalRequests: number; openRequests: number; awardedRequests: number; expiredRequests: number; totalProposals: number }> {
+  if (!CANISTER_ID) return { totalRequests: 0, openRequests: 0, awardedRequests: 0, expiredRequests: 0, totalProposals: 0 };
   const a = await getActor();
   const m = await a.metrics() as any;
   return {
     totalRequests:   Number(m.totalRequests),
     openRequests:    Number(m.openRequests),
     awardedRequests: Number(m.awardedRequests),
+    expiredRequests: Number(m.expiredRequests),
     totalProposals:  Number(m.totalProposals),
   };
 }
