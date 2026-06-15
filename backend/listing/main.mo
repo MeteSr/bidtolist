@@ -449,6 +449,10 @@ persistent actor Listing {
           if (req.bidDeadline <= Time.now()) break exit (#err(#DeadlinePassed));
           let existingCount = Iter.size(Iter.filter(Map.values(proposals), func(p: ListingProposal) : Bool { p.requestId == requestId }));
           if (existingCount >= MAX_PROPOSALS_PER_REQUEST) break exit (#err(#InvalidInput("This listing has reached its maximum of 10 proposals")));
+          let alreadyBid = Iter.size(Iter.filter(Map.values(proposals), func(p: ListingProposal) : Bool {
+            p.requestId == requestId and p.agentId == msg.caller
+          })) > 0;
+          if (alreadyBid) break exit (#err(#InvalidInput("You have already submitted a proposal for this listing")));
           if (commissionBps == 0)           break exit (#err(#InvalidInput("commissionBps must be greater than 0")));
           if (estimatedSalePrice == 0)      break exit (#err(#InvalidInput("estimatedSalePrice must be greater than 0")));
           if (Text.size(agentName) == 0)    break exit (#err(#InvalidInput("agentName cannot be empty")));
