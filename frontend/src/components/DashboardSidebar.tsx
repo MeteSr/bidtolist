@@ -101,7 +101,7 @@ export function DashboardSidebar({ items, activeLabel, onLogout }: {
       {/* Logo */}
       <div style={{ padding: "20px 20px 24px", borderBottom: "1px solid rgba(255,255,255,0.1)", flexShrink: 0 }}>
         <a href="/" style={{ display: "block" }}>
-          <img src="/bid_to_list_logo.png" alt="BidToList" style={{ height: 32, width: "auto" }} />
+          <img src="/logo.png" alt="BidToList" style={{ height: 32, width: "auto" }} />
         </a>
       </div>
 

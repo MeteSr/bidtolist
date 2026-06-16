@@ -13,6 +13,7 @@ import AdminPage from "./pages/AdminPage";
 import AgentProfilePage from "./pages/AgentProfilePage";
 import AgentListingPage from "./pages/AgentListingPage";
 import FaqPage from "./pages/FaqPage";
+import AgentLandingPage from "./pages/AgentLandingPage";
 
 export default function App() {
   return (
@@ -31,6 +32,7 @@ export default function App() {
         <Route path="/agents/dashboard"           element={<AgentDashboardPage />} />
         <Route path="/agents/profile/:agentId"   element={<AgentProfilePage />} />
         <Route path="/faq"                        element={<FaqPage />} />
+        <Route path="/for-agents"                element={<AgentLandingPage />} />
       </Routes>
     </AuthProvider>
   );

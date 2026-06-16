@@ -98,7 +98,7 @@ export default function PostListingPage() {
         boxShadow: "0 1px 8px rgba(0,0,0,0.06)",
       }}>
         <a href="/" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}>
-          <img src="/bid_to_list_logo.png" alt="BidToList" style={{ height: 36, width: "auto", display: "block" }} />
+          <img src="/logo.png" alt="BidToList" style={{ height: 36, width: "auto", display: "block" }} />
         </a>
         <a href="/my-bids" style={{ fontFamily: C.sans, fontSize: "0.875rem", color: C.sub, textDecoration: "none" }}>
           ← My Listings

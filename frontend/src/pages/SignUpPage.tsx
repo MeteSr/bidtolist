@@ -103,7 +103,7 @@ export default function SignUpPage() {
         boxShadow:    "0 1px 12px rgba(0,0,0,0.06)",
       }}>
         <a href="/" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}>
-          <img src="/bid_to_list_logo.png" alt="BidtoList" style={{ height: 40, width: "auto", display: "block" }} />
+          <img src="/logo.png" alt="BidtoList" style={{ height: 40, width: "auto", display: "block" }} />
         </a>
         <a href="/" style={{ fontFamily: S.sans, fontSize: "0.85rem", fontWeight: 500, color: S.muted, textDecoration: "none" }}>
           ← Back

@@ -58,7 +58,7 @@ export default function AgentProfilePage() {
         boxShadow: "0 1px 8px rgba(0,0,0,0.06)",
       }}>
         <a href="/" style={{ textDecoration: "none" }}>
-          <img src="/bid_to_list_logo.png" alt="BidToList" style={{ height: 36, display: "block" }} />
+          <img src="/logo.png" alt="BidToList" style={{ height: 36, display: "block" }} />
         </a>
         <a href="/agents/browse" style={{ fontFamily: C.sans, fontSize: "0.875rem", color: C.sub, textDecoration: "none" }}>
           Browse Listings

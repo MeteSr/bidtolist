@@ -103,7 +103,7 @@ export default function AdminPage() {
         boxShadow: "0 1px 8px rgba(0,0,0,0.06)",
       }}>
         <a href="/" style={{ textDecoration: "none" }}>
-          <img src="/bid_to_list_logo.png" alt="BidToList" style={{ height: 36, display: "block" }} />
+          <img src="/logo.png" alt="BidToList" style={{ height: 36, display: "block" }} />
         </a>
         <span style={{ fontFamily: C.mono, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", color: C.sub }}>Admin</span>
       </nav>
