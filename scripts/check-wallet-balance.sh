@@ -20,13 +20,10 @@ DFX_NETWORK="${DFX_NETWORK:-ic}"
 MIN_WALLET_CYCLES="${MIN_WALLET_CYCLES:-5000000000000}"   # 5T
 
 if [ -n "${DFX_IDENTITY_PEM:-}" ]; then
-  # Write PEM directly to the dfx identity directory instead of using
-  # `dfx identity import`, whose CLI changed across dfx 0.24.x versions.
-  IDENTITY_DIR="$HOME/.config/dfx/identity/ci-deploy"
-  mkdir -p "$IDENTITY_DIR"
-  printf '%s\n' "$DFX_IDENTITY_PEM" > "$IDENTITY_DIR/identity.pem"
-  chmod 600 "$IDENTITY_DIR/identity.pem"
-
+  PEM_FILE=$(mktemp /tmp/ci-identity-XXXXXX.pem)
+  trap 'rm -f "$PEM_FILE"' EXIT
+  printf '%s' "$DFX_IDENTITY_PEM" > "$PEM_FILE"
+  dfx identity import --storage-mode=plaintext ci-deploy "$PEM_FILE" 2>/dev/null || true
   dfx identity use ci-deploy
   if [ -n "${DFX_WALLET_ID:-}" ]; then
     dfx identity set-wallet "$DFX_WALLET_ID" --network "$DFX_NETWORK"

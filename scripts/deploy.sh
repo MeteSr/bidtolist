@@ -169,14 +169,12 @@ fi
 # ── Fund cycles ledger from dfx wallet (non-local fresh deploy only) ─────────
 if [ "$ENV" != "local" ] && [ ${#CANISTERS_TO_CREATE[@]} -gt 0 ] && [ -n "${DFX_WALLET_ID:-}" ] && [ -n "${DFX_IDENTITY_PEM:-}" ]; then
   echo "▶ Configuring dfx wallet for cycles-funded canister creation..."
-  # Write PEM directly to the dfx identity directory instead of using
-  # `dfx identity import`, whose CLI changed across dfx 0.24.x versions.
-  _IDENTITY_DIR="$HOME/.config/dfx/identity/ci-deploy"
-  mkdir -p "$_IDENTITY_DIR"
-  printf '%s\n' "$DFX_IDENTITY_PEM" > "$_IDENTITY_DIR/identity.pem"
-  chmod 600 "$_IDENTITY_DIR/identity.pem"
+  _DFX_PEM=$(mktemp /tmp/dfx-pem-XXXXXX.pem)
+  printf '%s' "$DFX_IDENTITY_PEM" > "$_DFX_PEM"
+  dfx identity import --storage-mode=plaintext ci-deploy "$_DFX_PEM" 2>/dev/null || true
   dfx identity use ci-deploy
   dfx identity set-wallet "$DFX_WALLET_ID" --network ic
+  rm -f "$_DFX_PEM"
   echo "  ✓ dfx wallet: $DFX_WALLET_ID"
 
   _FUND=$(( ${#CANISTERS_TO_CREATE[@]} * 2500000000000 ))
