@@ -1,0 +1,37 @@
+{
+  "canisters": {
+    "listing": {
+      "main": "backend/listing/main.mo",
+      "type": "motoko"
+    },
+    "agent": {
+      "main": "backend/agent/main.mo",
+      "type": "motoko"
+    },
+    "fee": {
+      "main": "backend/fee/main.mo",
+      "type": "motoko"
+    }
+  },
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:4943",
+      "type": "ephemeral"
+    },
+    "testnet": {
+      "providers": ["https://ic0.app"],
+      "type": "persistent"
+    },
+    "ic": {
+      "providers": ["https://ic0.app"],
+      "type": "persistent"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": "mops sources"
+    }
+  },
+  "version": 1
+}
