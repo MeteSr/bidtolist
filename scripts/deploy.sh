@@ -177,8 +177,8 @@ if [ "$ENV" != "local" ] && [ ${#CANISTERS_TO_CREATE[@]} -gt 0 ] && [ -n "${DFX_
   rm -f "$_DFX_PEM"
   echo "  ✓ dfx wallet: $DFX_WALLET_ID"
 
-  _FUND=$(( ${#CANISTERS_TO_CREATE[@]} * 700000000000 ))
-  echo "▶ Depositing ${_FUND} cycles (${#CANISTERS_TO_CREATE[@]} × 700B) for $DEPLOY_PRINCIPAL..."
+  _FUND=$(( ${#CANISTERS_TO_CREATE[@]} * 1500000000000 ))
+  echo "▶ Depositing ${_FUND} cycles (${#CANISTERS_TO_CREATE[@]} × 1.5T) for $DEPLOY_PRINCIPAL..."
   if dfx canister call um5iw-rqaaa-aaaaq-qaaba-cai deposit \
     "(record { to = record { owner = principal \"$DEPLOY_PRINCIPAL\"; subaccount = null }; memo = null; created_at_time = null })" \
     --with-cycles "$_FUND" \
@@ -223,7 +223,7 @@ else
       echo "exists ($_known_id)"
       continue
     fi
-    if icp canister create "$canister" -e "$ENV" --cycles 700000000000 >"$LOG_DIR/$canister.create.log" 2>&1; then
+    if icp canister create "$canister" -e "$ENV" --cycles 1500000000000 >"$LOG_DIR/$canister.create.log" 2>&1; then
       echo "created"
     else
       EXISTING_ID=$(icp canister status "$canister" -e "$ENV" --id-only 2>/dev/null || echo "")
