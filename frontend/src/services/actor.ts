@@ -3,7 +3,7 @@ import { HttpAgent } from "@icp-sdk/core/agent";
 import { Ed25519KeyIdentity } from "@icp-sdk/core/identity";
 
 const DFX_NETWORK = (process.env as any).DFX_NETWORK || "local";
-const IS_LOCAL    = DFX_NETWORK !== "ic";
+const IS_LOCAL    = DFX_NETWORK === "local";
 
 // @icp-sdk/auth v6 local II URL — /authorize is where the ICRC-29 heartbeat
 // listener lives; opening the root URL causes a 120-second establish-timeout.
