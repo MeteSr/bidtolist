@@ -19,11 +19,26 @@ set -uo pipefail
 DFX_NETWORK="${DFX_NETWORK:-ic}"
 MIN_WALLET_CYCLES="${MIN_WALLET_CYCLES:-5000000000000}"   # 5T
 
+# dfx 0.24+ requires a dfx.json in the working directory even for identity/wallet
+# operations. This repo uses icp.yaml (icp-cli) instead, so we create a minimal
+# dfx.json stub for the duration of this script.
+_DFX_JSON_CREATED=0
+if [ ! -f dfx.json ]; then
+  printf '{"version":1}' > dfx.json
+  _DFX_JSON_CREATED=1
+fi
+_cleanup() {
+  [ "$_DFX_JSON_CREATED" -eq 1 ] && rm -f dfx.json
+  rm -f "${PEM_FILE:-}"
+}
+trap _cleanup EXIT
+
 if [ -n "${DFX_IDENTITY_PEM:-}" ]; then
   PEM_FILE=$(mktemp /tmp/ci-identity-XXXXXX.pem)
-  trap 'rm -f "$PEM_FILE"' EXIT
   printf '%s' "$DFX_IDENTITY_PEM" > "$PEM_FILE"
-  dfx identity import --storage-mode=plaintext ci-deploy "$PEM_FILE" 2>/dev/null || true
+  # dfx 0.24+ wants: import <name> <file> --storage-mode plaintext
+  dfx identity import ci-deploy "$PEM_FILE" --storage-mode plaintext 2>/dev/null || \
+    dfx identity import --storage-mode=plaintext ci-deploy "$PEM_FILE" 2>/dev/null || true
   dfx identity use ci-deploy
   if [ -n "${DFX_WALLET_ID:-}" ]; then
     dfx identity set-wallet "$DFX_WALLET_ID" --network "$DFX_NETWORK"

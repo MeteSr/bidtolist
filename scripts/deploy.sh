@@ -171,10 +171,15 @@ if [ "$ENV" != "local" ] && [ ${#CANISTERS_TO_CREATE[@]} -gt 0 ] && [ -n "${DFX_
   echo "▶ Configuring dfx wallet for cycles-funded canister creation..."
   _DFX_PEM=$(mktemp /tmp/dfx-pem-XXXXXX.pem)
   printf '%s' "$DFX_IDENTITY_PEM" > "$_DFX_PEM"
-  dfx identity import --storage-mode=plaintext ci-deploy "$_DFX_PEM" 2>/dev/null || true
+  # dfx 0.24+ wants: import <name> <file> --storage-mode plaintext
+  # Also requires dfx.json in cwd — create a stub if absent.
+  [ ! -f dfx.json ] && printf '{"version":1}' > dfx.json && _CREATED_DFX_JSON_DEPLOY=1 || _CREATED_DFX_JSON_DEPLOY=0
+  dfx identity import ci-deploy "$_DFX_PEM" --storage-mode plaintext 2>/dev/null || \
+    dfx identity import --storage-mode=plaintext ci-deploy "$_DFX_PEM" 2>/dev/null || true
   dfx identity use ci-deploy
   dfx identity set-wallet "$DFX_WALLET_ID" --network ic
   rm -f "$_DFX_PEM"
+  [ "$_CREATED_DFX_JSON_DEPLOY" -eq 1 ] && rm -f dfx.json || true
   echo "  ✓ dfx wallet: $DFX_WALLET_ID"
 
   _FUND=$(( ${#CANISTERS_TO_CREATE[@]} * 2500000000000 ))
