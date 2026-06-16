@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { getAllAgentProfiles, verifyAgent } from "../services/agent";
-import { getPendingVerificationRequests, verifyHomeowner } from "../services/listing";
+import { getPendingVerificationRequests, verifyHomeowner, getVerificationDocs } from "../services/listing";
 import { getAllFees, markFeeInvoiced, markFeePaid, waiveFee, FeeRecord } from "../services/fee";
 import { notifyAgentVerified } from "../services/email";
 import { useBreakpoint } from "../hooks/useBreakpoint";
@@ -34,6 +34,8 @@ export default function AdminPage() {
   const [verifyingAgent, setVerifyingAgent] = useState<string | null>(null);
   const [verifyingHomeowner, setVerifyingHomeowner] = useState<string | null>(null);
   const [updatingFee, setUpdatingFee] = useState<string | null>(null);
+  const [loadingDocs, setLoadingDocs] = useState<string | null>(null);
+  const [openDocs, setOpenDocs] = useState<Record<string, any[]>>({});
 
   async function loadData() {
     const [allAgents, pending, allFees] = await Promise.all([
@@ -58,6 +60,17 @@ export default function AdminPage() {
       await loadData();
     } finally {
       setVerifyingAgent(null);
+    }
+  }
+
+  async function handleViewDocs(requestId: string) {
+    if (openDocs[requestId]) { setOpenDocs(d => { const n = { ...d }; delete n[requestId]; return n; }); return; }
+    setLoadingDocs(requestId);
+    try {
+      const docs = await getVerificationDocs(requestId);
+      setOpenDocs(d => ({ ...d, [requestId]: docs }));
+    } finally {
+      setLoadingDocs(null);
     }
   }
 
@@ -249,38 +262,88 @@ export default function AdminPage() {
               <p style={{ fontFamily: C.sans, color: C.sub, fontSize: "0.9rem" }}>No pending homeowner verification requests.</p>
             </div>
           ) : (
-            pendingHomeowners.map(req => (
-              <div key={req.id} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, padding: isMobile ? 16 : "16px 20px", marginBottom: 12, boxShadow: C.shadow }}>
-                <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", gap: 12 }}>
-                  <div>
-                    <p style={{ fontFamily: C.sans, fontWeight: 600, color: C.text, marginBottom: 4 }}>{req.address}</p>
-                    <p style={{ fontFamily: C.mono, fontSize: "0.7rem", color: C.sub, letterSpacing: "0.06em", marginBottom: 2 }}>
-                      Parcel: {req.parcelNumber}
-                    </p>
-                    <p style={{ fontFamily: C.mono, fontSize: "0.7rem", color: C.sub, letterSpacing: "0.06em" }}>
-                      {req.contactEmail}
-                    </p>
-                    <div style={{ marginTop: 8, display: "flex", gap: 12 }}>
-                      <a href="https://vcpa.vcgov.org" target="_blank" rel="noopener noreferrer"
-                        style={{ fontFamily: C.mono, fontSize: "0.65rem", letterSpacing: "0.06em", textTransform: "uppercase", color: C.primary, textDecoration: "none" }}>
-                        Volusia VCPA ↗
-                      </a>
-                      <a href="https://flaglerpa.com" target="_blank" rel="noopener noreferrer"
-                        style={{ fontFamily: C.mono, fontSize: "0.65rem", letterSpacing: "0.06em", textTransform: "uppercase", color: C.primary, textDecoration: "none" }}>
-                        Flagler PA ↗
-                      </a>
+            pendingHomeowners.map(req => {
+              const docs = openDocs[req.id];
+              const isLoadingThese = loadingDocs === req.id;
+              return (
+                <div key={req.id} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, padding: isMobile ? 16 : "16px 20px", marginBottom: 12, boxShadow: C.shadow }}>
+                  <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", gap: 12 }}>
+                    <div>
+                      <p style={{ fontFamily: C.sans, fontWeight: 600, color: C.text, marginBottom: 4 }}>{req.address}</p>
+                      <p style={{ fontFamily: C.mono, fontSize: "0.7rem", color: C.sub, letterSpacing: "0.06em", marginBottom: 2 }}>
+                        Parcel: {req.parcelNumber}
+                      </p>
+                      <p style={{ fontFamily: C.mono, fontSize: "0.7rem", color: C.sub, letterSpacing: "0.06em" }}>
+                        {req.contactEmail}
+                      </p>
+                      <div style={{ marginTop: 8, display: "flex", gap: 12 }}>
+                        <a href="https://vcpa.vcgov.org" target="_blank" rel="noopener noreferrer"
+                          style={{ fontFamily: C.mono, fontSize: "0.65rem", letterSpacing: "0.06em", textTransform: "uppercase", color: C.primary, textDecoration: "none" }}>
+                          Volusia VCPA ↗
+                        </a>
+                        <a href="https://flaglerpa.com" target="_blank" rel="noopener noreferrer"
+                          style={{ fontFamily: C.mono, fontSize: "0.65rem", letterSpacing: "0.06em", textTransform: "uppercase", color: C.primary, textDecoration: "none" }}>
+                          Flagler PA ↗
+                        </a>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: isMobile ? "flex-start" : "flex-end", width: isMobile ? "100%" : "auto" }}>
+                      <button
+                        onClick={() => handleViewDocs(req.id)}
+                        disabled={isLoadingThese}
+                        style={{ background: C.bg, border: `1px solid ${C.border}`, color: C.text, fontFamily: C.sans, fontSize: "0.8rem", fontWeight: 500, padding: "8px 14px", borderRadius: 6, cursor: "pointer", whiteSpace: "nowrap" }}
+                      >
+                        {isLoadingThese ? "Loading…" : docs ? "Hide Docs" : "View Docs"}
+                      </button>
+                      <button
+                        onClick={() => handleVerifyHomeowner(String(req.principal))}
+                        disabled={verifyingHomeowner === String(req.principal)}
+                        style={{ background: C.primary, border: "none", color: C.white, fontFamily: C.sans, fontSize: "0.875rem", fontWeight: 600, padding: "10px 20px", borderRadius: 8, cursor: "pointer", whiteSpace: "nowrap" }}
+                      >
+                        {verifyingHomeowner === String(req.principal) ? "Verifying…" : "Verify Homeowner"}
+                      </button>
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleVerifyHomeowner(String(req.principal))}
-                    disabled={verifyingHomeowner === String(req.principal)}
-                    style={{ background: C.primary, border: "none", color: C.white, fontFamily: C.sans, fontSize: "0.875rem", fontWeight: 600, padding: "10px 20px", borderRadius: 8, cursor: "pointer", whiteSpace: "nowrap", width: isMobile ? "100%" : "auto" }}
-                  >
-                    {verifyingHomeowner === String(req.principal) ? "Verifying…" : "Verify Homeowner"}
-                  </button>
+
+                  {/* Inline document viewer */}
+                  {docs && (
+                    <div style={{ marginTop: 16, borderTop: `1px solid ${C.border}`, paddingTop: 14 }}>
+                      {docs.length === 0 ? (
+                        <p style={{ fontFamily: C.sans, fontSize: "0.85rem", color: C.sub }}>No documents uploaded yet.</p>
+                      ) : (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+                          {docs.map((doc: any) => {
+                            const label: Record<string, string> = { photoId: "Photo ID", ownershipProof: "Proof of Ownership", selfie: "Selfie", authorizationDoc: "Authorization Doc" };
+                            const typeKey = Object.keys(doc.docType)[0] as string;
+                            const blob = new Blob([doc.blob]);
+                            const url  = URL.createObjectURL(blob);
+                            const isImage = typeKey === "selfie" || typeKey === "photoId";
+                            return (
+                              <div key={doc.id} style={{ border: `1px solid ${C.border}`, borderRadius: 6, padding: 10, background: C.bg, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, width: 120 }}>
+                                {isImage ? (
+                                  <img src={url} alt={label[typeKey] ?? typeKey} style={{ width: 100, height: 80, objectFit: "cover", borderRadius: 4, border: `1px solid ${C.border}` }} />
+                                ) : (
+                                  <div style={{ width: 100, height: 80, background: C.white, border: `1px solid ${C.border}`, borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                    <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke={C.sub} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                  </div>
+                                )}
+                                <p style={{ fontFamily: C.mono, fontSize: "0.6rem", color: C.sub, letterSpacing: "0.06em", textTransform: "uppercase", margin: 0, textAlign: "center" }}>
+                                  {label[typeKey] ?? typeKey}
+                                </p>
+                                <a href={url} download={`${typeKey}.${isImage ? "jpg" : "pdf"}`} target="_blank" rel="noopener noreferrer"
+                                  style={{ fontFamily: C.mono, fontSize: "0.6rem", color: C.primary, textDecoration: "none" }}>
+                                  Download
+                                </a>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </section>
       </div>

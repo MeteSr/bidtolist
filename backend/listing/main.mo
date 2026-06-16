@@ -60,6 +60,17 @@ persistent actor Listing {
     submittedAt:  Time.Time;
   };
 
+  public type DocType = { #photoId; #ownershipProof; #selfie; #authorizationDoc };
+
+  public type VerificationDoc = {
+    id:         Text;
+    requestId:  Text;
+    principal:  Principal;
+    docType:    DocType;
+    blob:       Blob;
+    uploadedAt: Time.Time;
+  };
+
   public type BidRequestSummary = {
     id:               Text;
     city:             Text;
@@ -147,6 +158,8 @@ persistent actor Listing {
   private let verifiedHomeowners    = Map.empty<Principal, Bool>();
   private let verificationRequests  = Map.empty<Text, HomeownerVerificationRequest>();
   private var verificationCounter:  Nat = 0;
+  private let verificationDocs      = Map.empty<Text, VerificationDoc>();
+  private var docCounter:           Nat = 0;
 
   // ─── Cascade State ────────────────────────────────────────────────────────────
 
@@ -227,6 +240,11 @@ persistent actor Listing {
   private func nextVerificationId() : Text {
     verificationCounter += 1;
     "VER_" # Nat.toText(verificationCounter)
+  };
+
+  private func nextDocId() : Text {
+    docCounter += 1;
+    "DOC_" # Nat.toText(docCounter)
   };
 
   // ─── Homeowner: Bid Request Lifecycle ────────────────────────────────────────
@@ -945,6 +963,40 @@ persistent actor Listing {
     };
     Map.add(verificationRequests, Text.compare, id, req);
     #ok(req)
+  };
+
+  /// Upload a verification document blob for an existing request.
+  /// Only the principal who submitted the request may upload docs for it.
+  /// Max 800 KB per document.
+  public shared(msg) func uploadVerificationDoc(
+    requestId : Text,
+    docType   : DocType,
+    blob      : Blob
+  ) : async Result.Result<Text, Error> {
+    switch (requireActive(msg.caller)) { case (#err(e)) return #err(e); case _ {} };
+    if (blob.size() > 819_200) return #err(#InvalidInput("Document must be under 800 KB"));
+    switch (Map.get(verificationRequests, Text.compare, requestId)) {
+      case null    { #err(#NotFound) };
+      case (?req) {
+        if (req.principal != msg.caller) return #err(#NotAuthorized);
+        let docId = nextDocId();
+        Map.add(verificationDocs, Text.compare, docId, {
+          id = docId; requestId; principal = msg.caller;
+          docType; blob; uploadedAt = Time.now();
+        });
+        #ok(docId)
+      };
+    }
+  };
+
+  /// Admin-only: retrieve all documents attached to a verification request.
+  public query(msg) func getVerificationDocs(requestId : Text) : async [VerificationDoc] {
+    if (not isAdmin(msg.caller)) return [];
+    Iter.toArray(
+      Iter.filter(Map.values(verificationDocs), func(d : VerificationDoc) : Bool {
+        d.requestId == requestId
+      })
+    )
   };
 
   public shared(msg) func verifyHomeowner(principal: Principal) : async Result.Result<(), Error> {

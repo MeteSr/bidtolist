@@ -39,6 +39,14 @@ export const idlFactory = ({ IDL }: any) => {
     id: IDL.Text, principal: IDL.Principal, address: IDL.Text,
     parcelNumber: IDL.Text, contactEmail: IDL.Text, submittedAt: IDL.Int,
   });
+  const DocType = IDL.Variant({
+    photoId: IDL.Null, ownershipProof: IDL.Null,
+    selfie: IDL.Null, authorizationDoc: IDL.Null,
+  });
+  const VerificationDoc = IDL.Record({
+    id: IDL.Text, requestId: IDL.Text, principal: IDL.Principal,
+    docType: DocType, blob: IDL.Vec(IDL.Nat8), uploadedAt: IDL.Int,
+  });
   const Result = (ok: any) => IDL.Variant({ ok, err: Error });
 
   return IDL.Service({
@@ -57,6 +65,8 @@ export const idlFactory = ({ IDL }: any) => {
     getMyProposals:                  IDL.Func([], [IDL.Vec(ListingProposal)], ["query"]),
     acceptProposal:                  IDL.Func([IDL.Text, IDL.Vec(IDL.Text)], [Result(IDL.Null)], []),
     requestHomeownerVerification:    IDL.Func([IDL.Text, IDL.Text, IDL.Text], [Result(HomeownerVerificationRequest)], []),
+    uploadVerificationDoc:           IDL.Func([IDL.Text, DocType, IDL.Vec(IDL.Nat8)], [Result(IDL.Text)], []),
+    getVerificationDocs:             IDL.Func([IDL.Text], [IDL.Vec(VerificationDoc)], ["query"]),
     isHomeownerVerified:             IDL.Func([], [IDL.Bool], ["query"]),
     getPendingVerificationRequests:  IDL.Func([], [IDL.Vec(HomeownerVerificationRequest)], ["query"]),
     verifyHomeowner:                 IDL.Func([IDL.Principal], [Result(IDL.Null)], []),
@@ -236,6 +246,22 @@ export async function withdrawProposal(proposalId: string) {
   if (!CANISTER_ID) return { ok: null };
   const a = await getActor();
   return a.withdrawProposal(proposalId);
+}
+
+export type DocType = "photoId" | "ownershipProof" | "selfie" | "authorizationDoc";
+
+export async function uploadVerificationDoc(requestId: string, docType: DocType, file: File) {
+  if (!CANISTER_ID) return { ok: `DOC_mock_${docType}` };
+  if (file.size > 819_200) return { err: { InvalidInput: "Document must be under 800 KB" } };
+  const blob = new Uint8Array(await file.arrayBuffer());
+  const a = await getActor();
+  return a.uploadVerificationDoc(requestId, { [docType]: null }, blob);
+}
+
+export async function getVerificationDocs(requestId: string): Promise<any[]> {
+  if (!CANISTER_ID) return [];
+  const a = await getActor();
+  return a.getVerificationDocs(requestId) as Promise<any[]>;
 }
 
 export async function expireStaleListings(): Promise<number> {

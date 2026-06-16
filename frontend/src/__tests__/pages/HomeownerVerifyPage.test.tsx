@@ -24,7 +24,7 @@ beforeEach(() => {
 describe("HomeownerVerifyPage", () => {
   it("renders heading", () => {
     renderPage();
-    expect(screen.getByRole("heading", { name: /verify ownership/i })).toBeDefined();
+    expect(screen.getByRole("heading", { name: /verify your homeownership/i })).toBeDefined();
   });
 
   it("renders all required fields", () => {
@@ -45,7 +45,7 @@ describe("HomeownerVerifyPage", () => {
     fireEvent.change(screen.getByLabelText(/street address/i), { target: { value: "123 Main St" } });
     fireEvent.change(screen.getByLabelText(/parcel number/i), { target: { value: "7001-00-00-0010" } });
     fireEvent.change(screen.getByLabelText(/contact email/i), { target: { value: "owner@example.com" } });
-    fireEvent.click(screen.getByRole("button", { name: /submit verification/i }));
+    fireEvent.click(screen.getByRole("button", { name: /complete verification/i }));
     await waitFor(() => expect(mockRequest).toHaveBeenCalledWith("123 Main St", "7001-00-00-0010", "owner@example.com"));
   });
 
@@ -54,7 +54,7 @@ describe("HomeownerVerifyPage", () => {
     fireEvent.change(screen.getByLabelText(/street address/i), { target: { value: "123 Main St" } });
     fireEvent.change(screen.getByLabelText(/parcel number/i), { target: { value: "7001-00-00-0010" } });
     fireEvent.change(screen.getByLabelText(/contact email/i), { target: { value: "owner@example.com" } });
-    fireEvent.click(screen.getByRole("button", { name: /submit verification/i }));
+    fireEvent.click(screen.getByRole("button", { name: /complete verification/i }));
     await waitFor(() => expect(screen.getByText(/request submitted/i)).toBeDefined());
   });
 
@@ -64,7 +64,7 @@ describe("HomeownerVerifyPage", () => {
     fireEvent.change(screen.getByLabelText(/street address/i), { target: { value: "123 Main St" } });
     fireEvent.change(screen.getByLabelText(/parcel number/i), { target: { value: "bad" } });
     fireEvent.change(screen.getByLabelText(/contact email/i), { target: { value: "a@b.com" } });
-    fireEvent.click(screen.getByRole("button", { name: /submit verification/i }));
+    fireEvent.click(screen.getByRole("button", { name: /complete verification/i }));
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
     expect(screen.queryByText(/request submitted/i)).toBeNull();
   });
