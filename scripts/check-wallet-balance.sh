@@ -20,14 +20,22 @@ DFX_NETWORK="${DFX_NETWORK:-ic}"
 MIN_WALLET_CYCLES="${MIN_WALLET_CYCLES:-5000000000000}"   # 5T
 
 if [ -n "${DFX_IDENTITY_PEM:-}" ]; then
+  echo "  DFX_IDENTITY_PEM: set (${#DFX_IDENTITY_PEM} chars)"
   PEM_FILE=$(mktemp /tmp/ci-identity-XXXXXX.pem)
   trap 'rm -f "$PEM_FILE"' EXIT
-  printf '%s' "$DFX_IDENTITY_PEM" > "$PEM_FILE"
-  dfx identity import --storage-mode=plaintext ci-deploy "$PEM_FILE" 2>/dev/null || true
-  dfx identity use ci-deploy
+  printf '%s\n' "$DFX_IDENTITY_PEM" > "$PEM_FILE"
+  echo "  PEM header: $(head -1 "$PEM_FILE")"
+  dfx identity import --storage-mode=plaintext ci-deploy "$PEM_FILE" \
+    || { echo "❌  dfx identity import failed (exit $?)"; exit 1; }
+  dfx identity use ci-deploy \
+    || { echo "❌  dfx identity use failed"; exit 1; }
   if [ -n "${DFX_WALLET_ID:-}" ]; then
-    dfx identity set-wallet "$DFX_WALLET_ID" --network "$DFX_NETWORK"
+    dfx identity set-wallet "$DFX_WALLET_ID" --network "$DFX_NETWORK" \
+      || { echo "❌  dfx identity set-wallet failed"; exit 1; }
   fi
+else
+  echo "❌  DFX_IDENTITY_PEM is not set — cannot configure deploy identity."
+  exit 1
 fi
 
 echo "============================================"
