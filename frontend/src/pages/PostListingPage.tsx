@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { createBidRequest, isHomeownerVerified } from "../services/listing";
@@ -7,11 +7,38 @@ import { useAuth } from "../contexts/AuthContext";
 import { useBreakpoint } from "../hooks/useBreakpoint";
 import { FLORIDA_CITIES } from "../data/floridaCities";
 
-const S = {
-  ink: "#0E0E0C", paper: "#F4F1EB", rule: "#C8C3B8", rust: "#C94C2E",
-  inkLight: "#7A7268", serif: "'Playfair Display', Georgia, serif",
-  mono: "'IBM Plex Mono', monospace", sans: "'IBM Plex Sans', sans-serif",
+const C = {
+  bg:      "#F3F4F6",
+  white:   "#FFFFFF",
+  text:    "#111827",
+  sub:     "#6B7280",
+  border:  "#E5E7EB",
+  primary: "#2563EB",
+  green:   "#16A34A",
+  shadow:  "0 1px 3px rgba(0,0,0,0.10)",
+  sans:    "'Inter','IBM Plex Sans',system-ui,sans-serif",
+  mono:    "'IBM Plex Mono',monospace",
 };
+
+const LBL: React.CSSProperties = {
+  fontFamily: C.mono, fontSize: "0.7rem", letterSpacing: "0.08em",
+  textTransform: "uppercase", color: C.sub, display: "block", marginBottom: 6,
+};
+const INP: React.CSSProperties = {
+  border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 12px",
+  width: "100%", fontFamily: C.sans, fontSize: "0.95rem",
+  background: C.white, color: C.text, boxSizing: "border-box",
+  outline: "none",
+};
+
+function Field({ label, id, children }: { label: string; id: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <label htmlFor={id} style={LBL}>{label}</label>
+      {children}
+    </div>
+  );
+}
 
 export default function PostListingPage() {
   const navigate = useNavigate();
@@ -34,7 +61,7 @@ export default function PostListingPage() {
 
   function set(k: string, v: string) { setForm(f => ({ ...f, [k]: v })); }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
     try {
@@ -58,129 +85,179 @@ export default function PostListingPage() {
     }
   }
 
-  const LBL: React.CSSProperties = { fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, display: "block", marginBottom: 6 };
-  const INP: React.CSSProperties = { border: `1px solid ${S.rule}`, padding: "12px", width: "100%", fontFamily: S.sans, fontSize: "1rem", background: "white", boxSizing: "border-box" };
-
-  const field = (label: string, key: string, type = "text", placeholder = "") => (
-    <div style={{ marginBottom: 24 }}>
-      <label htmlFor={`field-${key}`} style={LBL}>{label}</label>
-      <input id={`field-${key}`} type={type} value={(form as any)[key]} placeholder={placeholder}
-        onChange={e => set(key, e.target.value)} style={INP} />
-    </div>
-  );
-
   return (
-    <div style={{ background: S.paper, minHeight: "100vh" }}>
-      <nav style={{ borderBottom: `1px solid ${S.rule}`, padding: isMobile ? "12px 16px" : "16px 40px" }}>
-        <a href="/" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}><img src="/bid_to_list_logo.png" alt="BidtoList" style={{ height: 36, width: "auto", display: "block" }} /></a>
+    <div style={{ background: C.bg, minHeight: "100vh" }}>
+
+      {/* Nav */}
+      <nav style={{
+        background: C.white, borderBottom: `1px solid ${C.border}`,
+        padding: isMobile ? "14px 20px" : "0 48px",
+        height: isMobile ? "auto" : 64,
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        position: "sticky", top: 0, zIndex: 100,
+        boxShadow: "0 1px 8px rgba(0,0,0,0.06)",
+      }}>
+        <a href="/" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}>
+          <img src="/bid_to_list_logo.png" alt="BidToList" style={{ height: 36, width: "auto", display: "block" }} />
+        </a>
+        <a href="/my-bids" style={{ fontFamily: C.sans, fontSize: "0.875rem", color: C.sub, textDecoration: "none" }}>
+          ← My Listings
+        </a>
       </nav>
-      <div style={{ maxWidth: 600, margin: "0 auto", padding: isMobile ? "32px 16px" : "60px 40px" }}>
-        <h1 style={{ fontFamily: S.serif, fontSize: "clamp(1.6rem, 5vw, 2rem)", fontWeight: 900, marginBottom: 8 }}>Post Your Listing</h1>
-        <p style={{ fontFamily: S.sans, color: S.inkLight, marginBottom: 40 }}>Agents will submit blind proposals until your deadline.</p>
+
+      {/* Content */}
+      <div style={{ maxWidth: 640, margin: "0 auto", padding: isMobile ? "28px 16px" : "48px 24px" }}>
+
+        <h1 style={{ fontFamily: C.sans, fontSize: "clamp(1.5rem,4vw,1.875rem)", fontWeight: 700, color: C.text, marginBottom: 6 }}>
+          Post Your Listing
+        </h1>
+        <p style={{ fontFamily: C.sans, fontSize: "0.95rem", color: C.sub, marginBottom: 32 }}>
+          Agents will submit blind proposals until your deadline.
+        </p>
 
         {verifiedState === "loading" && (
-          <p style={{ fontFamily: S.mono, fontSize: "0.75rem", color: S.inkLight }}>Checking verification status…</p>
+          <p style={{ fontFamily: C.mono, fontSize: "0.75rem", color: C.sub }}>Checking verification status…</p>
         )}
 
         {verifiedState === "unverified" && !isAuthenticated && (
-          <div data-testid="sign-in-gate" style={{ border: `1px solid ${S.rule}`, padding: isMobile ? 20 : 32, textAlign: "center" }}>
-            <p style={{ fontFamily: S.serif, fontSize: "1.1rem", fontWeight: 700, marginBottom: 12 }}>Sign in to post a listing</p>
-            <p style={{ fontFamily: S.sans, color: S.inkLight, marginBottom: 24, fontSize: "0.9rem" }}>
+          <div data-testid="sign-in-gate" style={{
+            background: C.white, border: `1px solid ${C.border}`, borderRadius: 12,
+            padding: isMobile ? 24 : 36, textAlign: "center", boxShadow: C.shadow,
+          }}>
+            <p style={{ fontFamily: C.sans, fontSize: "1.05rem", fontWeight: 600, color: C.text, marginBottom: 10 }}>
+              Sign in to post a listing
+            </p>
+            <p style={{ fontFamily: C.sans, fontSize: "0.9rem", color: C.sub, marginBottom: 24 }}>
               You need to sign in and verify property ownership before posting.
             </p>
-            <a href="/" style={{ fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", color: S.rust, textDecoration: "none" }}>
+            <a href="/" style={{
+              fontFamily: C.sans, fontSize: "0.875rem", fontWeight: 500,
+              color: C.primary, textDecoration: "none",
+            }}>
               ← Sign in on the home page
             </a>
           </div>
         )}
 
         {verifiedState === "unverified" && isAuthenticated && (
-          <div style={{ border: `1px solid ${S.rule}`, padding: isMobile ? 20 : 32 }}>
-            <p style={{ fontFamily: S.serif, fontSize: "1.1rem", fontWeight: 700, marginBottom: 12 }}>Verify your ownership first</p>
-            <p style={{ fontFamily: S.sans, color: S.inkLight, marginBottom: 24, lineHeight: 1.7, fontSize: "0.9rem" }}>
-              Before you can post a listing, we need to confirm you own the property. Submit your parcel number and we'll verify it — usually within 24 hours.
+          <div style={{
+            background: C.white, border: `1px solid ${C.border}`, borderRadius: 12,
+            padding: isMobile ? 24 : 36, boxShadow: C.shadow,
+          }}>
+            <p style={{ fontFamily: C.sans, fontSize: "1.05rem", fontWeight: 600, color: C.text, marginBottom: 10 }}>
+              Verify your ownership first
             </p>
-            <a href="/verify" style={{ display: "inline-block", background: S.rust, border: `1px solid ${S.rust}`, color: S.paper, fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", padding: "14px 24px", textDecoration: "none" }}>
-              Start Verification
+            <p style={{ fontFamily: C.sans, fontSize: "0.9rem", color: C.sub, lineHeight: 1.7, marginBottom: 24 }}>
+              Before you can post a listing, we need to confirm you own the property.
+              Submit your parcel number and we'll verify it — usually within 24 hours.
+            </p>
+            <a href="/verify" style={{
+              display: "inline-block", background: C.green, color: C.white,
+              fontFamily: C.sans, fontSize: "0.875rem", fontWeight: 600,
+              padding: "10px 22px", borderRadius: 8, textDecoration: "none",
+            }}>
+              Start Verification →
             </a>
           </div>
         )}
 
-        {verifiedState === "verified" && <form onSubmit={handleSubmit}>
-          {field("Street Address", "address", "text", "123 Main St")}
+        {verifiedState === "verified" && (
+          <div style={{
+            background: C.white, border: `1px solid ${C.border}`, borderRadius: 12,
+            padding: isMobile ? 24 : 36, boxShadow: C.shadow,
+          }}>
+            <form onSubmit={handleSubmit}>
 
-          <datalist id="fl-cities-post">
-            {FLORIDA_CITIES.map(c => <option key={c} value={c} />)}
-          </datalist>
+              <Field label="Street Address" id="field-address">
+                <input id="field-address" type="text" value={form.address}
+                  placeholder="123 Main St" onChange={e => set("address", e.target.value)} style={INP} />
+              </Field>
 
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 24 }}>
-            <div>
-              <label htmlFor="field-city" style={LBL}>City</label>
-              <input id="field-city" value={form.city} onChange={e => set("city", e.target.value)}
-                placeholder="Daytona Beach" style={INP}
-                list="fl-cities-post" autoComplete="off" />
-            </div>
-            <div>
-              <label htmlFor="field-zipCode" style={LBL}>Zip Code</label>
-              <input id="field-zipCode" value={form.zipCode} onChange={e => set("zipCode", e.target.value)} placeholder="32118" style={INP} />
-            </div>
+              <datalist id="fl-cities-post">
+                {FLORIDA_CITIES.map(c => <option key={c} value={c} />)}
+              </datalist>
+
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 20 }}>
+                <Field label="City" id="field-city">
+                  <input id="field-city" value={form.city} onChange={e => set("city", e.target.value)}
+                    placeholder="Daytona Beach" style={INP} list="fl-cities-post" autoComplete="off" />
+                </Field>
+                <Field label="Zip Code" id="field-zipCode">
+                  <input id="field-zipCode" value={form.zipCode} onChange={e => set("zipCode", e.target.value)}
+                    placeholder="32118" style={INP} />
+                </Field>
+              </div>
+
+              <Field label="County" id="field-county">
+                <select id="field-county" value={form.county} onChange={e => set("county", e.target.value)} style={INP}>
+                  <option value="Volusia">Volusia County</option>
+                  <option value="Flagler">Flagler County</option>
+                </select>
+              </Field>
+
+              <Field label="Target List Date" id="field-targetListDate">
+                <input id="field-targetListDate" type="date" value={form.targetListDate}
+                  onChange={e => set("targetListDate", e.target.value)} style={INP} />
+              </Field>
+
+              <Field label="Desired Sale Price (optional)" id="field-desiredSalePrice">
+                <input id="field-desiredSalePrice" type="number" value={form.desiredSalePrice}
+                  placeholder="350000" onChange={e => set("desiredSalePrice", e.target.value)} style={INP} />
+              </Field>
+
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr", gap: 16, marginBottom: 20 }}>
+                <Field label="Bedrooms" id="field-beds">
+                  <input id="field-beds" type="number" min="0" value={form.beds}
+                    placeholder="3" onChange={e => set("beds", e.target.value)} style={INP} />
+                </Field>
+                <Field label="Bathrooms" id="field-baths">
+                  <input id="field-baths" type="number" min="0" value={form.baths}
+                    placeholder="2" onChange={e => set("baths", e.target.value)} style={INP} />
+                </Field>
+                <div style={isMobile ? { gridColumn: "1 / -1" } : {}}>
+                  <Field label="Sq Ft" id="field-sqft">
+                    <input id="field-sqft" type="number" min="0" value={form.sqft}
+                      placeholder="1800" onChange={e => set("sqft", e.target.value)} style={INP} />
+                  </Field>
+                </div>
+              </div>
+
+              <Field label="Notes for Agents" id="field-notes">
+                <textarea id="field-notes" value={form.notes} rows={4}
+                  placeholder="Any details about the property, preferred services, timeline, etc."
+                  onChange={e => set("notes", e.target.value)}
+                  style={{ ...INP, resize: "vertical" }} />
+              </Field>
+
+              <Field label="Contact Email" id="field-contactEmail">
+                <input id="field-contactEmail" type="email" value={form.contactEmail}
+                  placeholder="you@example.com" onChange={e => set("contactEmail", e.target.value)} style={INP} />
+              </Field>
+
+              <Field label="Bid Deadline (minimum 48 hours)" id="field-deadline">
+                <select id="field-deadline" value={form.bidDeadlineHours}
+                  onChange={e => set("bidDeadlineHours", e.target.value)} style={INP}>
+                  <option value="48">48 hours (2 days)</option>
+                  <option value="72">72 hours (3 days)</option>
+                  <option value="120">120 hours (5 days)</option>
+                  <option value="168">168 hours (7 days — recommended)</option>
+                  <option value="240">240 hours (10 days)</option>
+                  <option value="336">336 hours (14 days)</option>
+                </select>
+              </Field>
+
+              <button type="submit" disabled={saving} style={{
+                background: saving ? C.sub : C.primary, border: "none", color: C.white,
+                fontFamily: C.sans, fontSize: "0.95rem", fontWeight: 600,
+                padding: "12px 24px", borderRadius: 8, cursor: saving ? "not-allowed" : "pointer",
+                width: "100%", marginTop: 8,
+              }}>
+                {saving ? "Posting…" : "Post Listing — Free"}
+              </button>
+
+            </form>
           </div>
-
-          <div style={{ marginBottom: 24 }}>
-            <label htmlFor="field-county" style={LBL}>County</label>
-            <select id="field-county" value={form.county} onChange={e => set("county", e.target.value)} style={{ ...INP }}>
-              <option value="Volusia">Volusia County</option>
-              <option value="Flagler">Flagler County</option>
-            </select>
-          </div>
-
-          {field("Target List Date", "targetListDate", "date")}
-          {field("Desired Sale Price (optional)", "desiredSalePrice", "number", "350000")}
-
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr", gap: 16, marginBottom: 24 }}>
-            <div>
-              <label htmlFor="field-beds" style={LBL}>Bedrooms</label>
-              <input id="field-beds" type="number" min="0" value={form.beds} placeholder="3"
-                onChange={e => set("beds", e.target.value)} style={INP} />
-            </div>
-            <div>
-              <label htmlFor="field-baths" style={LBL}>Bathrooms</label>
-              <input id="field-baths" type="number" min="0" value={form.baths} placeholder="2"
-                onChange={e => set("baths", e.target.value)} style={INP} />
-            </div>
-            <div style={isMobile ? { gridColumn: "1 / -1" } : {}}>
-              <label htmlFor="field-sqft" style={LBL}>Sq Ft</label>
-              <input id="field-sqft" type="number" min="0" value={form.sqft} placeholder="1800"
-                onChange={e => set("sqft", e.target.value)} style={INP} />
-            </div>
-          </div>
-
-          <div style={{ marginBottom: 24 }}>
-            <label htmlFor="field-notes" style={LBL}>Notes for Agents</label>
-            <textarea id="field-notes" value={form.notes} onChange={e => set("notes", e.target.value)} rows={4}
-              placeholder="Any details about the property, preferred services, timeline, etc."
-              style={{ ...INP, resize: "vertical" }} />
-          </div>
-
-          {field("Contact Email", "contactEmail", "email", "you@example.com")}
-
-          <div style={{ marginBottom: 40 }}>
-            <label htmlFor="field-deadline" style={LBL}>Bid Deadline (minimum 48 hours)</label>
-            <select id="field-deadline" value={form.bidDeadlineHours} onChange={e => set("bidDeadlineHours", e.target.value)} style={{ ...INP }}>
-              <option value="48">48 hours (2 days)</option>
-              <option value="72">72 hours (3 days)</option>
-              <option value="120">120 hours (5 days)</option>
-              <option value="168">168 hours (7 days — recommended)</option>
-              <option value="240">240 hours (10 days)</option>
-              <option value="336">336 hours (14 days)</option>
-            </select>
-          </div>
-
-          <button type="submit" disabled={saving}
-            style={{ background: S.rust, border: `1px solid ${S.rust}`, color: S.paper, fontFamily: S.mono, fontSize: "0.75rem", letterSpacing: "0.08em", textTransform: "uppercase", padding: "16px 32px", cursor: "pointer", width: "100%" }}>
-            {saving ? "Posting..." : "Post Listing — Free"}
-          </button>
-        </form>}
+        )}
       </div>
     </div>
   );

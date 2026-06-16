@@ -1,14 +1,26 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import toast from "react-hot-toast";
 import { registerAgent, getMyAgentProfile, updateAgentProfile } from "../services/agent";
 import { useAuth } from "../contexts/AuthContext";
 import { useBreakpoint } from "../hooks/useBreakpoint";
 import { FLORIDA_CITIES } from "../data/floridaCities";
 
-const S = {
-  ink: "#0E0E0C", paper: "#F4F1EB", rule: "#C8C3B8", rust: "#C94C2E",
-  inkLight: "#7A7268", serif: "'Playfair Display', Georgia, serif",
-  mono: "'IBM Plex Mono', monospace", sans: "'IBM Plex Sans', sans-serif",
+const C = {
+  bg: "#F3F4F6", white: "#FFFFFF", text: "#111827", sub: "#6B7280",
+  border: "#E5E7EB", primary: "#2563EB", green: "#16A34A",
+  shadow: "0 1px 3px rgba(0,0,0,0.10)",
+  sans: "'Inter','IBM Plex Sans',system-ui,sans-serif",
+  mono: "'IBM Plex Mono',monospace",
+};
+
+const LBL: React.CSSProperties = {
+  fontFamily: C.mono, fontSize: "0.7rem", letterSpacing: "0.08em",
+  textTransform: "uppercase", color: C.sub, display: "block", marginBottom: 6,
+};
+const INP: React.CSSProperties = {
+  border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 12px",
+  width: "100%", fontFamily: C.sans, fontSize: "0.95rem",
+  background: C.white, color: C.text, boxSizing: "border-box",
 };
 
 type PageState = "loading" | "form" | "pending" | "verified";
@@ -20,15 +32,6 @@ const INITIAL_FORM = {
 
 const MAX_DOC_BYTES = 800 * 1024;
 const MAX_CITIES = 10;
-
-function LabelStyle(): React.CSSProperties {
-  return { fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, display: "block", marginBottom: 6 };
-}
-function InputStyle(): React.CSSProperties {
-  return { border: `1px solid ${S.rule}`, padding: "12px", width: "100%", fontFamily: S.sans, fontSize: "1rem", background: "white", color: S.ink, boxSizing: "border-box" };
-}
-
-// ── Cities chip input ─────────────────────────────────────────────────────────
 
 function CitiesInput({
   cities, onChange, isMobile,
@@ -75,26 +78,25 @@ function CitiesInput({
   }
 
   return (
-    <div style={{ marginBottom: 24 }}>
-      <label style={LabelStyle()}>
+    <div style={{ marginBottom: 20 }}>
+      <label style={LBL}>
         Cities I Serve
-        <span style={{ color: S.inkLight, fontWeight: 400, marginLeft: 8 }}>
+        <span style={{ color: C.sub, fontWeight: 400, marginLeft: 8 }}>
           {cities.length}/{MAX_CITIES} added
         </span>
       </label>
 
-      {/* chips */}
       {cities.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
           {cities.map((c, i) => (
             <span key={i} style={{
               display: "inline-flex", alignItems: "center", gap: 6,
-              background: S.ink, color: S.paper, fontFamily: S.mono,
-              fontSize: "0.65rem", letterSpacing: "0.06em", padding: "5px 10px",
+              background: C.primary, color: C.white, fontFamily: C.sans,
+              fontSize: "0.8rem", padding: "4px 10px", borderRadius: 6,
             }}>
               {c}
               <button type="button" onClick={() => removeCity(i)}
-                style={{ background: "none", border: "none", color: S.paper, cursor: "pointer", padding: 0, lineHeight: 1, fontSize: "0.8rem" }}
+                style={{ background: "none", border: "none", color: C.white, cursor: "pointer", padding: 0, lineHeight: 1, fontSize: "0.9rem" }}
                 aria-label={`Remove ${c}`}>
                 ×
               </button>
@@ -103,7 +105,6 @@ function CitiesInput({
         </div>
       )}
 
-      {/* input + dropdown */}
       <div style={{ position: "relative" }}>
         <input
           ref={inputRef}
@@ -115,25 +116,26 @@ function CitiesInput({
           onKeyDown={handleKeyDown}
           onFocus={() => setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 150)}
-          style={{ ...InputStyle(), opacity: cities.length >= MAX_CITIES ? 0.5 : 1 }}
-          list="fl-cities-agent"
+          style={{ ...INP, opacity: cities.length >= MAX_CITIES ? 0.5 : 1 }}
           autoComplete="off"
         />
         {open && suggestions.length > 0 && (
           <ul style={{
             position: "absolute", top: "100%", left: 0, right: 0, zIndex: 10,
-            background: "white", border: `1px solid ${S.rule}`, borderTop: "none",
+            background: C.white, border: `1px solid ${C.border}`, borderTop: "none",
+            borderRadius: "0 0 8px 8px",
             margin: 0, padding: 0, listStyle: "none", maxHeight: 220, overflowY: "auto",
+            boxShadow: "0 4px 6px rgba(0,0,0,0.07)",
           }}>
             {suggestions.map(s => (
               <li key={s}
                 onMouseDown={() => addCity(s)}
                 style={{
-                  padding: "10px 12px", fontFamily: S.sans, fontSize: "0.9rem",
-                  cursor: "pointer", borderBottom: `1px solid ${S.rule}`,
+                  padding: "10px 12px", fontFamily: C.sans, fontSize: "0.9rem",
+                  cursor: "pointer", borderBottom: `1px solid ${C.border}`, color: C.text,
                 }}
-                onMouseEnter={e => (e.currentTarget.style.background = S.paper)}
-                onMouseLeave={e => (e.currentTarget.style.background = "white")}
+                onMouseEnter={e => (e.currentTarget.style.background = C.bg)}
+                onMouseLeave={e => (e.currentTarget.style.background = C.white)}
               >
                 {s}
               </li>
@@ -141,14 +143,12 @@ function CitiesInput({
           </ul>
         )}
       </div>
-      <p style={{ fontFamily: S.sans, fontSize: "0.8rem", color: S.inkLight, marginTop: 6 }}>
+      <p style={{ fontFamily: C.sans, fontSize: "0.8rem", color: C.sub, marginTop: 6 }}>
         Enter/comma to add · backspace to remove last · max {MAX_CITIES}
       </p>
     </div>
   );
 }
-
-// ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AgentRegisterPage() {
   const { isAuthenticated, login, isLoading: authLoading } = useAuth();
@@ -236,177 +236,207 @@ export default function AgentRegisterPage() {
 
   function field(label: string, key: string, type = "text", placeholder = "") {
     return (
-      <div style={{ marginBottom: 24 }}>
-        <label style={LabelStyle()}>{label}</label>
+      <div style={{ marginBottom: 20 }}>
+        <label style={LBL}>{label}</label>
         <input type={type} value={(form as any)[key]} placeholder={placeholder}
-          onChange={e => set(key, e.target.value)} style={InputStyle()} />
+          onChange={e => set(key, e.target.value)} style={INP} />
       </div>
     );
   }
 
-  const navPad = isMobile ? "12px 16px" : "16px 40px";
-  const secPad = isMobile ? "32px 16px" : "60px 40px";
+  const contentPad = isMobile ? "28px 16px" : "48px 24px";
+
+  const navEl = (
+    <nav style={{
+      background: C.white, borderBottom: `1px solid ${C.border}`,
+      padding: isMobile ? "14px 20px" : "0 48px",
+      height: isMobile ? "auto" : 64,
+      display: "flex", alignItems: "center",
+      position: "sticky", top: 0, zIndex: 100,
+      boxShadow: "0 1px 8px rgba(0,0,0,0.06)",
+    }}>
+      <a href="/" style={{ textDecoration: "none" }}>
+        <img src="/bid_to_list_logo.png" alt="BidToList" style={{ height: 36, display: "block" }} />
+      </a>
+    </nav>
+  );
 
   return (
-    <div style={{ background: S.paper, minHeight: "100vh" }}>
-      <nav style={{ borderBottom: `1px solid ${S.rule}`, padding: navPad }}>
-        <a href="/" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}><img src="/bid_to_list_logo.png" alt="BidtoList" style={{ height: 36, width: "auto", display: "block" }} /></a>
-      </nav>
+    <div style={{ background: C.bg, minHeight: "100vh" }}>
+      {navEl}
 
       {pageState === "loading" && (
-        <div style={{ maxWidth: 560, margin: "0 auto", padding: secPad, fontFamily: S.sans, color: S.inkLight }}>
-          Loading…
+        <div style={{ maxWidth: 560, margin: "0 auto", padding: contentPad }}>
+          <p style={{ fontFamily: C.mono, fontSize: "0.75rem", color: C.sub }}>Loading…</p>
         </div>
       )}
 
       {pageState === "form" && (
-        <div style={{ maxWidth: 560, margin: "0 auto", padding: secPad }}>
-          <h1 style={{ fontFamily: S.serif, fontSize: "clamp(1.6rem, 5vw, 2rem)", fontWeight: 900, marginBottom: 8 }}>Agent Sign Up</h1>
-          <p style={{ fontFamily: S.sans, color: S.inkLight, marginBottom: 40 }}>Free to join. $295 fee only when your bid is accepted.</p>
+        <div style={{ maxWidth: 560, margin: "0 auto", padding: contentPad }}>
+          <h1 style={{ fontFamily: C.sans, fontSize: "clamp(1.4rem,4vw,1.75rem)", fontWeight: 700, color: C.text, marginBottom: 6 }}>
+            Agent Sign Up
+          </h1>
+          <p style={{ fontFamily: C.sans, fontSize: "0.95rem", color: C.sub, marginBottom: 32, lineHeight: 1.6 }}>
+            Free to join. $295 fee only when your bid is accepted.
+          </p>
 
-          {!isAuthenticated && (
-            <div style={{ border: `1px solid ${S.rust}`, padding: 16, marginBottom: 32 }}>
-              <p style={{ fontFamily: S.sans, fontSize: "0.9rem", marginBottom: 12, color: S.ink }}>
-                You must sign in with Internet Identity before registering.
-              </p>
-              <button onClick={login}
-                style={{ border: `1px solid ${S.ink}`, background: "transparent", color: S.ink, fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", padding: "12px 20px", cursor: "pointer", minHeight: 44, width: isMobile ? "100%" : "auto" }}>
-                Sign In
+          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: isMobile ? 24 : 36, boxShadow: C.shadow }}>
+            {!isAuthenticated && (
+              <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 8, padding: 16, marginBottom: 28 }}>
+                <p style={{ fontFamily: C.sans, fontSize: "0.9rem", marginBottom: 12, color: C.text }}>
+                  You must sign in with Internet Identity before registering.
+                </p>
+                <button onClick={login}
+                  style={{ background: C.primary, border: "none", color: C.white, fontFamily: C.sans, fontSize: "0.875rem", fontWeight: 600, padding: "10px 20px", borderRadius: 8, cursor: "pointer" }}>
+                  Sign In
+                </button>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit}>
+              {field("Full Name", "name", "text", "Jane Smith")}
+              {field("Brokerage", "brokerage", "text", "Keller Williams Realty")}
+              {field("FL License Number", "licenseNumber", "text", "SL3XXXXXX")}
+
+              <div style={{ marginBottom: 20 }}>
+                <label style={LBL}>License State</label>
+                <input value="FL" disabled style={{ ...INP, background: C.bg, color: C.sub, cursor: "not-allowed" }} />
+              </div>
+
+              <div style={{ marginBottom: 20 }}>
+                <label style={LBL}>County Focus</label>
+                <select value={form.county} onChange={e => set("county", e.target.value)} style={INP}>
+                  <option value="Volusia">Volusia County</option>
+                  <option value="Flagler">Flagler County</option>
+                  <option value="Both">Both Counties</option>
+                </select>
+              </div>
+
+              <CitiesInput cities={serviceCities} onChange={setServiceCities} isMobile={isMobile} />
+
+              {field("Phone", "phone", "tel", "(386) 555-0100")}
+              {field("Email", "email", "email", "jane@brokerage.com")}
+
+              <div style={{ marginBottom: 28 }}>
+                <label style={LBL}>Bio (optional)</label>
+                <textarea value={form.bio} onChange={e => set("bio", e.target.value)} rows={4}
+                  placeholder="Brief professional background, specialties, years in Volusia/Flagler market..."
+                  style={{ ...INP, resize: "vertical" }} />
+              </div>
+
+              <div style={{ marginBottom: 20 }}>
+                <label htmlFor="photoIdInput" style={LBL}>
+                  State-Issued Photo ID <span style={{ color: "#EF4444" }}>*</span>
+                </label>
+                <p style={{ fontFamily: C.sans, fontSize: "0.85rem", color: C.sub, marginBottom: 8 }}>
+                  Driver's license or passport — JPG, PNG, or PDF, max 800 KB
+                </p>
+                <input id="photoIdInput" type="file" accept="image/jpeg,image/png,image/heic,application/pdf"
+                  onChange={handlePhotoIdChange} style={{ fontFamily: C.sans, fontSize: "0.9rem" }} />
+              </div>
+
+              <div style={{ marginBottom: 32 }}>
+                <label htmlFor="licenseDocInput" style={LBL}>
+                  State-Issued Agent License <span style={{ color: "#EF4444" }}>*</span>
+                </label>
+                <p style={{ fontFamily: C.sans, fontSize: "0.85rem", color: C.sub, marginBottom: 8 }}>
+                  Florida DBPR license document — JPG, PNG, or PDF, max 800 KB
+                </p>
+                <input id="licenseDocInput" type="file" accept="image/jpeg,image/png,application/pdf"
+                  onChange={handleLicenseDocChange} style={{ fontFamily: C.sans, fontSize: "0.9rem" }} />
+              </div>
+
+              <button type="submit" disabled={saving || !isAuthenticated || !photoIdFile || !licenseFile}
+                style={{
+                  background: (saving || !isAuthenticated || !photoIdFile || !licenseFile) ? C.sub : C.primary,
+                  border: "none", color: C.white, fontFamily: C.sans, fontSize: "0.95rem", fontWeight: 600,
+                  padding: "12px 24px", borderRadius: 8,
+                  cursor: (saving || !isAuthenticated || !photoIdFile || !licenseFile) ? "not-allowed" : "pointer",
+                  width: "100%",
+                }}>
+                {saving ? "Submitting…" : "Create Agent Profile — Free"}
               </button>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit}>
-            {field("Full Name", "name", "text", "Jane Smith")}
-            {field("Brokerage", "brokerage", "text", "Keller Williams Realty")}
-            {field("FL License Number", "licenseNumber", "text", "SL3XXXXXX")}
-
-            {/* License state — locked to FL */}
-            <div style={{ marginBottom: 24 }}>
-              <label style={LabelStyle()}>License State</label>
-              <input value="FL" disabled style={{ ...InputStyle(), background: S.paper, color: S.inkLight, cursor: "not-allowed" }} />
-            </div>
-
-            <div style={{ marginBottom: 24 }}>
-              <label style={LabelStyle()}>County Focus</label>
-              <select value={form.county} onChange={e => set("county", e.target.value)} style={InputStyle()}>
-                <option value="Volusia">Volusia County</option>
-                <option value="Flagler">Flagler County</option>
-                <option value="Both">Both Counties</option>
-              </select>
-            </div>
-
-            <CitiesInput cities={serviceCities} onChange={setServiceCities} isMobile={isMobile} />
-
-            {field("Phone", "phone", "tel", "(386) 555-0100")}
-            {field("Email", "email", "email", "jane@brokerage.com")}
-
-            <div style={{ marginBottom: 40 }}>
-              <label style={LabelStyle()}>Bio (optional)</label>
-              <textarea value={form.bio} onChange={e => set("bio", e.target.value)} rows={4}
-                placeholder="Brief professional background, specialties, years in Volusia/Flagler market..."
-                style={{ ...InputStyle(), resize: "vertical" }} />
-            </div>
-
-            <div style={{ marginBottom: 24 }}>
-              <label htmlFor="photoIdInput" style={LabelStyle()}>
-                State-Issued Photo ID <span style={{ color: S.rust }}>*</span>
-              </label>
-              <p style={{ fontFamily: S.sans, fontSize: "0.85rem", color: S.inkLight, marginBottom: 8 }}>
-                Driver's license or passport — JPG, PNG, or PDF, max 800 KB
-              </p>
-              <input id="photoIdInput" type="file" accept="image/jpeg,image/png,image/heic,application/pdf"
-                onChange={handlePhotoIdChange} style={{ fontFamily: S.sans, fontSize: "0.9rem" }} />
-            </div>
-
-            <div style={{ marginBottom: 40 }}>
-              <label htmlFor="licenseDocInput" style={LabelStyle()}>
-                State-Issued Agent License <span style={{ color: S.rust }}>*</span>
-              </label>
-              <p style={{ fontFamily: S.sans, fontSize: "0.85rem", color: S.inkLight, marginBottom: 8 }}>
-                Florida DBPR license document — JPG, PNG, or PDF, max 800 KB
-              </p>
-              <input id="licenseDocInput" type="file" accept="image/jpeg,image/png,application/pdf"
-                onChange={handleLicenseDocChange} style={{ fontFamily: S.sans, fontSize: "0.9rem" }} />
-            </div>
-
-            <button type="submit" disabled={saving || !isAuthenticated || !photoIdFile || !licenseFile}
-              style={{ background: S.ink, border: `1px solid ${S.ink}`, color: S.paper, fontFamily: S.mono, fontSize: "0.75rem", letterSpacing: "0.08em", textTransform: "uppercase", padding: "16px 32px", cursor: (saving || !isAuthenticated || !photoIdFile || !licenseFile) ? "not-allowed" : "pointer", width: "100%", minHeight: 44, opacity: (!isAuthenticated || !photoIdFile || !licenseFile) ? 0.5 : 1 }}>
-              {saving ? "Submitting…" : "Create Agent Profile — Free"}
-            </button>
-          </form>
+            </form>
+          </div>
         </div>
       )}
 
       {pageState === "pending" && profile && (
-        <div style={{ maxWidth: 560, margin: "0 auto", padding: secPad }}>
-          <div style={{ border: `1px solid ${S.rule}`, padding: isMobile ? 20 : 32, marginBottom: 40 }}>
-            <p style={{ fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, marginBottom: 12 }}>Status</p>
-            <h2 style={{ fontFamily: S.serif, fontSize: "1.6rem", fontWeight: 900, marginBottom: 8 }}>Under Review</h2>
-            <p style={{ fontFamily: S.sans, color: S.inkLight, lineHeight: 1.6 }}>
-              Your application is pending BidtoList verification. We review license numbers against the Florida DBPR database — you'll receive an email at <strong>{profile.email}</strong> once approved.
+        <div style={{ maxWidth: 560, margin: "0 auto", padding: contentPad }}>
+          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: isMobile ? 24 : 36, boxShadow: C.shadow, marginBottom: 32 }}>
+            <p style={LBL}>Status</p>
+            <h2 style={{ fontFamily: C.sans, fontSize: "1.25rem", fontWeight: 700, color: C.text, marginBottom: 10 }}>Under Review</h2>
+            <p style={{ fontFamily: C.sans, color: C.sub, lineHeight: 1.7 }}>
+              Your application is pending BidToList verification. We review license numbers against the Florida DBPR database — you'll receive an email at <strong style={{ color: C.text }}>{profile.email}</strong> once approved.
             </p>
           </div>
 
-          <p style={{ fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, marginBottom: 24 }}>Submitted Info</p>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 16 }}>
+          <p style={{ ...LBL, marginBottom: 20 }}>Submitted Info</p>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 24 }}>
             {[
               ["Name", profile.name], ["Brokerage", profile.brokerage],
               ["License", profile.licenseNumber], ["County", profile.county],
               ["Phone", profile.phone], ["Email", profile.email],
             ].map(([label, value]) => (
-              <div key={label}>
-                <p style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, marginBottom: 4 }}>{label}</p>
-                <p style={{ fontFamily: S.sans, color: S.ink, wordBreak: "break-word" }}>{value}</p>
+              <div key={label} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px 16px" }}>
+                <p style={{ ...LBL, marginBottom: 4 }}>{label}</p>
+                <p style={{ fontFamily: C.sans, color: C.text, wordBreak: "break-word" }}>{value}</p>
               </div>
             ))}
           </div>
           {profile.serviceCities?.length > 0 && (
-            <div style={{ marginBottom: 40 }}>
-              <p style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, marginBottom: 8 }}>Service Cities</p>
-              <p style={{ fontFamily: S.sans, color: S.ink }}>{profile.serviceCities.join(", ")}</p>
+            <div style={{ marginBottom: 32 }}>
+              <p style={{ ...LBL, marginBottom: 8 }}>Service Cities</p>
+              <p style={{ fontFamily: C.sans, color: C.text }}>{profile.serviceCities.join(", ")}</p>
             </div>
           )}
 
-          <p style={{ fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, marginBottom: 24 }}>Need to correct something?</p>
-          <form onSubmit={handleUpdate}>
-            {field("Full Name", "name", "text")}
-            {field("Brokerage", "brokerage", "text")}
-            {field("Phone", "phone", "tel")}
-            {field("Email", "email", "email")}
-            <CitiesInput cities={serviceCities} onChange={setServiceCities} isMobile={isMobile} />
-            <div style={{ marginBottom: 24 }}>
-              <label style={LabelStyle()}>Bio</label>
-              <textarea value={form.bio} onChange={e => set("bio", e.target.value)} rows={3}
-                style={{ ...InputStyle(), resize: "vertical" }} />
-            </div>
-            <button type="submit" disabled={saving}
-              style={{ border: `1px solid ${S.ink}`, background: "transparent", color: S.ink, fontFamily: S.mono, fontSize: "0.75rem", letterSpacing: "0.08em", textTransform: "uppercase", padding: "14px 24px", cursor: "pointer", minHeight: 44, width: isMobile ? "100%" : "auto" }}>
-              {saving ? "Saving…" : "Update Profile"}
-            </button>
-          </form>
+          <p style={{ ...LBL, marginBottom: 20 }}>Need to correct something?</p>
+          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: isMobile ? 24 : 36, boxShadow: C.shadow }}>
+            <form onSubmit={handleUpdate}>
+              {field("Full Name", "name")}
+              {field("Brokerage", "brokerage")}
+              {field("Phone", "phone", "tel")}
+              {field("Email", "email", "email")}
+              <CitiesInput cities={serviceCities} onChange={setServiceCities} isMobile={isMobile} />
+              <div style={{ marginBottom: 24 }}>
+                <label style={LBL}>Bio</label>
+                <textarea value={form.bio} onChange={e => set("bio", e.target.value)} rows={3}
+                  style={{ ...INP, resize: "vertical" }} />
+              </div>
+              <button type="submit" disabled={saving}
+                style={{
+                  background: saving ? C.sub : C.primary, border: "none", color: C.white,
+                  fontFamily: C.sans, fontSize: "0.95rem", fontWeight: 600,
+                  padding: "12px 24px", borderRadius: 8,
+                  cursor: saving ? "not-allowed" : "pointer",
+                  width: isMobile ? "100%" : "auto",
+                }}>
+                {saving ? "Saving…" : "Update Profile"}
+              </button>
+            </form>
+          </div>
         </div>
       )}
 
       {pageState === "verified" && profile && (
-        <div style={{ maxWidth: 560, margin: "0 auto", padding: secPad }}>
-          <div style={{ border: `1px solid ${S.rule}`, padding: isMobile ? 20 : 32, marginBottom: 40 }}>
-            <p style={{ fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, marginBottom: 12 }}>Status</p>
-            <h2 style={{ fontFamily: S.serif, fontSize: "1.6rem", fontWeight: 900, marginBottom: 8 }}>Verified Agent</h2>
-            <p style={{ fontFamily: S.sans, color: S.inkLight, lineHeight: 1.6 }}>
+        <div style={{ maxWidth: 560, margin: "0 auto", padding: contentPad }}>
+          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: isMobile ? 24 : 36, boxShadow: C.shadow }}>
+            <p style={LBL}>Status</p>
+            <h2 style={{ fontFamily: C.sans, fontSize: "1.25rem", fontWeight: 700, color: C.text, marginBottom: 10 }}>Verified Agent</h2>
+            <p style={{ fontFamily: C.sans, color: C.sub, lineHeight: 1.7, marginBottom: 24 }}>
               Your license has been verified. You can now browse FSBO listings and submit bids.
             </p>
-          </div>
-
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <a href="/agents/browse"
-              style={{ background: S.ink, border: `1px solid ${S.ink}`, color: S.paper, fontFamily: S.mono, fontSize: "0.75rem", letterSpacing: "0.08em", textTransform: "uppercase", padding: "14px 32px", textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: 44, flex: isMobile ? "1 1 100%" : "0 0 auto" }}>
-              Browse Listings
-            </a>
-            <a href="/"
-              style={{ border: `1px solid ${S.rule}`, color: S.inkLight, fontFamily: S.mono, fontSize: "0.75rem", letterSpacing: "0.08em", textTransform: "uppercase", padding: "14px 32px", textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: 44, flex: isMobile ? "1 1 100%" : "0 0 auto" }}>
-              Home
-            </a>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              <a href="/agents/browse"
+                style={{ background: C.primary, border: "none", color: C.white, fontFamily: C.sans, fontSize: "0.875rem", fontWeight: 600, padding: "10px 22px", borderRadius: 8, textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center", flex: isMobile ? "1 1 100%" : "0 0 auto" }}>
+                Browse Listings
+              </a>
+              <a href="/"
+                style={{ background: C.bg, border: `1px solid ${C.border}`, color: C.sub, fontFamily: C.sans, fontSize: "0.875rem", fontWeight: 500, padding: "10px 22px", borderRadius: 8, textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center", flex: isMobile ? "1 1 100%" : "0 0 auto" }}>
+                Home
+              </a>
+            </div>
           </div>
         </div>
       )}
