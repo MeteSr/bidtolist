@@ -1,1 +1,14 @@
-{}
+{
+  "listing": {
+    "testnet": "vfjhc-ziaaa-aaaai-axyma-cai"
+  },
+  "agent": {
+    "testnet": "vcibw-uqaaa-aaaai-axymq-cai"
+  },
+  "fee": {
+    "testnet": "vllkk-cyaaa-aaaai-axyna-cai"
+  },
+  "frontend": {
+    "testnet": "vmkm6-paaaa-aaaai-axynq-cai"
+  }
+}
