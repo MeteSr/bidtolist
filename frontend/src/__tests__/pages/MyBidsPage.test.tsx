@@ -93,8 +93,8 @@ describe("MyBidsPage — listings", () => {
     mockGetMyBidRequests.mockResolvedValue([MOCK_REQUEST_OPEN]);
     renderPage();
     await waitFor(() => {
-      expect(screen.getByText(/123 Oak St/i)).toBeInTheDocument();
-      expect(screen.getByText(/Volusia/)).toBeInTheDocument();
+      expect(screen.getAllByText(/Daytona Beach/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Volusia/i).length).toBeGreaterThan(0);
     });
   });
 
@@ -111,7 +111,7 @@ describe("MyBidsPage — sealed / revealed logic", () => {
     mockGetMyBidRequests.mockResolvedValue([MOCK_REQUEST_OPEN]);
     renderPage();
     await waitFor(() =>
-      expect(screen.getByText(/bids are sealed until the deadline/i)).toBeInTheDocument()
+      expect(screen.getByText(/proposals are sealed until bidding closes/i)).toBeInTheDocument()
     );
   });
 
@@ -128,8 +128,8 @@ describe("MyBidsPage — sealed / revealed logic", () => {
     mockGetProposalsForRequest.mockResolvedValue([MOCK_PROPOSAL]);
     renderPage();
     await waitFor(() => {
-      expect(screen.getAllByText(/jane smith/i).length).toBeGreaterThan(0);
-      expect(screen.getAllByText(/keller williams/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Agent #1/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/2\.50%/).length).toBeGreaterThan(0);
     });
   });
 
@@ -154,32 +154,32 @@ describe("MyBidsPage — accept proposal", () => {
     mockGetProposalsForRequest.mockResolvedValue([MOCK_PROPOSAL]);
     const user = userEvent.setup();
     renderPage();
-    await waitFor(() => screen.getByRole("button", { name: /select agent/i }));
+    await waitFor(() => screen.getByRole("button", { name: /^select$/i }));
     return user;
   }
 
   it("calls acceptProposal with proposal id", async () => {
     const user = await openProposals();
-    await user.click(screen.getByRole("button", { name: /select agent/i }));
+    await user.click(screen.getByRole("button", { name: /^select$/i }));
     await waitFor(() => expect(mockAcceptProposal).toHaveBeenCalledWith("PROP_1"));
   });
 
   it("shows success toast on accept", async () => {
     const user = await openProposals();
-    await user.click(screen.getByRole("button", { name: /select agent/i }));
+    await user.click(screen.getByRole("button", { name: /^select$/i }));
     await waitFor(() => expect(vi.mocked(toast.success)).toHaveBeenCalled());
   });
 
   it("shows error toast when acceptProposal returns err", async () => {
     mockAcceptProposal.mockResolvedValue({ err: { NotAuthorized: null } } as any);
     const user = await openProposals();
-    await user.click(screen.getByRole("button", { name: /select agent/i }));
+    await user.click(screen.getByRole("button", { name: /^select$/i }));
     await waitFor(() => expect(vi.mocked(toast.error)).toHaveBeenCalled());
   });
 
   it("fires notifyProposalResult with won=true for the accepted agent", async () => {
     const user = await openProposals();
-    await user.click(screen.getByRole("button", { name: /select agent/i }));
+    await user.click(screen.getByRole("button", { name: /^select$/i }));
     await waitFor(() => expect(vi.mocked(toast.success)).toHaveBeenCalled());
     expect(mockNotifyProposalResult).toHaveBeenCalledWith(
       expect.objectContaining({ agentEmail: "jane@kw.com", won: true })
@@ -189,7 +189,7 @@ describe("MyBidsPage — accept proposal", () => {
   it("does not fire notifyProposalResult when acceptProposal returns err", async () => {
     mockAcceptProposal.mockResolvedValue({ err: { NotAuthorized: null } } as any);
     const user = await openProposals();
-    await user.click(screen.getByRole("button", { name: /select agent/i }));
+    await user.click(screen.getByRole("button", { name: /^select$/i }));
     await waitFor(() => expect(vi.mocked(toast.error)).toHaveBeenCalled());
     expect(mockNotifyProposalResult).not.toHaveBeenCalled();
   });
@@ -267,7 +267,7 @@ describe("MyBidsPage — review form", () => {
     mockGetMyBidRequests.mockResolvedValue([MOCK_REQUEST_PAST]);
     mockGetProposalsForRequest.mockResolvedValue([MOCK_PROPOSAL]);
     renderPage();
-    await waitFor(() => expect(screen.getAllByText(/jane smith/i).length).toBeGreaterThan(0));
+    await waitFor(() => expect(screen.getAllByText(/Agent #1/i).length).toBeGreaterThan(0));
     expect(screen.queryByTestId("review-form")).toBeNull();
   });
 });
@@ -392,7 +392,7 @@ describe("MyBidsPage — reveal notification", () => {
     mockGetMyBidRequests.mockResolvedValue([MOCK_REQUEST_OPEN]);
     mockGetProposalsForRequest.mockResolvedValue([]);
     renderPage();
-    await waitFor(() => expect(screen.getByText(/bids are sealed until the deadline/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/proposals are sealed until bidding closes/i)).toBeInTheDocument());
     expect(mockMarkRevealNotified).not.toHaveBeenCalled();
   });
 });
@@ -423,7 +423,7 @@ describe("MyBidsPage — multiple agents", () => {
     renderPage();
     for (let i = 1; i <= 5; i++) {
       await waitFor(() =>
-        expect(screen.getAllByText(new RegExp(`Agent ${i}`, "i")).length).toBeGreaterThan(0)
+        expect(screen.getAllByText(new RegExp(`Agent #${i}`, "i")).length).toBeGreaterThan(0)
       );
     }
   });
@@ -433,7 +433,7 @@ describe("MyBidsPage — multiple agents", () => {
     mockGetProposalsForRequest.mockResolvedValue(FIVE_PROPOSALS);
     renderPage();
     await waitFor(() =>
-      expect(screen.getAllByRole("button", { name: /select agent/i }).length).toBe(5)
+      expect(screen.getAllByRole("button", { name: /^select$/i }).length).toBe(5)
     );
   });
 

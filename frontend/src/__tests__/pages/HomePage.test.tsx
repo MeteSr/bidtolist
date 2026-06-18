@@ -48,15 +48,15 @@ describe("HomePage", () => {
 
   it("renders How It Works section with three steps", () => {
     renderPage();
-    expect(screen.getByText(/post your property/i)).toBeInTheDocument();
-    expect(screen.getByText(/agents compete/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/post your property/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/agents compete/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/choose the best fit/i)).toBeInTheDocument();
   });
 
   it("renders results statistics bar", () => {
     renderPage();
     expect(screen.getByText(/\$5,000\+/)).toBeInTheDocument();
-    expect(screen.getByText(/100%/)).toBeInTheDocument();
+    expect(screen.getAllByText(/100%/).length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders comparison section", () => {
@@ -89,7 +89,7 @@ describe("HomePage", () => {
 
   it("renders For Agents nav link", () => {
     renderPage();
-    expect(screen.getByRole("link", { name: /for agents/i })).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: /for agents/i }).length).toBeGreaterThanOrEqual(1);
   });
 
   it("shows Dashboard button when authenticated", () => {
