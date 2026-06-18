@@ -18,7 +18,7 @@ test.describe("LoginPage (/login)", () => {
   test("shows Internet Identity button with ICP badge by default", async ({ page }) => {
     await page.goto("/login");
     await expect(page.getByRole("button", { name: /continue with internet identity/i })).toBeVisible();
-    await expect(page.getByText("ICP")).toBeVisible();
+    await expect(page.getByText("ICP").first()).toBeVisible();
   });
 
   test("shows Google, Apple and Microsoft provider buttons", async ({ page }) => {

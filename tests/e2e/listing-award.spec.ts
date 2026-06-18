@@ -79,9 +79,9 @@ test.describe("ListingAwardPage (/agents/listing-award/:id)", () => {
     await injectAwardData(page);
     await page.goto(`/agents/listing-award/${PROPOSAL_ID}`);
     await expect(page.getByTestId("countdown")).toBeVisible();
-    await expect(page.getByText("HRS")).toBeVisible();
-    await expect(page.getByText("MIN")).toBeVisible();
-    await expect(page.getByText("SEC")).toBeVisible();
+    await expect(page.getByText("HRS").first()).toBeVisible();
+    await expect(page.getByText("MIN").first()).toBeVisible();
+    await expect(page.getByText("SEC").first()).toBeVisible();
   });
 
   test("shows PAYMENT DUE IN label on countdown card", async ({ page }) => {
@@ -137,7 +137,7 @@ test.describe("ListingAwardPage (/agents/listing-award/:id)", () => {
   test("shows no-subscriptions, no-recurring, no-hidden-fees checklist", async ({ page }) => {
     await injectAwardData(page);
     await page.goto(`/agents/listing-award/${PROPOSAL_ID}`);
-    await expect(page.getByText(/no subscriptions/i)).toBeVisible();
+    await expect(page.getByText(/no subscriptions/i).first()).toBeVisible();
     await expect(page.getByText(/no recurring charges/i)).toBeVisible();
     await expect(page.getByText(/no hidden fees/i)).toBeVisible();
   });

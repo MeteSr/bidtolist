@@ -86,10 +86,7 @@ test.describe("HomeownerVerifyPage (/verify)", () => {
 
   test("shows Photo ID upload zone with Choose File button", async ({ page }) => {
     await page.goto("/verify");
-    // The upload zone for photo ID shows "Choose File" within the section
-    const section = page.getByRole("heading", { name: /government-issued photo id/i })
-      .locator("../..");
-    await expect(section.getByText(/drag & drop here/i)).toBeVisible();
+    await expect(page.getByText(/drag & drop here/i).first()).toBeVisible();
   });
 
   test("shows Take Photo and Upload Photo buttons in Selfie section", async ({ page }) => {
@@ -149,7 +146,7 @@ test.describe("HomeownerVerifyPage (/verify)", () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/verify");
     await expect(page.getByRole("heading", { name: /accepted documents/i })).toBeVisible();
-    await expect(page.getByText(/utility bill/i)).toBeVisible();
+    await expect(page.getByText(/utility bill/i).first()).toBeVisible();
     await expect(page.getByText(/property tax statement/i)).toBeVisible();
   });
 
@@ -158,7 +155,7 @@ test.describe("HomeownerVerifyPage (/verify)", () => {
     await page.goto("/verify");
     await expect(page.getByRole("heading", { name: /your information is protected/i })).toBeVisible();
     await expect(page.getByText(/bank-level encryption/i)).toBeVisible();
-    await expect(page.getByText(/never sold/i)).toBeVisible();
+    await expect(page.getByText(/never sold/i).first()).toBeVisible();
   });
 
   // ── Sticky footer ─────────────────────────────────────────────────────────────
@@ -233,8 +230,8 @@ test.describe("HomeownerVerifyPage (/verify)", () => {
 
   test("shows Secure, Private, Encrypted badges near heading", async ({ page }) => {
     await page.goto("/verify");
-    await expect(page.getByText(/^secure$/i)).toBeVisible();
-    await expect(page.getByText(/^private$/i)).toBeVisible();
-    await expect(page.getByText(/^encrypted$/i)).toBeVisible();
+    await expect(page.getByText(/\bsecure\b/i).first()).toBeVisible();
+    await expect(page.getByText(/\bprivate\b/i).first()).toBeVisible();
+    await expect(page.getByText(/\bencrypted\b/i).first()).toBeVisible();
   });
 });

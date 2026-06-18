@@ -14,7 +14,7 @@ export default defineConfig({
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
   ],
   webServer: {
-    command: "npm run frontend",
+    command: "cd frontend && npx vite --mode test --port 5174",
     url: "http://localhost:5174",
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,

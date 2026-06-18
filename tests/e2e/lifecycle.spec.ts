@@ -72,8 +72,8 @@ test.describe("Lifecycle — bid secrecy", () => {
   test("homeowner sees 'bids are sealed' message before deadline (no proposals shown)", async ({ page }) => {
     await injectOpenRequest(page);
     await page.goto("/my-bids");
-    await expect(page.getByText(/bids are sealed until the deadline/i)).toBeVisible();
-    await expect(page.queryByRole("button", { name: /select agent/i })).resolves.toBeNull();
+    await expect(page.getByText(/proposals are sealed until bidding closes/i)).toBeVisible();
+    await expect(page.getByRole("button", { name: /^select$/i })).toHaveCount(0);
   });
 
   test("homeowner does NOT see individual bid details before deadline", async ({ page }) => {
@@ -83,7 +83,7 @@ test.describe("Lifecycle — bid secrecy", () => {
     await injectOpenRequest(page);
     // __e2e_proposals is intentionally absent — canister wouldn't return them
     await page.goto("/my-bids");
-    await expect(page.getByText(/bids are sealed until the deadline/i)).toBeVisible();
+    await expect(page.getByText(/proposals are sealed until bidding closes/i)).toBeVisible();
   });
 
   test("agent browse page shows only proposal count, not proposal content", async ({ page }) => {
@@ -99,7 +99,7 @@ test.describe("Lifecycle — bid secrecy", () => {
       }];
     `);
     await page.goto("/agents/browse");
-    await expect(page.getByText(/daytona beach/i)).toBeVisible();
+    await expect(page.getByText(/daytona beach/i).first()).toBeVisible();
     // Proposal agent names and commission rates must NOT appear on the browse page
     await expect(page.getByText(/jane smith/i)).not.toBeVisible();
     await expect(page.getByText(/2\.50%/)).not.toBeVisible();
@@ -132,7 +132,8 @@ test.describe("Lifecycle — bid secrecy", () => {
     await page.goto("/agents/dashboard");
     // Both appear in mock getMyProposals, but in production only PROP_MINE would be returned.
     // This test verifies the dashboard renders whatever getMyProposals returns (canister enforces secrecy).
-    await expect(page.getByText(/jane smith/i).first()).toBeVisible();
+    // Dashboard shows requestId ("Request BID_1"), not the agent's own name.
+    await expect(page.getByText(/request BID_1/i).first()).toBeVisible();
   });
 });
 
@@ -147,26 +148,26 @@ test.describe("Lifecycle — proposal reveal", () => {
     await injectPastRequest(page);
     await injectProposal(page);
     await page.goto("/my-bids");
-    await expect(page.getByText(/jane smith/i).first()).toBeVisible();
-    await expect(page.getByText(/keller williams/i).first()).toBeVisible();
+    // Proposals are anonymous — shown as "Agent #1" until homeowner selects one
+    await expect(page.getByText(/agent #1/i).first()).toBeVisible();
     await expect(page.getByText(/2\.50%/).first()).toBeVisible();
   });
 
-  test("Select Agent button is present for each pending proposal after reveal", async ({ page }) => {
+  test("Select button is present for each pending proposal after reveal", async ({ page }) => {
     await injectPastRequest(page);
     await injectProposal(page);
     await page.goto("/my-bids");
-    await expect(page.getByRole("button", { name: /select agent/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^select$/i })).toBeVisible();
   });
 
   test("homeowner can select winning agent after reveal", async ({ page }) => {
     await injectPastRequest(page);
     await injectProposal(page);
     await page.goto("/my-bids");
-    await page.getByRole("button", { name: /select agent/i }).click();
+    await page.getByRole("button", { name: /^select$/i }).click();
     // acceptProposal runs in mock mode (no canister) and refreshes list
     // After accepting, page reloads requests — assert the click didn't throw/crash
-    await expect(page.getByRole("button", { name: /select agent/i }).or(page.getByTestId("review-form"))).toBeVisible();
+    await expect(page.getByRole("button", { name: /^select$/i }).or(page.getByTestId("review-form"))).toBeVisible();
   });
 
   test("accepted proposal shows View Profile link", async ({ page }) => {
@@ -201,13 +202,13 @@ test.describe("Lifecycle — multiple agents (5 bidders)", () => {
   test("all 5 agent names are visible after reveal", async ({ page }) => {
     await page.goto("/my-bids");
     for (let i = 1; i <= 5; i++) {
-      await expect(page.getByText(new RegExp(`Agent ${i}`, "i")).first()).toBeVisible();
+      await expect(page.getByText(new RegExp(`Agent #${i}`, "i")).first()).toBeVisible();
     }
   });
 
-  test("at least 3 Select Agent buttons are visible (top 3 shown by default)", async ({ page }) => {
+  test("at least 3 Select buttons are visible", async ({ page }) => {
     await page.goto("/my-bids");
-    const buttons = page.getByRole("button", { name: /select agent/i });
+    const buttons = page.getByRole("button", { name: /^select$/i });
     await expect(buttons.first()).toBeVisible();
     expect(await buttons.count()).toBeGreaterThanOrEqual(3);
   });
@@ -237,12 +238,10 @@ test.describe("Lifecycle — cancel listing", () => {
     // Past deadline with Open status — biddingOpen is false when deadline passed
     // (the status field alone determines biddingOpen, so cancel still won't show
     //  if the listing was already actioned. Verify the button isn't blocking UX.)
-    const cancelBtn = page.getByRole("button", { name: /cancel listing/i });
-    // After deadline the request status is still Open in mock, but
-    // the component guards on biddingOpen which checks status.Open.
-    // For now just confirm the reveal flow isn't broken by the button's presence.
-    const noProposals = page.getByText(/no proposals received/i);
-    await expect(noProposals.or(cancelBtn)).toBeVisible();
+    // After deadline, showProposals=true and no bids → "No proposals received." shows.
+    // The cancel button may also appear (status is still Open in mock).
+    // Just confirm the reveal flow rendered without crashing.
+    await expect(page.getByText(/no proposals received/i)).toBeVisible();
   });
 
   test("dismissing confirm dialog does not cancel the listing", async ({ page }) => {
@@ -253,7 +252,7 @@ test.describe("Lifecycle — cancel listing", () => {
     page.on("dialog", dialog => dialog.dismiss());
     await page.getByRole("button", { name: /cancel listing/i }).click();
     // The page should still show the open listing (not navigate away or show error)
-    await expect(page.getByText(/123 Oak St/i)).toBeVisible();
+    await expect(page.getByText(/daytona beach/i).first()).toBeVisible();
   });
 
   test("accepting confirm dialog cancels the listing and shows toast", async ({ page }) => {
@@ -262,10 +261,10 @@ test.describe("Lifecycle — cancel listing", () => {
     await page.goto("/my-bids");
     page.on("dialog", dialog => dialog.accept());
     await page.getByRole("button", { name: /cancel listing/i }).click();
-    // In mock mode cancelBidRequest returns ok; the list refreshes (now empty)
-    // and the success toast renders. Check that the page doesn't crash.
+    // In mock mode cancelBidRequest returns ok but doesn't mutate the store,
+    // so the listing still shows. Verify the page didn't crash.
     await expect(
-      page.getByText(/no active listings yet/i).or(page.getByText(/123 Oak St/i))
+      page.getByText(/no active listings yet/i).or(page.getByRole("heading", { name: /daytona beach/i }))
     ).toBeVisible();
   });
 });
