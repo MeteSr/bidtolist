@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 import { getMyProposals } from "../services/listing";
 import { getMyFees, FeeRecord } from "../services/fee";
 import { useBreakpoint } from "../hooks/useBreakpoint";
@@ -12,8 +12,6 @@ const C = {
   sans: "'Inter','IBM Plex Sans',system-ui,sans-serif",
   mono: "'IBM Plex Mono',monospace",
 };
-
-const AGENT_SERVER = (import.meta as any).env?.VITE_AGENT_SERVER_URL || "http://localhost:3001";
 
 function feeForProposal(fees: FeeRecord[], proposalId: string): FeeRecord | undefined {
   return fees.find(f => f.proposalId === proposalId);
@@ -55,9 +53,9 @@ function referralLink(principal: string): string {
 export default function AgentDashboardPage() {
   const { isMobile } = useBreakpoint();
   const { principal } = useAuth();
+  const navigate = useNavigate();
   const [proposals, setProposals] = useState<any[]>([]);
   const [fees, setFees] = useState<FeeRecord[]>([]);
-  const [payingFee, setPayingFee] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
 
   useEffect(() => {
@@ -73,26 +71,8 @@ export default function AgentDashboardPage() {
     });
   }
 
-  async function handlePayNow(proposalId: string, feeId?: string) {
-    const key = feeId ?? proposalId;
-    setPayingFee(key);
-    try {
-      const res = await fetch(`${AGENT_SERVER}/api/bidtolist/stripe/create-checkout-session`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ feeId: feeId ?? proposalId, proposalId }),
-      });
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        toast.error("Stripe is not configured. Contact billing@bidtolist.com to pay your fee.");
-      }
-    } catch {
-      toast.error("Could not reach payment server. Try again or contact support.");
-    } finally {
-      setPayingFee(null);
-    }
+  function handlePayNow(proposalId: string) {
+    navigate(`/agents/listing-award/${proposalId}`);
   }
 
   const accepted = proposals.filter((p: any) => p.status && "Accepted" in p.status);
@@ -156,11 +136,10 @@ export default function AgentDashboardPage() {
                       </p>
                       <button
                         data-testid={`pay-now-${p.id}`}
-                        onClick={() => handlePayNow(p.id, fee?.id)}
-                        disabled={payingFee === (fee?.id ?? p.id)}
+                        onClick={() => handlePayNow(p.id)}
                         style={{ background: C.primary, border: "none", color: C.white, fontFamily: C.sans, fontSize: "0.875rem", fontWeight: 600, padding: "10px 20px", borderRadius: 8, cursor: "pointer", whiteSpace: "nowrap" }}
                       >
-                        {payingFee === (fee?.id ?? p.id) ? "Redirecting…" : "Pay Now — $295"}
+                        Pay Now — $395
                       </button>
                     </div>
                   )}

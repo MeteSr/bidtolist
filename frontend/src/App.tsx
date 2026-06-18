@@ -15,6 +15,7 @@ import AgentListingPage from "./pages/AgentListingPage";
 import FaqPage from "./pages/FaqPage";
 import AgentLandingPage from "./pages/AgentLandingPage";
 import LoginPage from "./pages/LoginPage";
+import ListingAwardPage from "./pages/ListingAwardPage";
 
 export default function App() {
   return (
@@ -35,6 +36,7 @@ export default function App() {
         <Route path="/agents/profile/:agentId"   element={<AgentProfilePage />} />
         <Route path="/faq"                        element={<FaqPage />} />
         <Route path="/for-agents"                element={<AgentLandingPage />} />
+        <Route path="/agents/listing-award/:proposalId" element={<ListingAwardPage />} />
       </Routes>
     </AuthProvider>
   );
