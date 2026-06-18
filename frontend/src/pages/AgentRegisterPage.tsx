@@ -683,7 +683,7 @@ export default function AgentRegisterPage() {
               <p style={{ fontFamily: P.sans, fontSize: "0.9rem", marginBottom: 12, color: P.charcoal }}>
                 You must sign in with Internet Identity before registering.
               </p>
-              <button onClick={login}
+              <button onClick={() => login()}
                 style={{ background: P.navy, border: "none", color: P.white, fontFamily: P.sans, fontSize: "0.875rem", fontWeight: 600, padding: "10px 20px", cursor: "pointer" }}>
                 Sign In
               </button>

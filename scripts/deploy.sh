@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DEPLOY_SCRIPT_VERSION="0.4.0"
+DEPLOY_SCRIPT_VERSION="0.4.3"
 ENV=${1:-local}
 
 echo "============================================"
@@ -17,20 +17,10 @@ if [ "$ENV" != "local" ] && [ -n "${DFX_IDENTITY_PEM:-}" ]; then
   icp identity default ci-deploy
   rm -f "$IDENTITY_FILE"
   echo "  ✓ Identity loaded"
-else
-  _PRINCIPAL=$(icp identity principal 2>/dev/null || echo "2vxsx-fae")
-  if [ "$_PRINCIPAL" = "2vxsx-fae" ]; then
-    echo "▶ Creating local deploy identity (bidtolist-local)..."
-    if ! icp identity new bidtolist-local --storage plaintext 2>/dev/null && \
-       ! icp identity new bidtolist-local 2>/dev/null; then
-      _ID_PEM=$(mktemp /tmp/btl-deploy-XXXXXX.pem)
-      openssl genpkey -algorithm Ed25519 -out "$_ID_PEM" 2>/dev/null
-      icp identity import bidtolist-local --from-pem "$_ID_PEM" --storage plaintext 2>/dev/null || true
-      rm -f "$_ID_PEM"
-    fi
-    icp identity default bidtolist-local 2>/dev/null || true
-    echo "  ✓ Identity: $(icp identity principal)"
-  fi
+elif [ "$ENV" = "local" ]; then
+  # Local network seeds the default identity with ICP and cycles automatically.
+  # Do not create a new identity — a fresh identity has 0 cycles and cannot create canisters.
+  echo "  ✓ Using default local identity (pre-seeded with cycles): $(icp identity principal 2>/dev/null || echo 'anonymous')"
 fi
 
 # ── Mops toolchain ────────────────────────────────────────────────────────────
@@ -192,9 +182,28 @@ fi
 
 if [ "$ENV" = "local" ]; then
   # ── Local: mint cycles + all-in-one icp deploy ────────────────────────────
-  echo "▶ Minting local cycles..."
-  icp cycles mint 500000000000000 -e local >/dev/null 2>&1 || true
-  echo "  ✓ Cycles minted (500T)"
+  echo "▶ Minting local cycles (100T)..."
+  icp cycles mint 100000000000000 -e local >/dev/null 2>&1 || true
+  echo "  ✓ Cycles minted"
+
+  # Top up each existing canister — minting funds the deployer account, not the
+  # canisters themselves. Wasm reinstalls cost cycles proportional to binary size.
+  # dfx canister deposit-cycles is reliable for local; icp cycles transfer is a fallback.
+  echo "▶ Topping up existing local canisters (10T each)..."
+  for _c in "${CANISTERS[@]}"; do
+    _cid=$(icp canister status "$_c" -e local --id-only 2>/dev/null || echo "")
+    if [ -z "$_cid" ]; then
+      echo "  (skipping $_c — not yet deployed)"
+      continue
+    fi
+    if dfx canister deposit-cycles 10000000000000 "$_cid" --network local >/dev/null 2>&1; then
+      echo "  ✓ $_c topped up"
+    elif icp cycles transfer 10000000000000 "$_cid" -e local >/dev/null 2>&1; then
+      echo "  ✓ $_c topped up (via icp cycles transfer)"
+    else
+      echo "  ⚠️  $_c top-up failed — deploy may fail if canister is low on cycles"
+    fi
+  done
 
   echo ""
   echo "▶ Deploying canisters (local)..."

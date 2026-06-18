@@ -4,6 +4,7 @@ import {
   logout as actorLogout,
   isAuthenticated as actorIsAuthenticated,
   getPrincipal,
+  type OpenIdProvider,
 } from "../services/actor";
 import { getMyAgentProfile } from "../services/agent";
 
@@ -14,8 +15,8 @@ interface AuthState {
   principal: string | null;
   role: UserRole;
   isLoading: boolean;
-  login: () => Promise<void>;
-  loginWithRole: (intendedRole: "homeowner" | "agent") => Promise<UserRole>;
+  login: (provider?: OpenIdProvider) => Promise<void>;
+  loginWithRole: (intendedRole: "homeowner" | "agent", provider?: OpenIdProvider) => Promise<UserRole>;
   logout: () => Promise<void>;
 }
 
@@ -67,15 +68,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })();
   }, []);
 
-  async function login() {
-    await actorLogin();
+  async function login(provider?: OpenIdProvider) {
+    await actorLogin(provider);
     setPrincipal(await getPrincipal());
     setIsAuthenticated(true);
     setRole(await detectRole());
   }
 
-  async function loginWithRole(intendedRole: "homeowner" | "agent"): Promise<UserRole> {
-    await actorLogin();
+  async function loginWithRole(intendedRole: "homeowner" | "agent", provider?: OpenIdProvider): Promise<UserRole> {
+    await actorLogin(provider);
     setPrincipal(await getPrincipal());
     setIsAuthenticated(true);
     const detected = await detectRole();

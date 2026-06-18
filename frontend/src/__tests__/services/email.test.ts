@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { notifyNewProposal, notifyProposalResult, notifyAgentVerified } from "../../services/email";
+import { notifyNewProposal, notifyProposalResult, notifyAgentVerified, notifyRevealOpened, notifyListingCancelled } from "../../services/email";
 
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
@@ -89,5 +89,52 @@ describe("notifyAgentVerified", () => {
   it("does not throw when fetch fails", async () => {
     mockFetch.mockRejectedValue(new Error("network error"));
     expect(() => notifyAgentVerified({ agentEmail: "jane@kw.com", agentName: "Jane" })).not.toThrow();
+  });
+});
+
+describe("notifyRevealOpened", () => {
+  it("POSTs to /api/bidtolist/email/reveal-opened with requestId", async () => {
+    notifyRevealOpened("BID_reveal_123");
+    await new Promise(r => setTimeout(r, 0));
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/bidtolist/email/reveal-opened"),
+      expect.objectContaining({
+        method: "POST",
+        body: expect.stringContaining("BID_reveal_123"),
+      })
+    );
+  });
+
+  it("does not throw when fetch fails", async () => {
+    mockFetch.mockRejectedValue(new Error("network error"));
+    expect(() => notifyRevealOpened("BID_reveal_123")).not.toThrow();
+  });
+});
+
+describe("notifyListingCancelled", () => {
+  it("POSTs to /api/bidtolist/email/listing-cancelled with agent details", async () => {
+    notifyListingCancelled({ agentEmail: "bob@remax.com", agentName: "Bob Jones", city: "Palm Coast" });
+    await new Promise(r => setTimeout(r, 0));
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/bidtolist/email/listing-cancelled"),
+      expect.objectContaining({
+        method: "POST",
+        body: expect.stringContaining("bob@remax.com"),
+      })
+    );
+  });
+
+  it("includes city in the request body", async () => {
+    notifyListingCancelled({ agentEmail: "bob@remax.com", agentName: "Bob Jones", city: "Palm Coast" });
+    await new Promise(r => setTimeout(r, 0));
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ body: expect.stringContaining("Palm Coast") })
+    );
+  });
+
+  it("does not throw when fetch fails", async () => {
+    mockFetch.mockRejectedValue(new Error("network error"));
+    expect(() => notifyListingCancelled({ agentEmail: "bob@remax.com", agentName: "Bob", city: "Daytona Beach" })).not.toThrow();
   });
 });

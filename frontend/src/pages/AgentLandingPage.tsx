@@ -153,10 +153,6 @@ export default function AgentLandingPage() {
   const navigate = useNavigate();
   const { isMobile } = useBreakpoint();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [commission, setCommission] = useState(10000);
-
-  const FEE = 395;
-  const net = Math.max(0, commission - FEE);
 
   async function handleSignIn() {
     if (!isAuthenticated) await login();
@@ -501,109 +497,121 @@ export default function AgentLandingPage() {
         </div>
       </section>
 
-      {/* ── ROI Calculator ───────────────────────────────────────────────────── */}
+      {/* ── Transparent Pricing ──────────────────────────────────────────────── */}
       <section style={{ background: C.warmWhite, padding: isMobile ? "56px 20px" : "80px 48px" }}>
         <div style={{ maxWidth: 960, margin: "0 auto" }}>
-          <div style={{
-            background:   C.white,
-            border:       `1px solid ${C.softGray}`,
-            borderRadius: 20,
-            padding:      isMobile ? "32px 20px" : "40px 48px",
-            boxShadow:    "0 4px 24px rgba(0,0,0,0.06)",
-            display:      "grid",
-            gridTemplateColumns: isMobile ? "1fr" : "1fr 1.2fr 1fr",
-            gap:          isMobile ? 32 : 40,
-            alignItems:   "center",
-          }}>
-            {/* Left: headline */}
-            <div>
-              <h2 style={{ fontFamily: C.serif, fontSize: "clamp(1.4rem,2.5vw,1.75rem)", fontWeight: 700, color: C.navy, lineHeight: 1.25, marginBottom: 12 }}>
-                One Listing Could Pay for an Entire Year of BidToList.
-              </h2>
-              <p style={{ fontFamily: C.sans, fontSize: "0.85rem", fontWeight: 400, color: C.muted, lineHeight: 1.65 }}>
-                See how the numbers work for your business.
-              </p>
-            </div>
 
-            {/* Middle: inputs */}
-            <div>
-              <div style={{ marginBottom: 20 }}>
-                <p style={{ fontFamily: C.mono, fontSize: "0.62rem", letterSpacing: "0.1em", textTransform: "uppercase" as const, color: C.muted, marginBottom: 8 }}>
-                  Average Commission
-                </p>
-                <div style={{
-                  display: "flex", alignItems: "center",
-                  border: `1px solid ${C.softGray}`, borderRadius: 8,
-                  padding: "10px 14px", background: C.white, marginBottom: 10,
-                }}>
-                  <span style={{ fontFamily: C.sans, fontSize: "0.9rem", color: C.muted, marginRight: 6 }}>$</span>
-                  <input
-                    type="number"
-                    min={1000}
-                    max={100000}
-                    step={500}
-                    value={commission}
-                    onChange={e => setCommission(Math.max(1, Number(e.target.value)))}
-                    style={{
-                      border: "none", outline: "none", fontFamily: C.sans,
-                      fontSize: "0.9rem", fontWeight: 600, color: C.navy,
-                      width: "100%", background: "transparent",
-                    }}
-                  />
-                </div>
-                <input
-                  type="range"
-                  min={1000}
-                  max={50000}
-                  step={500}
-                  value={commission}
-                  onChange={e => setCommission(Number(e.target.value))}
-                  style={{ width: "100%", accentColor: C.navy }}
-                />
+          {/* Header */}
+          <p style={{ fontFamily: C.mono, fontSize: "0.62rem", letterSpacing: "0.15em", textTransform: "uppercase" as const, color: C.orange, textAlign: "center", marginBottom: 12 }}>
+            Transparent Pricing
+          </p>
+          <h2 style={{ fontFamily: C.serif, fontSize: "clamp(2rem,4.5vw,3rem)", fontWeight: 700, color: C.navy, textAlign: "center", lineHeight: 1.1, marginBottom: 16 }}>
+            You Only Pay When You Win<span style={{ color: C.orange }}>.</span>
+          </h2>
+          <p style={{ fontFamily: C.sans, fontSize: "0.95rem", fontWeight: 400, color: C.charcoal, textAlign: "center", lineHeight: 1.65, maxWidth: 560, margin: "0 auto 48px" }}>
+            You secure the signed listing agreement. You pay the $395 success fee. Until then, you owe nothing.
+          </p>
+
+          {/* Two-column layout */}
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1.45fr", gap: 20, marginBottom: 20 }}>
+
+            {/* Left: $395 card */}
+            <div style={{ background: C.white, border: `1px solid ${C.softGray}`, borderRadius: 16, padding: "36px 28px", display: "flex", flexDirection: "column" as const, alignItems: "center", textAlign: "center" }}>
+              <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#FEF0E6", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+                <IcTrophy size={28} />
               </div>
-
-              <div>
-                <p style={{ fontFamily: C.mono, fontSize: "0.62rem", letterSpacing: "0.1em", textTransform: "uppercase" as const, color: C.muted, marginBottom: 8 }}>
-                  BidToList Fee
-                </p>
-                <div style={{
-                  display: "flex", alignItems: "center",
-                  border: `1px solid ${C.softGray}`, borderRadius: 8,
-                  padding: "10px 14px", background: "#F7F4F0", marginBottom: 10,
-                }}>
-                  <span style={{ fontFamily: C.sans, fontSize: "0.9rem", color: C.muted, marginRight: 6 }}>$</span>
-                  <span style={{ fontFamily: C.sans, fontSize: "0.9rem", fontWeight: 600, color: C.orange }}>395</span>
-                  <span style={{ fontFamily: C.sans, fontSize: "0.75rem", color: C.muted, marginLeft: 8 }}>fixed</span>
-                </div>
-                <div style={{ height: 4, borderRadius: 2, background: C.softGray, overflow: "hidden" }}>
-                  <div style={{ width: `${Math.min(100, (FEE / commission) * 100)}%`, height: "100%", background: C.orange, borderRadius: 2 }} />
-                </div>
+              <p style={{ fontFamily: C.serif, fontSize: "clamp(3rem,6vw,4.5rem)", fontWeight: 700, color: C.orange, lineHeight: 1, marginBottom: 6 }}>$395</p>
+              <p style={{ fontFamily: C.sans, fontSize: "1rem", fontWeight: 700, color: C.navy, marginBottom: 28 }}>Success Fee Per Signed Listing</p>
+              <div style={{ width: "100%", textAlign: "left" as const }}>
+                {[
+                  "No monthly fees",
+                  "No contracts",
+                  "No upfront costs",
+                  "No charge for losing bids",
+                  "Only pay after securing the listing agreement",
+                ].map((item, i, arr) => (
+                  <div key={item} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: i < arr.length - 1 ? `1px solid ${C.softGray}` : "none" }}>
+                    <div style={{ width: 22, height: 22, borderRadius: "50%", background: C.orange, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                    <span style={{ fontFamily: C.sans, fontSize: "0.875rem", fontWeight: 400, color: C.charcoal }}>{item}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
-            {/* Right: outputs */}
-            <div style={{ borderLeft: isMobile ? "none" : `1px solid ${C.softGray}`, paddingLeft: isMobile ? 0 : 40 }}>
-              <div style={{ marginBottom: 24 }}>
-                <p style={{ fontFamily: C.mono, fontSize: "0.62rem", letterSpacing: "0.1em", textTransform: "uppercase" as const, color: C.muted, marginBottom: 6 }}>
-                  Net After Fee
-                </p>
-                <p style={{ fontFamily: C.serif, fontSize: "clamp(2rem,3vw,2.6rem)", fontWeight: 700, color: C.navy, lineHeight: 1 }}>
-                  ${net.toLocaleString()}
-                </p>
+            {/* Right: Comparison table */}
+            <div style={{ background: C.white, border: `1px solid ${C.softGray}`, borderRadius: 16, overflow: "hidden" }}>
+              {/* Header row */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
+                <div style={{ background: C.navy, padding: "16px 20px" }}>
+                  <p style={{ fontFamily: C.sans, fontSize: "0.875rem", fontWeight: 700, color: C.white }}>Traditional Lead Sources</p>
+                </div>
+                <div style={{ background: C.orange, padding: "16px 20px" }}>
+                  <p style={{ fontFamily: C.sans, fontSize: "0.875rem", fontWeight: 700, color: C.white }}>BidToList</p>
+                </div>
               </div>
-              <div style={{ marginBottom: 20 }}>
-                <p style={{ fontFamily: C.mono, fontSize: "0.62rem", letterSpacing: "0.1em", textTransform: "uppercase" as const, color: C.muted, marginBottom: 6 }}>
-                  Additional Listings Needed to Profit
-                </p>
-                <p style={{ fontFamily: C.serif, fontSize: "clamp(2rem,3vw,2.6rem)", fontWeight: 700, color: C.orange, lineHeight: 1 }}>
-                  {net > 0 ? "1" : "—"}
-                </p>
-              </div>
-              <p style={{ fontFamily: C.sans, fontSize: "0.75rem", fontWeight: 400, color: C.muted, lineHeight: 1.5 }}>
-                No subscriptions. No guessing. Just results.
-              </p>
+              {/* Rows */}
+              {[
+                {
+                  li: <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>,
+                  lt: "Pay before results",
+                  ri: <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={C.orange} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+                  rt: "Pay after results",
+                },
+                {
+                  li: <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+                  lt: "Monthly commitments",
+                  ri: <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={C.orange} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="5" y1="5" x2="19" y2="19"/></svg>,
+                  rt: "No subscriptions",
+                },
+                {
+                  li: <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+                  lt: "Unpredictable ROI",
+                  ri: <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={C.orange} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>,
+                  rt: "Fixed $395 success fee",
+                },
+                {
+                  li: <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+                  lt: "Risk is on the agent",
+                  ri: <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={C.orange} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>,
+                  rt: "Risk is shared",
+                },
+              ].map((row, i) => (
+                <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderTop: `1px solid ${C.softGray}` }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "18px 20px", borderRight: `1px solid ${C.softGray}` }}>
+                    <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#EDEEF1", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{row.li}</div>
+                    <span style={{ fontFamily: C.sans, fontSize: "0.875rem", fontWeight: 400, color: C.charcoal }}>{row.lt}</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "18px 20px" }}>
+                    <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#FEF0E6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{row.ri}</div>
+                    <span style={{ fontFamily: C.sans, fontSize: "0.875rem", fontWeight: 400, color: C.charcoal }}>{row.rt}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
+
+          {/* Bottom trust bar */}
+          <div style={{
+            background: "#EEF2F8", borderRadius: 12, padding: "20px 28px",
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+            gap: 24, flexDirection: isMobile ? "column" : "row" as const,
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <div style={{ width: 44, height: 44, borderRadius: "50%", background: C.navy, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+              </div>
+              <div>
+                <p style={{ fontFamily: C.sans, fontSize: "0.95rem", fontWeight: 700, color: C.navy }}>We succeed when you do.</p>
+                <p style={{ fontFamily: C.sans, fontSize: "0.82rem", fontWeight: 400, color: C.muted }}>Our model is built around your success—not our fees.</p>
+              </div>
+            </div>
+            <a href="/agents/register" style={{ ...primaryBtn, whiteSpace: "nowrap" as const }}>
+              Become a BidToList Agent →
+            </a>
+          </div>
+
         </div>
       </section>
 

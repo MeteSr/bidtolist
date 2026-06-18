@@ -185,15 +185,17 @@ const COMPARISON_ROWS = [
 ];
 
 export default function HomePage() {
-  const { isAuthenticated, role, login } = useAuth();
+  const { isAuthenticated, role } = useAuth();
   const navigate = useNavigate();
   const { isMobile } = useBreakpoint();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  async function handleSignIn() {
-    if (!isAuthenticated) await login();
-    if (role === "agent") navigate("/agents/dashboard");
-    else navigate("/my-bids");
+  function handleSignIn() {
+    if (isAuthenticated) {
+      navigate(role === "agent" ? "/agents/dashboard" : "/my-bids");
+    } else {
+      navigate("/login");
+    }
   }
 
   const primaryBtn = {
@@ -259,7 +261,7 @@ export default function HomePage() {
         boxShadow:      "0 2px 12px rgba(0,0,0,0.06)",
       }}>
         <a href="/" style={{ textDecoration: "none", flexShrink: 0 }}>
-          <img src="/logo.png" alt="BidToList" style={{ height: 36, display: "block" }} />
+          <img src="/logo_transparent_bg.png" alt="BidToList" style={{ height: 36, display: "block" }} />
         </a>
 
         {!isMobile && (
@@ -289,7 +291,7 @@ export default function HomePage() {
               >
                 Log In
               </button>
-              <a href="/post" style={{ ...primaryBtn, padding: "9px 18px", fontSize: "0.875rem" }}>
+              <a href="/login" style={{ ...primaryBtn, padding: "9px 18px", fontSize: "0.875rem" }}>
                 Post Your Home Free
               </a>
             </>
@@ -411,7 +413,7 @@ export default function HomePage() {
             </p>
 
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" as const, marginBottom: 28 }}>
-              <a href="/post" style={primaryBtn}>
+              <a href="/login" style={primaryBtn}>
                 Post Your Home Free
               </a>
               <a href="#how-it-works" style={{ ...secondaryBtn, gap: 8 }}>
@@ -825,7 +827,7 @@ export default function HomePage() {
             Post once. Compare offers. Choose confidently.
           </p>
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
-            <a href="/post" style={{ ...primaryBtn, fontSize: "1rem", padding: "14px 36px", borderRadius: 14, boxShadow: "0 8px 24px rgba(198,106,43,0.4)" }}>
+            <a href="/login" style={{ ...primaryBtn, fontSize: "1rem", padding: "14px 36px", borderRadius: 14, boxShadow: "0 8px 24px rgba(198,106,43,0.4)" }}>
               Post Your Home Free
             </a>
           </div>
@@ -853,7 +855,7 @@ export default function HomePage() {
             marginBottom:  28,
           }}>
             <img
-              src="/logo.png"
+              src="/logo_transparent_bg.png"
               alt="BidToList"
               style={{ height: 30, display: "block" }}
             />

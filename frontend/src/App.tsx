@@ -14,12 +14,14 @@ import AgentProfilePage from "./pages/AgentProfilePage";
 import AgentListingPage from "./pages/AgentListingPage";
 import FaqPage from "./pages/FaqPage";
 import AgentLandingPage from "./pages/AgentLandingPage";
+import LoginPage from "./pages/LoginPage";
 
 export default function App() {
   return (
     <AuthProvider>
       <Routes>
         <Route path="/"                          element={<HomePage />} />
+        <Route path="/login"                     element={<LoginPage />} />
         <Route path="/signup"                    element={<SignUpPage />} />
         <Route path="/post"                      element={<PostListingPage />} />
         <Route path="/my-bids"                   element={<MyBidsPage />} />
