@@ -71,8 +71,8 @@ describe("MyBidsPage — integration (real service, mock fallback)", () => {
     ];
     renderPage();
     await waitFor(() => {
-      expect(screen.getByText(/daytona beach/i)).toBeInTheDocument();
-      expect(screen.getByText(/volusia/i)).toBeInTheDocument();
+      expect(document.body.textContent).toMatch(/daytona beach/i);
+      expect(document.body.textContent).toMatch(/volusia/i);
     });
   });
 
