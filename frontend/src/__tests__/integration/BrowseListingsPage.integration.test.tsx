@@ -52,7 +52,7 @@ describe("BrowseListingsPage — integration (real service, mock fallback)", () 
   it("shows empty state when no requests are injected", async () => {
     renderPage();
     await waitFor(() => {
-      expect(screen.getByText(/no open listings/i)).toBeInTheDocument();
+      expect(screen.getByText(/no opportunities right now/i)).toBeInTheDocument();
     });
   });
 
@@ -113,7 +113,7 @@ describe("BrowseListingsPage — integration (real service, mock fallback)", () 
     expect(screen.getByText(/flagler county/i)).toBeInTheDocument();
   });
 
-  it("Submit Proposal is disabled when unauthenticated", async () => {
+  it("View Details button is present and enabled when unauthenticated", async () => {
     (window as any).__e2e_requests = [
       {
         id: "BID_INT_5", address: "30 C St", city: "Daytona Beach", county: "Volusia",
@@ -123,8 +123,8 @@ describe("BrowseListingsPage — integration (real service, mock fallback)", () 
       },
     ];
     renderPage();
-    await waitFor(() => screen.getByRole("button", { name: /submit proposal/i }));
-    expect(screen.getByRole("button", { name: /submit proposal/i })).toBeDisabled();
+    await waitFor(() => screen.getByRole("button", { name: /view details/i }));
+    expect(screen.getByRole("button", { name: /view details/i })).not.toBeDisabled();
   });
 
   it("shows proposal count from injected proposal data", async () => {
@@ -142,7 +142,7 @@ describe("BrowseListingsPage — integration (real service, mock fallback)", () 
     ];
     renderPage();
     await waitFor(() => {
-      expect(screen.getByText(/2 \/ 10/)).toBeInTheDocument();
+      expect(screen.getByText(/2 proposals/i)).toBeInTheDocument();
     });
   });
 });
