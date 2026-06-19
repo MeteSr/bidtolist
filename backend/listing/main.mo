@@ -170,8 +170,6 @@ persistent actor Listing {
   /// requestId → true while a submitProposal await is in flight; transient so it clears on upgrade
   private transient let inFlightProposals = Map.empty<Text, Bool>();
   private var notificationCounter : Nat = 0;
-  private var heartbeatTick       : Nat = 0;
-  private let CASCADE_CHECK_INTERVAL : Nat = 60; // ~60 seconds at ~1 tick/sec
 
   // ─── Rate Limit ──────────────────────────────────────────────────────────────
 
@@ -618,14 +616,13 @@ persistent actor Listing {
     )
   };
 
-  // ─── Cascade Heartbeat ───────────────────────────────────────────────────────
-  // Runs on every consensus round (~1 s) but only does real work every
-  // CASCADE_CHECK_INTERVAL rounds (~60 s). Advances the payment cascade for any
-  // request whose current window has expired without feePaid = true.
+  // ─── Cascade Tick ────────────────────────────────────────────────────────────
+  // Called by the Cloudflare Workers cron (hourly) via the admin identity.
+  // Advances the payment cascade for any request whose deadline has passed
+  // without feePaid = true. No heartbeat needed — cascade windows are 2–12 h.
 
-  system func heartbeat() : async () {
-    heartbeatTick += 1;
-    if (heartbeatTick % CASCADE_CHECK_INTERVAL != 0) return;
+  public shared(msg) func tickCascade() : async () {
+    if (not isAdmin(msg.caller)) return;
     let now = Time.now();
     for ((requestId, state) in Map.entries(cascadeState)) {
       if (state.deadline > 0 and now >= state.deadline) {
