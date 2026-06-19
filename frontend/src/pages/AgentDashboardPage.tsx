@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react";
-import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 import { getMyProposals } from "../services/listing";
 import { getMyFees, FeeRecord } from "../services/fee";
 import { useBreakpoint } from "../hooks/useBreakpoint";
 import { useAuth } from "../contexts/AuthContext";
 
-const S = {
-  ink: "#0E0E0C", paper: "#F4F1EB", rule: "#C8C3B8", rust: "#C94C2E",
-  inkLight: "#7A7268", serif: "'Playfair Display', Georgia, serif",
-  mono: "'IBM Plex Mono', monospace", sans: "'IBM Plex Sans', sans-serif",
+const C = {
+  bg: "#F3F4F6", white: "#FFFFFF", text: "#111827", sub: "#6B7280",
+  border: "#E5E7EB", primary: "#2563EB", green: "#16A34A",
+  shadow: "0 1px 3px rgba(0,0,0,0.10)",
+  sans: "'Inter','IBM Plex Sans',system-ui,sans-serif",
+  mono: "'IBM Plex Mono',monospace",
 };
-
-const AGENT_SERVER = (import.meta as any).env?.VITE_AGENT_SERVER_URL || "http://localhost:3001";
 
 function feeForProposal(fees: FeeRecord[], proposalId: string): FeeRecord | undefined {
   return fees.find(f => f.proposalId === proposalId);
@@ -26,12 +26,12 @@ function feeStatusLabel(fee: FeeRecord | undefined): string {
 }
 
 function statusColor(status: any): string {
-  if (!status) return S.inkLight;
-  if ("Accepted" in status)  return "#2E7D32";
-  if ("Rejected" in status)  return S.inkLight;
-  if ("Pending" in status)   return S.rust;
-  if ("Withdrawn" in status) return S.inkLight;
-  return S.inkLight;
+  if (!status) return C.sub;
+  if ("Accepted" in status)  return C.green;
+  if ("Rejected" in status)  return C.sub;
+  if ("Pending" in status)   return C.primary;
+  if ("Withdrawn" in status) return C.sub;
+  return C.sub;
 }
 
 function statusLabel(status: any): string {
@@ -53,9 +53,9 @@ function referralLink(principal: string): string {
 export default function AgentDashboardPage() {
   const { isMobile } = useBreakpoint();
   const { principal } = useAuth();
+  const navigate = useNavigate();
   const [proposals, setProposals] = useState<any[]>([]);
   const [fees, setFees] = useState<FeeRecord[]>([]);
-  const [payingFee, setPayingFee] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
 
   useEffect(() => {
@@ -71,108 +71,103 @@ export default function AgentDashboardPage() {
     });
   }
 
-  async function handlePayNow(proposalId: string, feeId?: string) {
-    const key = feeId ?? proposalId;
-    setPayingFee(key);
-    try {
-      const res = await fetch(`${AGENT_SERVER}/api/bidtolist/stripe/create-checkout-session`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ feeId: feeId ?? proposalId, proposalId }),
-      });
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        toast.error("Stripe is not configured. Contact billing@bidtolist.com to pay your fee.");
-      }
-    } catch {
-      toast.error("Could not reach payment server. Try again or contact support.");
-    } finally {
-      setPayingFee(null);
-    }
+  function handlePayNow(proposalId: string) {
+    navigate(`/agents/listing-award/${proposalId}`);
   }
 
-  const accepted  = proposals.filter((p: any) => p.status && "Accepted" in p.status);
-  const pending   = proposals.filter((p: any) => p.status && "Pending" in p.status);
-  const closed    = proposals.filter((p: any) => p.status && ("Rejected" in p.status || "Withdrawn" in p.status));
-
-  const cardPad = isMobile ? "16px" : "20px 24px";
+  const accepted = proposals.filter((p: any) => p.status && "Accepted" in p.status);
+  const pending  = proposals.filter((p: any) => p.status && "Pending" in p.status);
+  const closed   = proposals.filter((p: any) => p.status && ("Rejected" in p.status || "Withdrawn" in p.status));
 
   return (
-    <div style={{ background: S.paper, minHeight: "100vh" }}>
-      <nav style={{ borderBottom: `1px solid ${S.rule}`, padding: isMobile ? "12px 16px" : "16px 40px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <a href="/" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}><img src="/bid_to_list_logo.png" alt="BidtoList" style={{ height: 36, width: "auto", display: "block" }} /></a>
-        <a href="/agents/browse" style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", color: S.ink, textDecoration: "none" }}>Browse Listings</a>
+    <div style={{ background: C.bg, minHeight: "100vh" }}>
+      <nav style={{
+        background: C.white, borderBottom: `1px solid ${C.border}`,
+        padding: isMobile ? "14px 20px" : "0 48px",
+        height: isMobile ? "auto" : 64,
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        position: "sticky", top: 0, zIndex: 100,
+        boxShadow: "0 1px 8px rgba(0,0,0,0.06)",
+      }}>
+        <a href="/" style={{ textDecoration: "none" }}>
+          <img src="/logo.png" alt="BidToList" style={{ height: 36, display: "block" }} />
+        </a>
+        <a href="/agents/browse" style={{ fontFamily: C.sans, fontSize: "0.875rem", color: C.sub, textDecoration: "none" }}>
+          Browse Listings
+        </a>
       </nav>
 
-      <div style={{ maxWidth: 800, margin: "0 auto", padding: isMobile ? "32px 16px" : "60px 40px" }}>
-        <h1 style={{ fontFamily: S.serif, fontSize: "clamp(1.6rem, 5vw, 2rem)", fontWeight: 900, marginBottom: 40 }}>My Proposals</h1>
+      <div style={{ maxWidth: 800, margin: "0 auto", padding: isMobile ? "28px 16px" : "48px 24px" }}>
+        <h1 style={{ fontFamily: C.sans, fontSize: "clamp(1.4rem,4vw,1.75rem)", fontWeight: 700, color: C.text, marginBottom: 32 }}>
+          My Proposals
+        </h1>
 
         {proposals.length === 0 && (
-          <div style={{ border: `1px solid ${S.rule}`, padding: 40, textAlign: "center" }}>
-            <p style={{ fontFamily: S.sans, color: S.inkLight }}>No proposals yet. <a href="/agents/browse">Browse open listings.</a></p>
+          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: 40, textAlign: "center", boxShadow: C.shadow }}>
+            <p style={{ fontFamily: C.sans, color: C.sub }}>
+              No proposals yet. <a href="/agents/browse" style={{ color: C.primary }}>Browse open listings.</a>
+            </p>
           </div>
         )}
 
         {accepted.length > 0 && (
           <section style={{ marginBottom: 40 }}>
-            <p style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "#2E7D32", marginBottom: 16 }}>Won — Platform Fee Due</p>
+            <p style={{ fontFamily: C.mono, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", color: C.green, marginBottom: 16 }}>
+              Won — Platform Fee Due
+            </p>
             {accepted.map((p: any) => {
               const fee = feeForProposal(fees, p.id);
               const feeStatus = feeStatusLabel(fee);
               return (
-                <div key={p.id} style={{ border: "1px solid #2E7D32", padding: cardPad, marginBottom: 12 }}>
+                <div key={p.id} style={{ background: C.white, border: "1px solid #BBF7D0", borderRadius: 12, padding: isMobile ? 16 : "20px 24px", marginBottom: 12, boxShadow: C.shadow }}>
                   <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", gap: 8, marginBottom: 8 }}>
-                    <p style={{ fontFamily: S.sans, fontWeight: 500 }}>Request {p.requestId}</p>
-                    <span style={{ fontFamily: S.mono, fontSize: "0.65rem", color: "#2E7D32", letterSpacing: "0.08em", textTransform: "uppercase" }}>Accepted</span>
+                    <p style={{ fontFamily: C.sans, fontWeight: 600, color: C.text }}>Request {p.requestId}</p>
+                    <span style={{ fontFamily: C.mono, fontSize: "0.7rem", color: C.green, letterSpacing: "0.08em", textTransform: "uppercase" }}>Accepted</span>
                   </div>
-                  <p style={{ fontFamily: S.mono, fontSize: "0.7rem", color: S.inkLight, letterSpacing: "0.06em", marginBottom: 12 }}>
+                  <p style={{ fontFamily: C.mono, fontSize: "0.7rem", color: C.sub, letterSpacing: "0.06em", marginBottom: 12 }}>
                     {(p.commissionBps / 100).toFixed(2)}% commission · Est. ${p.estimatedSalePrice?.toLocaleString()}
                   </p>
 
                   {(feeStatus === "owed" || feeStatus === "invoiced") && (
-                    <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "center", gap: 12, background: "#FFF8E1", border: "1px solid #FFE082", padding: "12px 16px" }}>
-                      <p style={{ fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.08em", color: S.ink, flex: 1 }}>
+                    <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "center", gap: 12, background: "#FFF7ED", border: "1px solid #FED7AA", borderRadius: 8, padding: "12px 16px" }}>
+                      <p style={{ fontFamily: C.mono, fontSize: "0.7rem", letterSpacing: "0.08em", color: C.text, flex: 1 }}>
                         PLATFORM FEE: $295.00
                         {feeStatus === "invoiced" ? " — Invoice sent" : " — Due now"}
                       </p>
                       <button
                         data-testid={`pay-now-${p.id}`}
-                        onClick={() => handlePayNow(p.id, fee?.id)}
-                        disabled={payingFee === (fee?.id ?? p.id)}
-                        style={{ background: S.rust, border: `1px solid ${S.rust}`, color: S.paper, fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", padding: "10px 20px", cursor: "pointer", minHeight: 40, whiteSpace: "nowrap" }}
+                        onClick={() => handlePayNow(p.id)}
+                        style={{ background: C.primary, border: "none", color: C.white, fontFamily: C.sans, fontSize: "0.875rem", fontWeight: 600, padding: "10px 20px", borderRadius: 8, cursor: "pointer", whiteSpace: "nowrap" }}
                       >
-                        {payingFee === (fee?.id ?? p.id) ? "Redirecting…" : "Pay Now — $295"}
+                        Pay Now — $395
                       </button>
                     </div>
                   )}
 
                   {feeStatus === "paid" && (
                     <>
-                      <div style={{ background: "#E8F5E9", border: "1px solid #A5D6A7", padding: "12px 16px", marginBottom: 12 }}>
-                        <p style={{ fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.08em", color: "#2E7D32" }}>
+                      <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 8, padding: "12px 16px", marginBottom: 12 }}>
+                        <p style={{ fontFamily: C.mono, fontSize: "0.7rem", letterSpacing: "0.08em", color: C.green }}>
                           PLATFORM FEE: $295.00 — PAID
                         </p>
                       </div>
 
-                      {/* Referral card — visible once fee is paid */}
                       {principal && (
-                        <div style={{ border: `1px solid ${S.rule}`, padding: "16px", background: S.paper }}>
-                          <p style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.10em", textTransform: "uppercase", color: S.inkLight, marginBottom: 6 }}>
+                        <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: 16 }}>
+                          <p style={{ fontFamily: C.mono, fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", color: C.sub, marginBottom: 6 }}>
                             Share HomeGentic with your clients
                           </p>
-                          <p style={{ fontFamily: S.sans, fontSize: "0.85rem", color: S.inkLight, marginBottom: 12 }}>
+                          <p style={{ fontFamily: C.sans, fontSize: "0.875rem", color: C.sub, marginBottom: 12, lineHeight: 1.6 }}>
                             Your buyer clients get 1&nbsp;month free on HomeGentic — the property management app they'll need after they close. You get referral credit once they subscribe.
                           </p>
                           <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 8, alignItems: isMobile ? "stretch" : "center" }}>
-                            <code style={{ flex: 1, fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.05em", background: "#F4F1EB", border: `1px solid ${S.rule}`, padding: "10px 12px", wordBreak: "break-all", color: S.ink }}>
+                            <code style={{ flex: 1, fontFamily: C.mono, fontSize: "0.7rem", background: C.white, border: `1px solid ${C.border}`, borderRadius: 6, padding: "10px 12px", wordBreak: "break-all", color: C.text }}>
                               {referralLink(principal)}
                             </code>
                             <button
                               data-testid="copy-referral-link"
                               onClick={handleCopyLink}
-                              style={{ background: copiedLink ? "#2E7D32" : S.ink, border: `1px solid ${copiedLink ? "#2E7D32" : S.ink}`, color: S.paper, fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", padding: "10px 20px", cursor: "pointer", whiteSpace: "nowrap", minHeight: 40, flexShrink: 0 }}
+                              style={{ background: copiedLink ? C.green : C.primary, border: "none", color: C.white, fontFamily: C.sans, fontSize: "0.875rem", fontWeight: 600, padding: "10px 20px", borderRadius: 8, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}
                             >
                               {copiedLink ? "Copied!" : "Copy Link"}
                             </button>
@@ -183,8 +178,8 @@ export default function AgentDashboardPage() {
                   )}
 
                   {feeStatus === "waived" && (
-                    <div style={{ background: S.paper, border: `1px solid ${S.rule}`, padding: "12px 16px" }}>
-                      <p style={{ fontFamily: S.mono, fontSize: "0.7rem", letterSpacing: "0.08em", color: S.inkLight }}>
+                    <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px 16px" }}>
+                      <p style={{ fontFamily: C.mono, fontSize: "0.7rem", letterSpacing: "0.08em", color: C.sub }}>
                         PLATFORM FEE: WAIVED
                       </p>
                     </div>
@@ -197,16 +192,16 @@ export default function AgentDashboardPage() {
 
         {pending.length > 0 && (
           <section style={{ marginBottom: 40 }}>
-            <p style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.12em", textTransform: "uppercase", color: S.inkLight, marginBottom: 16 }}>Pending</p>
+            <p style={{ fontFamily: C.mono, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", color: C.sub, marginBottom: 16 }}>Pending</p>
             {pending.map((p: any) => (
-              <div key={p.id} style={{ border: `1px solid ${S.rule}`, padding: cardPad, marginBottom: 12, display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", gap: 8 }}>
+              <div key={p.id} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, padding: isMobile ? 16 : "20px 24px", marginBottom: 12, display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", gap: 8, boxShadow: C.shadow }}>
                 <div>
-                  <p style={{ fontFamily: S.sans, fontWeight: 500, marginBottom: 4 }}>Request {p.requestId}</p>
-                  <p style={{ fontFamily: S.mono, fontSize: "0.7rem", color: S.inkLight, letterSpacing: "0.06em" }}>
+                  <p style={{ fontFamily: C.sans, fontWeight: 600, color: C.text, marginBottom: 4 }}>Request {p.requestId}</p>
+                  <p style={{ fontFamily: C.mono, fontSize: "0.7rem", color: C.sub, letterSpacing: "0.06em" }}>
                     {(p.commissionBps / 100).toFixed(2)}% · ${p.estimatedSalePrice?.toLocaleString()} · {p.estimatedDaysOnMarket}d DOM
                   </p>
                 </div>
-                <span style={{ fontFamily: S.mono, fontSize: "0.65rem", color: statusColor(p.status), letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                <span style={{ fontFamily: C.mono, fontSize: "0.7rem", color: statusColor(p.status), letterSpacing: "0.08em", textTransform: "uppercase" }}>
                   {statusLabel(p.status)}
                 </span>
               </div>
@@ -216,11 +211,11 @@ export default function AgentDashboardPage() {
 
         {closed.length > 0 && (
           <section>
-            <p style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.12em", textTransform: "uppercase", color: S.inkLight, marginBottom: 16 }}>Closed</p>
+            <p style={{ fontFamily: C.mono, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", color: C.sub, marginBottom: 16 }}>Closed</p>
             {closed.map((p: any) => (
-              <div key={p.id} style={{ border: `1px solid ${S.rule}`, padding: isMobile ? "12px 16px" : "16px 24px", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center", opacity: 0.6 }}>
-                <p style={{ fontFamily: S.sans, fontSize: "0.9rem" }}>Request {p.requestId}</p>
-                <span style={{ fontFamily: S.mono, fontSize: "0.65rem", color: S.inkLight, letterSpacing: "0.08em", textTransform: "uppercase" }}>{statusLabel(p.status)}</span>
+              <div key={p.id} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, padding: isMobile ? "12px 16px" : "16px 24px", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center", opacity: 0.6 }}>
+                <p style={{ fontFamily: C.sans, fontSize: "0.9rem", color: C.text }}>Request {p.requestId}</p>
+                <span style={{ fontFamily: C.mono, fontSize: "0.7rem", color: C.sub, letterSpacing: "0.08em", textTransform: "uppercase" }}>{statusLabel(p.status)}</span>
               </div>
             ))}
           </section>

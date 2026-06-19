@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import PostListingPage from "../../pages/PostListingPage";
@@ -151,8 +151,7 @@ describe("PostListingPage — form submission", () => {
 
     await user.type(screen.getByLabelText(/street address/i), "123 Oak St");
     await user.type(screen.getByLabelText(/city/i), "Daytona Beach");
-    await user.type(screen.getByLabelText(/zip code/i), "32118");
-    await user.type(screen.getByLabelText(/target list date/i), "2026-08-01");
+    fireEvent.change(screen.getByLabelText(/target list date/i), { target: { value: "2026-08-01" } });
     await user.click(screen.getByRole("button", { name: /post listing/i }));
 
     await waitFor(() => {

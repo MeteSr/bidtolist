@@ -14,12 +14,16 @@ vi.mock("../../services/listing", () => ({
   getMyBidRequests: vi.fn(),
   getProposalsForRequest: vi.fn(),
   acceptProposal: vi.fn(),
+  cancelBidRequest: vi.fn(),
+  markRevealNotified: vi.fn(),
 }));
 vi.mock("../../services/agent", () => ({
   addReview: vi.fn(),
 }));
 vi.mock("../../services/email", () => ({
   notifyProposalResult: vi.fn(),
+  notifyRevealOpened: vi.fn(),
+  notifyListingCancelled: vi.fn(),
 }));
 vi.mock("react-hot-toast", () => ({
   default: { success: vi.fn(), error: vi.fn() },
@@ -30,10 +34,14 @@ import * as agentService from "../../services/agent";
 import * as emailService from "../../services/email";
 import toast from "react-hot-toast";
 
-const mockNotifyProposalResult   = emailService.notifyProposalResult as ReturnType<typeof vi.fn>;
-const mockGetMyBidRequests       = listingService.getMyBidRequests as ReturnType<typeof vi.fn>;
+const mockNotifyProposalResult   = emailService.notifyProposalResult   as ReturnType<typeof vi.fn>;
+const mockNotifyRevealOpened     = emailService.notifyRevealOpened     as ReturnType<typeof vi.fn>;
+const mockNotifyListingCancelled = emailService.notifyListingCancelled as ReturnType<typeof vi.fn>;
+const mockGetMyBidRequests       = listingService.getMyBidRequests       as ReturnType<typeof vi.fn>;
 const mockGetProposalsForRequest = listingService.getProposalsForRequest as ReturnType<typeof vi.fn>;
-const mockAcceptProposal         = listingService.acceptProposal as ReturnType<typeof vi.fn>;
+const mockAcceptProposal         = listingService.acceptProposal         as ReturnType<typeof vi.fn>;
+const mockCancelBidRequest       = listingService.cancelBidRequest       as ReturnType<typeof vi.fn>;
+const mockMarkRevealNotified     = listingService.markRevealNotified     as ReturnType<typeof vi.fn>;
 const mockAddReview              = agentService.addReview as ReturnType<typeof vi.fn>;
 
 const PAST_NS   = BigInt(Date.now() - 2 * 24 * 60 * 60 * 1000) * BigInt(1_000_000);
@@ -65,6 +73,8 @@ beforeEach(() => {
   mockGetMyBidRequests.mockResolvedValue([]);
   mockGetProposalsForRequest.mockResolvedValue([]);
   mockAcceptProposal.mockResolvedValue({ ok: null } as any);
+  mockCancelBidRequest.mockResolvedValue({ ok: null } as any);
+  mockMarkRevealNotified.mockResolvedValue(true);
   mockAddReview.mockResolvedValue({ ok: {} });
 });
 
@@ -83,8 +93,8 @@ describe("MyBidsPage — listings", () => {
     mockGetMyBidRequests.mockResolvedValue([MOCK_REQUEST_OPEN]);
     renderPage();
     await waitFor(() => {
-      expect(screen.getByText(/123 Oak St/i)).toBeInTheDocument();
-      expect(screen.getByText(/Volusia/)).toBeInTheDocument();
+      expect(screen.getAllByText(/Daytona Beach/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Volusia/i).length).toBeGreaterThan(0);
     });
   });
 
@@ -101,7 +111,7 @@ describe("MyBidsPage — sealed / revealed logic", () => {
     mockGetMyBidRequests.mockResolvedValue([MOCK_REQUEST_OPEN]);
     renderPage();
     await waitFor(() =>
-      expect(screen.getByText(/bids are sealed until the deadline/i)).toBeInTheDocument()
+      expect(screen.getByText(/proposals are sealed until bidding closes/i)).toBeInTheDocument()
     );
   });
 
@@ -118,8 +128,8 @@ describe("MyBidsPage — sealed / revealed logic", () => {
     mockGetProposalsForRequest.mockResolvedValue([MOCK_PROPOSAL]);
     renderPage();
     await waitFor(() => {
-      expect(screen.getAllByText(/jane smith/i).length).toBeGreaterThan(0);
-      expect(screen.getAllByText(/keller williams/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Agent #1/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/2\.50%/).length).toBeGreaterThan(0);
     });
   });
 
@@ -144,32 +154,32 @@ describe("MyBidsPage — accept proposal", () => {
     mockGetProposalsForRequest.mockResolvedValue([MOCK_PROPOSAL]);
     const user = userEvent.setup();
     renderPage();
-    await waitFor(() => screen.getByRole("button", { name: /select agent/i }));
+    await waitFor(() => screen.getByRole("button", { name: /^select$/i }));
     return user;
   }
 
   it("calls acceptProposal with proposal id", async () => {
     const user = await openProposals();
-    await user.click(screen.getByRole("button", { name: /select agent/i }));
+    await user.click(screen.getByRole("button", { name: /^select$/i }));
     await waitFor(() => expect(mockAcceptProposal).toHaveBeenCalledWith("PROP_1"));
   });
 
   it("shows success toast on accept", async () => {
     const user = await openProposals();
-    await user.click(screen.getByRole("button", { name: /select agent/i }));
+    await user.click(screen.getByRole("button", { name: /^select$/i }));
     await waitFor(() => expect(vi.mocked(toast.success)).toHaveBeenCalled());
   });
 
   it("shows error toast when acceptProposal returns err", async () => {
     mockAcceptProposal.mockResolvedValue({ err: { NotAuthorized: null } } as any);
     const user = await openProposals();
-    await user.click(screen.getByRole("button", { name: /select agent/i }));
+    await user.click(screen.getByRole("button", { name: /^select$/i }));
     await waitFor(() => expect(vi.mocked(toast.error)).toHaveBeenCalled());
   });
 
   it("fires notifyProposalResult with won=true for the accepted agent", async () => {
     const user = await openProposals();
-    await user.click(screen.getByRole("button", { name: /select agent/i }));
+    await user.click(screen.getByRole("button", { name: /^select$/i }));
     await waitFor(() => expect(vi.mocked(toast.success)).toHaveBeenCalled());
     expect(mockNotifyProposalResult).toHaveBeenCalledWith(
       expect.objectContaining({ agentEmail: "jane@kw.com", won: true })
@@ -179,7 +189,7 @@ describe("MyBidsPage — accept proposal", () => {
   it("does not fire notifyProposalResult when acceptProposal returns err", async () => {
     mockAcceptProposal.mockResolvedValue({ err: { NotAuthorized: null } } as any);
     const user = await openProposals();
-    await user.click(screen.getByRole("button", { name: /select agent/i }));
+    await user.click(screen.getByRole("button", { name: /^select$/i }));
     await waitFor(() => expect(vi.mocked(toast.error)).toHaveBeenCalled());
     expect(mockNotifyProposalResult).not.toHaveBeenCalled();
   });
@@ -257,7 +267,182 @@ describe("MyBidsPage — review form", () => {
     mockGetMyBidRequests.mockResolvedValue([MOCK_REQUEST_PAST]);
     mockGetProposalsForRequest.mockResolvedValue([MOCK_PROPOSAL]);
     renderPage();
-    await waitFor(() => expect(screen.getAllByText(/jane smith/i).length).toBeGreaterThan(0));
+    await waitFor(() => expect(screen.getAllByText(/Agent #1/i).length).toBeGreaterThan(0));
     expect(screen.queryByTestId("review-form")).toBeNull();
+  });
+});
+
+describe("MyBidsPage — cancel listing", () => {
+  it("shows Cancel listing button when bid window is open", async () => {
+    mockGetMyBidRequests.mockResolvedValue([MOCK_REQUEST_OPEN]);
+    renderPage();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /cancel listing/i })).toBeInTheDocument()
+    );
+  });
+
+  it("still shows Cancel listing button after deadline when status is still Open", async () => {
+    // biddingOpen is determined by status.Open, not by deadline —
+    // homeowners can cancel an Open listing even after the bid window closes.
+    mockGetMyBidRequests.mockResolvedValue([MOCK_REQUEST_PAST]);
+    mockGetProposalsForRequest.mockResolvedValue([]);
+    renderPage();
+    await waitFor(() => expect(screen.getByText(/no proposals received/i)).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: /cancel listing/i })).toBeInTheDocument();
+  });
+
+  it("does not show Cancel listing button when status is Expired", async () => {
+    const expiredReq = { ...MOCK_REQUEST_PAST, id: "BID_EXP", status: { Expired: null } };
+    mockGetMyBidRequests.mockResolvedValue([expiredReq]);
+    mockGetProposalsForRequest.mockResolvedValue([]);
+    renderPage();
+    await waitFor(() => expect(screen.getByText(/no proposals received/i)).toBeInTheDocument());
+    expect(screen.queryByRole("button", { name: /cancel listing/i })).toBeNull();
+  });
+
+  it("calls cancelBidRequest with the request id when user confirms", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    mockGetMyBidRequests.mockResolvedValue([MOCK_REQUEST_OPEN]);
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => screen.getByRole("button", { name: /cancel listing/i }));
+    await user.click(screen.getByRole("button", { name: /cancel listing/i }));
+    await waitFor(() => expect(mockCancelBidRequest).toHaveBeenCalledWith("BID_1"));
+  });
+
+  it("does not call cancelBidRequest when user dismisses confirm", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+    mockGetMyBidRequests.mockResolvedValue([MOCK_REQUEST_OPEN]);
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => screen.getByRole("button", { name: /cancel listing/i }));
+    await user.click(screen.getByRole("button", { name: /cancel listing/i }));
+    expect(mockCancelBidRequest).not.toHaveBeenCalled();
+  });
+
+  it("shows success toast on cancel", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    mockGetMyBidRequests.mockResolvedValue([MOCK_REQUEST_OPEN]);
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => screen.getByRole("button", { name: /cancel listing/i }));
+    await user.click(screen.getByRole("button", { name: /cancel listing/i }));
+    await waitFor(() => expect(vi.mocked(toast.success)).toHaveBeenCalledWith(expect.stringMatching(/cancelled/i)));
+  });
+
+  it("fires notifyListingCancelled for each agent who has a proposal", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    mockGetMyBidRequests.mockResolvedValue([MOCK_REQUEST_OPEN]);
+    mockGetProposalsForRequest.mockResolvedValue([
+      { ...MOCK_PROPOSAL, id: "PROP_A", requestId: "BID_1", agentEmail: "agent_a@kw.com", agentName: "Agent A" },
+      { ...MOCK_PROPOSAL, id: "PROP_B", requestId: "BID_1", agentEmail: "agent_b@re.com", agentName: "Agent B" },
+    ]);
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => screen.getByRole("button", { name: /cancel listing/i }));
+    await user.click(screen.getByRole("button", { name: /cancel listing/i }));
+    await waitFor(() => expect(vi.mocked(toast.success)).toHaveBeenCalled());
+    expect(mockNotifyListingCancelled).toHaveBeenCalledWith(
+      expect.objectContaining({ agentEmail: "agent_a@kw.com", agentName: "Agent A" })
+    );
+    expect(mockNotifyListingCancelled).toHaveBeenCalledWith(
+      expect.objectContaining({ agentEmail: "agent_b@re.com", agentName: "Agent B" })
+    );
+  });
+
+  it("shows error toast when cancelBidRequest returns err", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    mockCancelBidRequest.mockResolvedValue({ err: { NotAuthorized: null } } as any);
+    mockGetMyBidRequests.mockResolvedValue([MOCK_REQUEST_OPEN]);
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => screen.getByRole("button", { name: /cancel listing/i }));
+    await user.click(screen.getByRole("button", { name: /cancel listing/i }));
+    await waitFor(() => expect(vi.mocked(toast.error)).toHaveBeenCalled());
+    expect(mockNotifyListingCancelled).not.toHaveBeenCalled();
+  });
+});
+
+describe("MyBidsPage — reveal notification", () => {
+  it("calls markRevealNotified when deadline has passed", async () => {
+    mockGetMyBidRequests.mockResolvedValue([MOCK_REQUEST_PAST]);
+    mockGetProposalsForRequest.mockResolvedValue([MOCK_PROPOSAL]);
+    renderPage();
+    await waitFor(() => expect(mockMarkRevealNotified).toHaveBeenCalledWith("BID_2"));
+  });
+
+  it("fires notifyRevealOpened when markRevealNotified returns true (first reveal)", async () => {
+    mockMarkRevealNotified.mockResolvedValue(true);
+    mockGetMyBidRequests.mockResolvedValue([MOCK_REQUEST_PAST]);
+    mockGetProposalsForRequest.mockResolvedValue([MOCK_PROPOSAL]);
+    renderPage();
+    await waitFor(() => expect(mockNotifyRevealOpened).toHaveBeenCalledWith("BID_2"));
+  });
+
+  it("does NOT fire notifyRevealOpened when markRevealNotified returns false (already notified)", async () => {
+    mockMarkRevealNotified.mockResolvedValue(false);
+    mockGetMyBidRequests.mockResolvedValue([MOCK_REQUEST_PAST]);
+    mockGetProposalsForRequest.mockResolvedValue([MOCK_PROPOSAL]);
+    renderPage();
+    await waitFor(() => expect(mockMarkRevealNotified).toHaveBeenCalled());
+    expect(mockNotifyRevealOpened).not.toHaveBeenCalled();
+  });
+
+  it("does NOT call markRevealNotified when deadline has not passed", async () => {
+    mockGetMyBidRequests.mockResolvedValue([MOCK_REQUEST_OPEN]);
+    mockGetProposalsForRequest.mockResolvedValue([]);
+    renderPage();
+    await waitFor(() => expect(screen.getByText(/proposals are sealed until bidding closes/i)).toBeInTheDocument());
+    expect(mockMarkRevealNotified).not.toHaveBeenCalled();
+  });
+});
+
+describe("MyBidsPage — multiple agents", () => {
+  const FIVE_PROPOSALS = Array.from({ length: 5 }, (_, i) => ({
+    id: `PROP_${i + 1}`,
+    requestId: "BID_2",
+    agentId: `agent-${i}`,
+    agentName: `Agent ${i + 1}`,
+    agentEmail: `agent${i + 1}@kw.com`,
+    agentBrokerage: "Keller Williams",
+    commissionBps: 200 + i * 25,
+    cmaSummary: `CMA for agent ${i + 1}`,
+    marketingPlan: "MLS",
+    estimatedDaysOnMarket: 30,
+    estimatedSalePrice: 350_000,
+    includedServices: ["MLS"],
+    validUntil: BigInt(0),
+    coverLetter: `Cover letter ${i + 1}`,
+    status: { Pending: null },
+    createdAt: BigInt(0),
+  }));
+
+  it("shows all 5 agent names after deadline", async () => {
+    mockGetMyBidRequests.mockResolvedValue([MOCK_REQUEST_PAST]);
+    mockGetProposalsForRequest.mockResolvedValue(FIVE_PROPOSALS);
+    renderPage();
+    for (let i = 1; i <= 5; i++) {
+      await waitFor(() =>
+        expect(screen.getAllByText(new RegExp(`Agent #${i}`, "i")).length).toBeGreaterThan(0)
+      );
+    }
+  });
+
+  it("shows 5 Select Agent buttons (one per pending proposal)", async () => {
+    mockGetMyBidRequests.mockResolvedValue([MOCK_REQUEST_PAST]);
+    mockGetProposalsForRequest.mockResolvedValue(FIVE_PROPOSALS);
+    renderPage();
+    await waitFor(() =>
+      expect(screen.getAllByRole("button", { name: /^select$/i }).length).toBe(5)
+    );
+  });
+
+  it("lowest commission offer appears first in bid overview", async () => {
+    mockGetMyBidRequests.mockResolvedValue([MOCK_REQUEST_PAST]);
+    mockGetProposalsForRequest.mockResolvedValue(FIVE_PROPOSALS);
+    renderPage();
+    await waitFor(() => screen.getAllByText(/2\.00%/i));
+    const commissionCells = screen.getAllByText(/\d+\.\d+%/);
+    expect(commissionCells[0].textContent).toContain("2.00");
   });
 });

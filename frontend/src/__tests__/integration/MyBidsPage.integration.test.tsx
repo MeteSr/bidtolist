@@ -71,8 +71,8 @@ describe("MyBidsPage — integration (real service, mock fallback)", () => {
     ];
     renderPage();
     await waitFor(() => {
-      expect(screen.getByText(/123 oak st/i)).toBeInTheDocument();
-      expect(screen.getByText(/volusia/i)).toBeInTheDocument();
+      expect(document.body.textContent).toMatch(/daytona beach/i);
+      expect(document.body.textContent).toMatch(/volusia/i);
     });
   });
 
@@ -87,7 +87,7 @@ describe("MyBidsPage — integration (real service, mock fallback)", () => {
     ];
     renderPage();
     await waitFor(() => {
-      expect(screen.getByText(/bids are sealed until the deadline/i)).toBeInTheDocument();
+      expect(screen.getByText(/proposals are sealed until bidding closes/i)).toBeInTheDocument();
     });
   });
 
@@ -126,10 +126,9 @@ describe("MyBidsPage — integration (real service, mock fallback)", () => {
       },
     ];
     renderPage();
-    // Proposals are shown inline after the deadline — no reveal click needed
+    // Proposals are shown inline after deadline — agent identity is anonymous until selected
     await waitFor(() => {
-      expect(screen.getAllByText(/jane smith/i).length).toBeGreaterThan(0);
-      expect(screen.getAllByText(/keller williams/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Agent #1/i).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/2\.75%/).length).toBeGreaterThan(0);
     });
   });

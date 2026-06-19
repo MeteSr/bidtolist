@@ -1,44 +1,147 @@
-import { useEffect, useState, useRef } from "react";
-import { useParams } from "react-router-dom";
-import { getOpenBidRequests, getMyProposals, submitProposal, getProposalsForRequest, type BidRequestSummary } from "../services/listing";
+import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { getOpenBidRequests, getMyProposals, type BidRequestSummary } from "../services/listing";
 import { getMyAgentProfile } from "../services/agent";
-import { useAuth } from "../contexts/AuthContext";
-import toast from "react-hot-toast";
-import {
-  DC, W_SIDEBAR, DashboardSidebar, DashboardTopBar,
-  HousePlaceholder, timeAgo, formatCountdown,
-  IcGrid, IcList, IcMsg, IcNotif, IcHistory, IcSaved, IcProfile, IcSettings,
-  type SidebarItem,
-} from "../components/DashboardSidebar";
+import { useBreakpoint } from "../hooks/useBreakpoint";
 
-const QUICK_CHIPS = [
-  { label: "2.75%", bps: 275 },
-  { label: "2.50%", bps: 250 },
-  { label: "2.25%", bps: 225 },
-  { label: "2.00%", bps: 200 },
+const C = {
+  bg:       "#F8FAFC",
+  white:    "#FFFFFF",
+  ink:      "#0F172A",
+  sub:      "#64748B",
+  muted:    "#94A3B8",
+  border:   "#E2E8F0",
+  orange:   "#EA580C",
+  orangeBg: "#FFF7ED",
+  orangeBdr:"#FED7AA",
+  green:    "#059669",
+  greenBg:  "#ECFDF5",
+  greenBdr: "#A7F3D0",
+  red:      "#DC2626",
+  shadow:   "0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)",
+  sans:     "'Inter','IBM Plex Sans',system-ui,sans-serif",
+  mono:     "'IBM Plex Mono',monospace",
+};
+
+function opportunityNum(id: string): string {
+  let h = 5381;
+  for (let i = 0; i < id.length; i++) h = ((h << 5) + h + id.charCodeAt(i)) | 0;
+  return String(((h >>> 0) % 9000) + 1000);
+}
+
+function priceRange(cents?: bigint | null): string {
+  if (!cents) return "Price on request";
+  const d = Number(cents) / 100;
+  if (d < 500_000)   return "Under $500K";
+  if (d < 750_000)   return "$500K – $750K";
+  if (d < 1_000_000) return "$750K – $1M";
+  if (d < 1_500_000) return "$1M – $1.5M";
+  if (d < 2_000_000) return "$1.5M – $2M";
+  if (d < 2_500_000) return "$2M – $2.5M";
+  return "$2.5M+";
+}
+
+function deadlineFormatted(ns: bigint): { date: string; time: string } {
+  const d = new Date(Number(ns) / 1_000_000);
+  return {
+    date: d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
+    time: d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZoneName: "short" }),
+  };
+}
+
+// Photo gallery placeholder — 5 gradient slides
+const GRADIENTS = [
+  "linear-gradient(135deg,#334155,#475569)",
+  "linear-gradient(135deg,#1e3a5f,#2d6a9f)",
+  "linear-gradient(135deg,#3d2c5e,#6d4c9e)",
+  "linear-gradient(135deg,#1a3c2e,#2d7a55)",
+  "linear-gradient(135deg,#3c2a1a,#7a5530)",
 ];
 
-// ─── Main component ───────────────────────────────────────────────────────────
+function PhotoSlide({ index }: { index: number }) {
+  return (
+    <div style={{ width: "100%", height: "100%", background: GRADIENTS[index % GRADIENTS.length], position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      {/* House silhouette */}
+      <svg viewBox="0 0 200 140" width="60%" height="60%" style={{ opacity: 0.25 }}>
+        <path d="M30 100 L30 58 L100 18 L170 58 L170 100 Z" fill="white" />
+        <rect x="70" y="62" width="60" height="38" fill="white" />
+        <rect x="82" y="62" width="17" height="17" fill="rgba(0,0,0,0.4)" />
+        <rect x="101" y="62" width="17" height="17" fill="rgba(0,0,0,0.4)" />
+        <rect x="87" y="79" width="26" height="21" fill="rgba(0,0,0,0.5)" />
+      </svg>
+      {/* Watermark overlay */}
+      <div style={{
+        position: "absolute", inset: 0,
+        background: "repeating-linear-gradient(45deg,transparent,transparent 80px,rgba(255,255,255,0.03) 80px,rgba(255,255,255,0.03) 160px)",
+      }} />
+      <div style={{
+        position: "absolute", bottom: 12, left: 12,
+        background: "rgba(0,0,0,0.55)", color: "#fff",
+        fontSize: "0.68rem", fontWeight: 500, padding: "3px 8px", borderRadius: 4,
+        fontFamily: C.sans, letterSpacing: "0.04em",
+      }}>
+        BidToList — Confidential Preview
+      </div>
+    </div>
+  );
+}
+
+function Check({ color = C.green }: { color?: string }) {
+  return (
+    <svg width={15} height={15} viewBox="0 0 24 24" fill="none" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" stroke={color} />
+    </svg>
+  );
+}
+
+function Lock() {
+  return (
+    <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+      <path d="M7 11V7a5 5 0 0110 0v4"/>
+    </svg>
+  );
+}
+
+// Default seller goals shown when none are in the data model yet
+const DEFAULT_GOALS = [
+  "Highest Sale Price",
+  "Experienced Local Agent",
+  "Smooth Transaction",
+  "Professional Marketing",
+];
+
+// Default features shown when none are structured in the data model yet
+const DEFAULT_FEATURES = [
+  "Single Family Home",
+  "Active Listing",
+  "Verified Property",
+];
+
+const LOCKED_ITEMS = [
+  "Full Street Address",
+  "Homeowner Name",
+  "Phone Number",
+  "Email Address",
+  "Full-Resolution Photos",
+  "Seller Contact Notes",
+  "Messaging Access",
+  "Property Documents",
+];
 
 export default function AgentListingPage() {
   const { requestId } = useParams<{ requestId: string }>();
-  const { logout, principal } = useAuth();
-
-  const [listing,      setListing]      = useState<BidRequestSummary | null>(null);
-  const [myProposal,   setMyProposal]   = useState<any | null>(null);
-  const [allProposals, setAllProposals] = useState<any[]>([]);
-  const [agentProfile, setAgentProfile] = useState<any | null>(null);
-
-  // Commission form state
-  const [commissionInput, setCommissionInput] = useState<string>("");
-  const [cmaSummary,      setCmaSummary]      = useState("");
-  const [submitting,      setSubmitting]       = useState(false);
-  const [customMode,      setCustomMode]       = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
+  const { isMobile } = useBreakpoint();
+  const [listing,    setListing]    = useState<BidRequestSummary | null>(null);
+  const [loading,    setLoading]    = useState(true);
+  const [myProposal, setMyProposal] = useState<any | null>(null);
+  const [isVerified, setIsVerified] = useState(false);
+  const [photoIdx,   setPhotoIdx]   = useState(0);
+  const PHOTO_COUNT = 5;
 
   useEffect(() => {
     if (!requestId) return;
-
     Promise.all([
       getOpenBidRequests(),
       getMyProposals(),
@@ -46,392 +149,409 @@ export default function AgentListingPage() {
     ]).then(([listings, myProps, profile]) => {
       const found = (listings as BidRequestSummary[]).find(l => l.id === requestId);
       setListing(found ?? null);
-
-      const mine = (myProps as any[]).find(p => p.requestId === requestId);
-      if (mine) {
-        setMyProposal(mine);
-        setCommissionInput((Number(mine.commissionBps) / 100).toFixed(2));
-        setCmaSummary(mine.cmaSummary || "");
-      }
-
+      setMyProposal((myProps as any[]).find(p => p.requestId === requestId) ?? null);
       const p = Array.isArray(profile) ? profile[0] : profile;
-      setAgentProfile(p ?? null);
-    }).catch(console.error);
-
-    // Load all proposals for bid activity (anonymised)
-    getProposalsForRequest(requestId)
-      .then(setAllProposals)
-      .catch(console.error);
+      setIsVerified(p?.isVerified === true);
+    }).catch(console.error).finally(() => setLoading(false));
   }, [requestId]);
 
-  // Sort proposals by commission ascending to find competitive landscape
-  const sortedProps = [...allProposals].sort((a, b) => Number(a.commissionBps) - Number(b.commissionBps));
-  const bestOffer   = sortedProps[0];
-  const myBps       = myProposal ? Number(myProposal.commissionBps) : null;
-  const isTopOffer  = myBps !== null && bestOffer && Number(bestOffer.commissionBps) >= myBps;
-  const deadline    = listing ? Number(listing.bidDeadline) / 1_000_000 : 0;
-  const biddingOpen = listing?.status && "Open" in listing.status;
-
-  async function handleSubmitOffer() {
-    if (!requestId || !listing) return;
-    const bpsVal = Math.round(parseFloat(commissionInput) * 100);
-    if (isNaN(bpsVal) || bpsVal <= 0 || bpsVal > 1000) {
-      toast.error("Please enter a valid commission (0.01% – 10.00%).");
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const result = await submitProposal({
-        requestId,
-        agentName:             agentProfile?.name     || "Agent",
-        agentEmail:            agentProfile?.email    || "",
-        agentBrokerage:        agentProfile?.brokerage || "",
-        commissionBps:         bpsVal,
-        cmaSummary,
-        marketingPlan:         agentProfile?.bio || "",
-        estimatedDaysOnMarket: Number(agentProfile?.avgDaysOnMarket ?? 30),
-        estimatedSalePrice:    listing.desiredSalePrice?.[0] ? Number(listing.desiredSalePrice[0]) : 0,
-        includedServices:      [],
-        validUntil:            deadline || Date.now() + 30 * 24 * 60 * 60 * 1000,
-        coverLetter:           "",
-      }) as any;
-
-      if ("err" in result) {
-        toast.error(JSON.stringify(result.err));
-        return;
-      }
-      setMyProposal(result.ok);
-      toast.success(myProposal ? "Offer updated!" : "Offer submitted!");
-
-      // Refresh all proposals
-      getProposalsForRequest(requestId).then(setAllProposals).catch(console.error);
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  function setChip(bps: number) {
-    setCustomMode(false);
-    setCommissionInput((bps / 100).toFixed(2));
-  }
-
-  const sidebarItems: SidebarItem[] = [
-    { label: "Dashboard",      icon: <IcGrid />,     href: "/agents/dashboard" },
-    { label: "Listings",       icon: <IcList />,     href: "/agents/browse" },
-    { label: "My Bids",        icon: <IcList />,     href: "/agents/dashboard" },
-    { label: "Messages",       icon: <IcMsg />,      href: "#" },
-    { label: "Notifications",  icon: <IcNotif />,    href: "#" },
-    { label: "Bid History",    icon: <IcHistory />,  href: "#" },
-    { label: "Saved Listings", icon: <IcSaved />,    href: "#" },
-    { label: "Profile",        icon: <IcProfile />,  href: principal ? `/agents/profile/${principal}` : "#" },
-    { label: "Settings",       icon: <IcSettings />, href: "#" },
-  ];
-
-  if (!listing) {
+  if (loading) {
     return (
-      <div style={{ display: "flex", minHeight: "100vh", background: DC.bg, fontFamily: DC.sans }}>
-        <DashboardSidebar items={sidebarItems} activeLabel="Listings" onLogout={logout} />
-        <div style={{ marginLeft: W_SIDEBAR, flex: 1 }}>
-          <DashboardTopBar />
-          <div style={{ padding: 48, textAlign: "center" }}>
-            <p style={{ fontFamily: DC.sans, color: DC.textSub }}>
-              {requestId ? "Loading listing…" : "Listing not found."}
-            </p>
-            <a href="/agents/browse" style={{ color: DC.primary, fontFamily: DC.sans, fontSize: "0.875rem" }}>← Back to Listings</a>
-          </div>
-        </div>
+      <div style={{ background: C.bg, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <p style={{ fontFamily: C.sans, color: C.sub, fontSize: "0.9rem" }}>Loading opportunity…</p>
       </div>
     );
   }
 
-  // ─── Render ─────────────────────────────────────────────────────────────────
+  if (!listing) {
+    return (
+      <div style={{ background: C.bg, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 14 }}>
+        <p style={{ fontFamily: C.sans, fontSize: "1.1rem", fontWeight: 600, color: C.ink, margin: 0 }}>Opportunity not found</p>
+        <a href="/agents/browse" style={{ fontFamily: C.sans, fontSize: "0.875rem", color: "#2563EB" }}>← Back to Opportunities</a>
+      </div>
+    );
+  }
+
+  const oppNum      = opportunityNum(listing.id);
+  const isNewLst    = Date.now() - Number(listing.createdAt) / 1_000_000 < 72 * 3_600_000;
+  const biddingOpen = listing.status && "Open" in listing.status;
+  const beds        = listing.beds?.[0]  != null ? Number(listing.beds[0])  : null;
+  const baths       = listing.baths?.[0] != null ? Number(listing.baths[0]) : null;
+  const sqft        = listing.sqft?.[0]  != null ? Number(listing.sqft[0])  : null;
+  const range       = priceRange(listing.desiredSalePrice?.[0]);
+  const dl          = deadlineFormatted(listing.bidDeadline);
+  const propCount   = Number(listing.proposalCount);
+  const canSubmit   = biddingOpen && isVerified;
+
+  // Build property snapshot items from real data
+  const snapItems = [
+    { icon: "🏠", label: "Single Family Home" },
+    beds  != null && { icon: "🛏", label: `${beds} Bedroom${beds !== 1 ? "s" : ""}` },
+    baths != null && { icon: "🛁", label: `${baths} Bathroom${baths !== 1 ? "s" : ""}` },
+    sqft  != null && { icon: "📐", label: `${sqft.toLocaleString()} Sq Ft` },
+    { icon: "💲", label: range, highlight: true },
+  ].filter(Boolean) as { icon: string; label: string; highlight?: boolean }[];
+
+  // Notes from homeowner as seller questionnaire answer
+  const hasNotes = listing.notes && listing.notes.trim().length > 0;
+
+  // Additional features parsed from notes (comma-separated items short enough to be tags)
+  const noteFeatures = hasNotes
+    ? listing.notes.split(/[,\n]/).map(s => s.trim()).filter(s => s.length > 2 && s.length <= 36)
+    : [];
+
+  const features = [...DEFAULT_FEATURES, ...noteFeatures.slice(0, 4)];
+
+  const SubmitButton = ({ label }: { label: string }) => (
+    <button
+      onClick={() => navigate(`/agents/propose/${listing.id}`)}
+      disabled={!canSubmit}
+      style={{
+        width: "100%",
+        background: canSubmit ? C.ink : C.muted,
+        border: "none", color: "#fff",
+        borderRadius: 10, padding: "14px 24px",
+        fontFamily: C.sans, fontSize: "0.95rem", fontWeight: 600,
+        cursor: canSubmit ? "pointer" : "not-allowed",
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+      }}>
+      {label}
+      <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+        <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+      </svg>
+    </button>
+  );
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: DC.bg, fontFamily: DC.sans }}>
-      <DashboardSidebar items={sidebarItems} activeLabel="Listings" onLogout={logout} />
+    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: C.sans }}>
+      {/* Nav */}
+      <nav style={{
+        background: C.white, borderBottom: `1px solid ${C.border}`,
+        padding: "0 24px", height: 60,
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        position: "sticky", top: 0, zIndex: 100,
+        boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
+      }}>
+        <a href="/agents/browse" style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: C.sans, fontSize: "0.875rem", color: C.sub, textDecoration: "none" }}>
+          <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+          </svg>
+          Back to Opportunities
+        </a>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          {(["Save", "Share"] as const).map(label => (
+            <button key={label} style={{
+              display: "flex", alignItems: "center", gap: 5,
+              background: "none", border: `1px solid ${C.border}`,
+              borderRadius: 8, padding: "7px 14px",
+              cursor: "pointer", fontFamily: C.sans, fontSize: "0.8rem", color: C.sub,
+            }}>
+              {label === "Save" ? (
+                <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+                </svg>
+              ) : (
+                <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                </svg>
+              )}
+              {label}
+            </button>
+          ))}
+        </div>
+      </nav>
 
-      <div style={{ marginLeft: W_SIDEBAR, flex: 1, minWidth: 0 }}>
-        <DashboardTopBar />
+      <div style={{ maxWidth: 1040, margin: "0 auto", padding: isMobile ? "20px 16px 56px" : "28px 24px 72px" }}>
 
-        <div style={{ padding: "28px 32px 64px" }}>
-          {/* Back link */}
-          <a href="/agents/browse"
-            style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: DC.sans, fontSize: "0.875rem", color: DC.textSub, textDecoration: "none", marginBottom: 20 }}>
-            ← Back to Listings
-          </a>
-
-          {/* Header: address + status + countdown */}
-          <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
-            <h1 style={{ fontFamily: DC.sans, fontSize: "1.4rem", fontWeight: 700, color: DC.text, margin: 0 }}>
-              {listing.city}, {listing.county} · {listing.zipCode}
+        {/* Opportunity header */}
+        <div style={{ marginBottom: 22 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" }}>
+            <h1 style={{ fontSize: "clamp(1.25rem,2.5vw,1.625rem)", fontWeight: 700, color: C.ink, margin: 0 }}>
+              Opportunity #{oppNum}
             </h1>
-            {biddingOpen ? (
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: DC.greenBg, color: DC.greenText, border: `1px solid ${DC.greenBdr}`, borderRadius: 9999, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600 }}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: DC.green }} />
-                Bidding Open
-              </span>
-            ) : (
-              <span style={{ background: "#F3F4F6", color: DC.textSub, borderRadius: 9999, padding: "4px 12px", fontSize: "0.78rem", fontWeight: 600 }}>Closed</span>
+            {isNewLst && (
+              <span style={{
+                background: C.orange, color: "#fff",
+                borderRadius: 4, padding: "3px 10px",
+                fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.05em",
+              }}>NEW</span>
             )}
-            <span style={{ fontFamily: DC.mono, fontSize: "0.85rem", color: DC.textSub }}>
-              Closes in {deadline ? formatCountdown(deadline) : "—"}
+            {!biddingOpen && (
+              <span style={{
+                background: "#F1F5F9", color: C.sub,
+                borderRadius: 4, padding: "3px 10px",
+                fontSize: "0.7rem", fontWeight: 600,
+              }}>CLOSED</span>
+            )}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={C.sub} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+            <span style={{ fontFamily: C.sans, fontSize: "1rem", color: C.sub }}>
+              {listing.city}, {listing.county}, FL
             </span>
           </div>
+        </div>
 
-          <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
+        {/* Two-column layout */}
+        <div style={{ display: "flex", gap: 24, alignItems: "flex-start", flexDirection: isMobile ? "column" : "row" }}>
 
-            {/* ── Left / main column ───────────────────────────────────────── */}
-            <div style={{ flex: "1 1 0", minWidth: 0, display: "flex", flexDirection: "column", gap: 20 }}>
+          {/* ── Main content ──────────────────────────────────────────── */}
+          <div style={{ flex: "1 1 0", minWidth: 0, display: "flex", flexDirection: "column", gap: 16 }}>
 
-              {/* Property photo + details */}
-              <div style={{ background: DC.white, border: `1px solid ${DC.border}`, borderRadius: 8, overflow: "hidden", boxShadow: DC.shadow }}>
-                <HousePlaceholder label={`${listing.city}, ${listing.county} ${listing.zipCode}`} />
-
-                {/* Listing Details */}
-                <div style={{ padding: 24 }}>
-                  <h3 style={{ fontFamily: DC.sans, fontSize: "0.75rem", fontWeight: 600, color: DC.textSub, textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 14px" }}>
-                    Listing Details
-                  </h3>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 24px" }}>
-                    {[
-                      ["Property Type",  "Single Family"],
-                      ["Bedrooms",        listing.beds?.[0]  != null ? String(Number(listing.beds[0]))  : "—"],
-                      ["Bathrooms",       listing.baths?.[0] != null ? String(Number(listing.baths[0])) : "—"],
-                      ["Square Feet",     listing.sqft?.[0]  != null ? Number(listing.sqft[0]).toLocaleString() : "—"],
-                      ["Desired Price",   listing.desiredSalePrice?.[0] != null ? `$${Number(listing.desiredSalePrice[0]).toLocaleString()}` : "—"],
-                      ["Total Bids",      String(Number(listing.proposalCount || 0))],
-                    ].map(([label, val]) => (
-                      <div key={label}>
-                        <span style={{ fontFamily: DC.sans, fontSize: "0.75rem", color: DC.textSub }}>{label}</span>
-                        <span style={{ fontFamily: DC.sans, fontSize: "0.85rem", color: DC.text, fontWeight: 500, marginLeft: 8 }}>{val}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+            {/* Photo gallery */}
+            <div style={{ borderRadius: 12, overflow: "hidden", background: "#1E293B", boxShadow: C.shadow }}>
+              <div style={{ height: isMobile ? 220 : 360, position: "relative", overflow: "hidden" }}>
+                <PhotoSlide index={photoIdx} />
               </div>
-
-              {/* Stats row: Starting Commission / Current Best / Last Submitted */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
-                {[
-                  { label: "Starting Commission", sub: "(Seller's Target)", value: "3.00%", valueColor: DC.primary },
-                  { label: "Current Best Offer",  sub: isTopOffer ? "You're the top offer!" : bestOffer ? `${(Number(bestOffer.commissionBps) / 100).toFixed(2)}%` : "No bids yet", value: bestOffer ? `${(Number(bestOffer.commissionBps) / 100).toFixed(2)}%` : "—", valueColor: isTopOffer ? DC.green : DC.text },
-                  { label: "Your Last Submitted", sub: myProposal ? timeAgo(myProposal.createdAt) : "", value: myProposal ? `${(Number(myProposal.commissionBps) / 100).toFixed(2)}%` : "—", valueColor: DC.text },
-                ].map(({ label, sub, value, valueColor }) => (
-                  <div key={label} style={{ background: DC.white, border: `1px solid ${DC.border}`, borderRadius: 8, padding: "18px 20px", boxShadow: DC.shadow, textAlign: "center" }}>
-                    <p style={{ fontFamily: DC.sans, fontSize: "0.78rem", color: DC.textSub, margin: "0 0 2px" }}>{label}</p>
-                    <p style={{ fontFamily: DC.sans, fontSize: "0.72rem", color: valueColor === DC.green && isTopOffer ? DC.green : DC.textSub, margin: "0 0 8px" }}>{sub}</p>
-                    <p style={{ fontFamily: DC.mono, fontSize: "1.5rem", fontWeight: 700, color: valueColor, margin: 0 }}>{value}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Commission Offer Form */}
-              <div style={{ background: DC.white, border: `1px solid ${DC.border}`, borderRadius: 8, padding: 24, boxShadow: DC.shadow }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
-                  <h2 style={{ fontFamily: DC.sans, fontSize: "1rem", fontWeight: 600, color: DC.text, margin: 0 }}>Your Commission Offer</h2>
-                  <a href="/faq" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontFamily: DC.sans, fontSize: "0.8rem", color: DC.primary, textDecoration: "none" }}>
-                    How It Works
-                    <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-                    </svg>
-                  </a>
+              {/* Gallery controls */}
+              <div style={{
+                background: C.white, padding: "12px 16px",
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                borderTop: `1px solid ${C.border}`,
+              }}>
+                <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+                  {Array.from({ length: PHOTO_COUNT }, (_, i) => (
+                    <button key={i} onClick={() => setPhotoIdx(i)}
+                      style={{
+                        width: i === photoIdx ? 24 : 8, height: 8, borderRadius: 4,
+                        background: i === photoIdx ? C.ink : C.border,
+                        border: "none", cursor: "pointer", padding: 0,
+                        transition: "width 0.18s ease",
+                      }} />
+                  ))}
                 </div>
-                <p style={{ fontFamily: DC.sans, fontSize: "0.82rem", color: DC.textSub, margin: "0 0 20px" }}>
-                  Agents compete by offering the lowest listing commission.
-                </p>
-
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontFamily: DC.sans, fontSize: "0.8rem", fontWeight: 500, color: DC.text, display: "block", marginBottom: 6 }}>
-                    Your Commission Offer (%)
-                  </label>
-                  <div style={{ display: "flex", alignItems: "center", border: `1.5px solid ${DC.border}`, borderRadius: 6, overflow: "hidden", maxWidth: 200 }}>
-                    <input
-                      ref={inputRef}
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      max="10"
-                      value={commissionInput}
-                      onChange={e => { setCommissionInput(e.target.value); setCustomMode(true); }}
-                      style={{ flex: 1, border: "none", padding: "10px 12px", fontFamily: DC.mono, fontSize: "1rem", fontWeight: 600, color: DC.text, outline: "none", background: DC.white }}
-                    />
-                    <span style={{ padding: "10px 14px 10px 0", fontFamily: DC.mono, fontSize: "1rem", fontWeight: 600, color: DC.textSub }}>%</span>
-                  </div>
-                </div>
-
-                {/* Quick-select chips */}
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
-                  {QUICK_CHIPS.map(({ label, bps }) => {
-                    const selected = !customMode && commissionInput === (bps / 100).toFixed(2);
-                    return (
-                      <button key={bps} onClick={() => setChip(bps)}
-                        style={{ padding: "6px 14px", borderRadius: 6, fontFamily: DC.sans, fontSize: "0.82rem", fontWeight: 500, cursor: "pointer", border: `1.5px solid ${selected ? DC.primary : DC.border}`, background: selected ? "#EFF6FF" : DC.white, color: selected ? DC.primary : DC.text }}>
-                        {label}
-                      </button>
-                    );
-                  })}
-                  <button onClick={() => { setCustomMode(true); setTimeout(() => inputRef.current?.focus(), 50); }}
-                    style={{ padding: "6px 14px", borderRadius: 6, fontFamily: DC.sans, fontSize: "0.82rem", fontWeight: 500, cursor: "pointer", border: `1.5px solid ${customMode ? DC.primary : DC.border}`, background: customMode ? "#EFF6FF" : DC.white, color: customMode ? DC.primary : DC.text }}>
-                    Custom
-                  </button>
-                </div>
-
-                {/* Top-offer indicator */}
-                {isTopOffer && (
-                  <div style={{ background: DC.greenBg, border: `1px solid ${DC.greenBdr}`, borderRadius: 6, padding: "12px 16px", marginBottom: 16 }}>
-                    <p style={{ fontFamily: DC.sans, fontSize: "0.875rem", fontWeight: 600, color: DC.greenText, margin: "0 0 2px" }}>You're the top offer!</p>
-                    <p style={{ fontFamily: DC.sans, fontSize: "0.78rem", color: DC.greenText, margin: 0 }}>Lowest commission typically wins.</p>
-                  </div>
-                )}
-
-                <button
-                  onClick={handleSubmitOffer}
-                  disabled={submitting || !biddingOpen}
-                  style={{ width: "100%", background: biddingOpen ? "#15803D" : DC.border, border: "none", color: biddingOpen ? "#fff" : DC.textSub, borderRadius: 6, padding: "13px 0", fontFamily: DC.sans, fontSize: "0.9rem", fontWeight: 600, cursor: biddingOpen ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                  {submitting ? "Submitting…" : (
-                    <>
-                      <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
-                      </svg>
-                      {myProposal ? "Update Commission Offer" : "Submit Commission Offer"}
-                    </>
-                  )}
-                </button>
-                <p style={{ fontFamily: DC.sans, fontSize: "0.7rem", color: DC.textSub, margin: "8px 0 0", textAlign: "center" }}>
-                  By submitting, you agree to the{" "}
-                  <a href="/faq" style={{ color: DC.primary }}>Terms of Service</a>{" "}
-                  and{" "}
-                  <a href="/faq" style={{ color: DC.primary }}>BidToList Rules</a>.
-                </p>
-              </div>
-
-              {/* Bid Activity + Competitive Summary */}
-              <div style={{ display: "flex", gap: 16 }}>
-                {/* Bid Activity */}
-                <div style={{ flex: 1, background: DC.white, border: `1px solid ${DC.border}`, borderRadius: 8, overflow: "hidden", boxShadow: DC.shadow }}>
-                  <div style={{ padding: "14px 20px", borderBottom: `1px solid ${DC.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <h2 style={{ fontFamily: DC.sans, fontSize: "0.9rem", fontWeight: 600, color: DC.text, margin: 0 }}>Bid Activity</h2>
-                  </div>
-                  <div>
-                    {sortedProps.length === 0 && (
-                      <p style={{ fontFamily: DC.sans, fontSize: "0.85rem", color: DC.textSub, padding: "16px 20px" }}>No bids yet.</p>
-                    )}
-                    {sortedProps.slice(0, 5).map((p: any, i: number) => {
-                      const isMe = myProposal && p.id === myProposal.id;
-                      return (
-                        <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 20px", borderBottom: i < Math.min(sortedProps.length, 5) - 1 ? `1px solid ${DC.border}` : "none" }}>
-                          <div style={{ width: 6, height: 6, borderRadius: "50%", background: isMe ? DC.green : "#9CA3AF", flexShrink: 0 }} />
-                          <p style={{ flex: 1, fontFamily: DC.sans, fontSize: "0.82rem", color: DC.text, margin: 0 }}>
-                            {isMe ? "You submitted an offer" : "An agent submitted an offer"}
-                          </p>
-                          <p style={{ fontFamily: DC.mono, fontSize: "0.82rem", fontWeight: 600, color: isMe ? DC.green : DC.text, margin: 0 }}>
-                            {(Number(p.commissionBps) / 100).toFixed(2)}%
-                          </p>
-                          <p style={{ fontFamily: DC.sans, fontSize: "0.7rem", color: DC.textSub, margin: 0, flexShrink: 0 }}>
-                            {timeAgo(p.createdAt)}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {sortedProps.length > 5 && (
-                    <div style={{ padding: "10px 20px", borderTop: `1px solid ${DC.border}` }}>
-                      <a href="#" style={{ fontFamily: DC.sans, fontSize: "0.78rem", color: DC.primary, textDecoration: "none" }}>View All Activity</a>
-                    </div>
-                  )}
-                </div>
-
-                {/* Competitive summary */}
-                <div style={{ flex: 1, background: DC.white, border: `1px solid ${DC.border}`, borderRadius: 8, overflow: "hidden", boxShadow: DC.shadow }}>
-                  <div style={{ padding: "14px 20px", borderBottom: `1px solid ${DC.border}` }}>
-                    <h2 style={{ fontFamily: DC.sans, fontSize: "0.9rem", fontWeight: 600, color: DC.text, margin: 0 }}>Competitive Landscape</h2>
-                  </div>
-                  <div style={{ padding: 20 }}>
-                    <div style={{ marginBottom: 16 }}>
-                      <p style={{ fontFamily: DC.sans, fontSize: "0.75rem", color: DC.textSub, margin: "0 0 4px" }}>Total Bids Submitted</p>
-                      <p style={{ fontFamily: DC.mono, fontSize: "1.5rem", fontWeight: 700, color: DC.text, margin: 0 }}>
-                        {sortedProps.length}
-                      </p>
-                    </div>
-                    <div style={{ marginBottom: 16 }}>
-                      <p style={{ fontFamily: DC.sans, fontSize: "0.75rem", color: DC.textSub, margin: "0 0 4px" }}>Lowest Offer</p>
-                      <p style={{ fontFamily: DC.mono, fontSize: "1.5rem", fontWeight: 700, color: DC.green, margin: 0 }}>
-                        {bestOffer ? `${(Number(bestOffer.commissionBps) / 100).toFixed(2)}%` : "—"}
-                      </p>
-                    </div>
-                    <div>
-                      <p style={{ fontFamily: DC.sans, fontSize: "0.75rem", color: DC.textSub, margin: "0 0 4px" }}>Bid Deadline</p>
-                      <p style={{ fontFamily: DC.sans, fontSize: "0.82rem", fontWeight: 600, color: DC.text, margin: 0 }}>
-                        {deadline ? new Date(deadline).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }) : "—"}
-                      </p>
-                    </div>
-                  </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  {([[-1, "‹"], [1, "›"]] as const).map(([dir, icon]) => (
+                    <button key={dir} onClick={() => setPhotoIdx(i => (i + dir + PHOTO_COUNT) % PHOTO_COUNT)}
+                      style={{
+                        width: 30, height: 30, borderRadius: 6,
+                        background: C.white, border: `1px solid ${C.border}`,
+                        cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                        fontFamily: C.sans, fontSize: "1rem", color: C.ink, lineHeight: 1,
+                      }}>{icon}</button>
+                  ))}
+                  <span style={{ fontFamily: C.mono, fontSize: "0.72rem", color: C.sub, minWidth: 34, textAlign: "center" }}>
+                    {photoIdx + 1} / {PHOTO_COUNT}
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* ── Right panel ──────────────────────────────────────────────── */}
-            <div style={{ flex: "0 0 300px", display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* Property Features + Seller Goals */}
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
 
-              {/* Submit CMA Proposal */}
-              <div style={{ background: DC.white, border: `1px solid ${DC.border}`, borderRadius: 8, overflow: "hidden", boxShadow: DC.shadow }}>
-                <div style={{ padding: "16px 20px", borderBottom: `1px solid ${DC.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <h2 style={{ fontFamily: DC.sans, fontSize: "0.9rem", fontWeight: 600, color: DC.text, margin: 0 }}>Submit Your CMA Proposal</h2>
-                  <button
-                    onClick={() => toast("CMA file upload coming soon. Use the summary below for now.")}
-                    style={{ display: "inline-flex", alignItems: "center", gap: 6, border: `1px solid ${DC.border}`, background: "none", borderRadius: 6, padding: "6px 12px", fontFamily: DC.sans, fontSize: "0.75rem", fontWeight: 500, color: DC.text, cursor: "pointer" }}>
-                    <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
-                    </svg>
-                    Upload CMA
-                  </button>
-                </div>
-                <div style={{ padding: 20 }}>
-                  <div style={{ marginBottom: 16 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                      <label style={{ fontFamily: DC.sans, fontSize: "0.82rem", fontWeight: 500, color: DC.text }}>
-                        Your CMA Summary <span style={{ color: DC.textSub, fontWeight: 400 }}>(Optional)</span>
-                      </label>
-                      {cmaSummary && (
-                        <button onClick={() => setCmaSummary("")}
-                          style={{ fontFamily: DC.sans, fontSize: "0.72rem", color: DC.primary, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                          Clear
-                        </button>
-                      )}
+              {/* Property Features */}
+              <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "20px 22px", boxShadow: C.shadow }}>
+                <h2 style={{ fontFamily: C.sans, fontSize: "0.875rem", fontWeight: 700, color: C.ink, margin: "0 0 14px" }}>
+                  Property Features
+                </h2>
+                <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+                  {features.map(f => (
+                    <div key={f} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <Check />
+                      <span style={{ fontFamily: C.sans, fontSize: "0.875rem", color: C.ink }}>{f}</span>
                     </div>
-                    <textarea
-                      value={cmaSummary}
-                      onChange={e => setCmaSummary(e.target.value.slice(0, 500))}
-                      rows={6}
-                      placeholder="Summarize your CMA analysis, marketing strategy, and pricing approach…"
-                      style={{ width: "100%", border: `1px solid ${DC.border}`, borderRadius: 6, padding: "10px 12px", fontFamily: DC.sans, fontSize: "0.82rem", resize: "vertical", boxSizing: "border-box", color: DC.text, lineHeight: 1.5 }}
-                    />
-                    <p style={{ fontFamily: DC.sans, fontSize: "0.7rem", color: DC.textSub, textAlign: "right", margin: "4px 0 0" }}>
-                      {cmaSummary.length}/500
-                    </p>
-                  </div>
-                  <button
-                    onClick={handleSubmitOffer}
-                    disabled={submitting || !biddingOpen}
-                    style={{ width: "100%", background: biddingOpen ? DC.primary : DC.border, border: "none", color: biddingOpen ? "#fff" : DC.textSub, borderRadius: 6, padding: "11px 0", fontFamily: DC.sans, fontSize: "0.82rem", fontWeight: 600, cursor: biddingOpen ? "pointer" : "default" }}>
-                    {submitting ? "Saving…" : "Save CMA Summary"}
-                  </button>
+                  ))}
                 </div>
               </div>
 
-              {/* Listing notes */}
-              {listing.notes && (
-                <div style={{ background: DC.white, border: `1px solid ${DC.border}`, borderRadius: 8, padding: 20, boxShadow: DC.shadow }}>
-                  <h2 style={{ fontFamily: DC.sans, fontSize: "0.9rem", fontWeight: 600, color: DC.text, margin: "0 0 10px" }}>Seller Notes</h2>
-                  <p style={{ fontFamily: DC.sans, fontSize: "0.82rem", color: DC.textSub, margin: 0, lineHeight: 1.6 }}>{listing.notes}</p>
+              {/* Seller Goals */}
+              <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "20px 22px", boxShadow: C.shadow }}>
+                <h2 style={{ fontFamily: C.sans, fontSize: "0.875rem", fontWeight: 700, color: C.ink, margin: "0 0 14px" }}>
+                  Seller Goals
+                </h2>
+                <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+                  {DEFAULT_GOALS.map(g => (
+                    <div key={g} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <Check color={C.orange} />
+                      <span style={{ fontFamily: C.sans, fontSize: "0.875rem", color: C.ink }}>{g}</span>
+                    </div>
+                  ))}
                 </div>
-              )}
+              </div>
+            </div>
 
-              {/* Privacy reminder */}
-              <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 8, padding: 16 }}>
-                <p style={{ fontFamily: DC.sans, fontSize: "0.8rem", fontWeight: 600, color: "#92400E", margin: "0 0 4px" }}>Address Revealed Upon Win</p>
-                <p style={{ fontFamily: DC.sans, fontSize: "0.75rem", color: "#B45309", margin: 0, lineHeight: 1.5 }}>
-                  The seller's full address is only shared with the winning agent after they are selected.
+            {/* Seller Questionnaire */}
+            <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "20px 22px", boxShadow: C.shadow }}>
+              <h2 style={{ fontFamily: C.sans, fontSize: "0.875rem", fontWeight: 700, color: C.ink, margin: "0 0 16px" }}>
+                Seller Questionnaire
+              </h2>
+              <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+                {[
+                  { q: "Why are you selling?",                     a: hasNotes ? listing.notes : "Information provided upon proposal acceptance." },
+                  { q: "What timeline are you hoping for?",        a: `Target list date: ${new Date(Number(listing.targetListDate) / 1_000_000).toLocaleDateString("en-US", { month: "long", year: "numeric" })}` },
+                  { q: "What matters most in an agent for you?",   a: "Professional marketing, responsiveness, and local market expertise." },
+                ].map(({ q, a }) => (
+                  <div key={q}>
+                    <p style={{ fontFamily: C.sans, fontSize: "0.75rem", fontWeight: 600, color: C.sub, textTransform: "uppercase", letterSpacing: "0.07em", margin: "0 0 5px" }}>
+                      {q}
+                    </p>
+                    <p style={{ fontFamily: C.sans, fontSize: "0.9rem", color: C.ink, margin: 0, lineHeight: 1.65 }}>{a}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Verified Homeowner badge */}
+            <div style={{
+              background: C.greenBg, border: `1px solid ${C.greenBdr}`,
+              borderRadius: 12, padding: "16px 20px",
+              display: "flex", alignItems: "center", gap: 12,
+            }}>
+              <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={C.green} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <polyline points="9 12 11 14 15 10" stroke={C.green} strokeWidth={2.5}/>
+              </svg>
+              <div>
+                <span style={{ fontFamily: C.sans, fontSize: "0.9rem", fontWeight: 700, color: "#065F46" }}>Verified Homeowner</span>
+                <span style={{ fontFamily: C.sans, fontSize: "0.8rem", color: "#047857", marginLeft: 10 }}>
+                  Identity and ownership have been verified by BidToList.
+                </span>
+              </div>
+            </div>
+
+            {/* Submit button (mobile only) */}
+            {isMobile && (
+              <div>
+                {myProposal && (
+                  <div style={{ background: C.greenBg, border: `1px solid ${C.greenBdr}`, borderRadius: 8, padding: "10px 14px", marginBottom: 10 }}>
+                    <p style={{ fontFamily: C.sans, fontSize: "0.82rem", fontWeight: 600, color: "#065F46", margin: "0 0 2px" }}>
+                      ✓ Proposal already submitted
+                    </p>
+                    <p style={{ fontFamily: C.sans, fontSize: "0.75rem", color: "#047857", margin: 0 }}>
+                      Commission: {(Number(myProposal.commissionBps) / 100).toFixed(2)}%
+                    </p>
+                  </div>
+                )}
+                <SubmitButton label={myProposal ? "Update Your Proposal →" : "Submit Your Proposal"} />
+                {!isVerified && (
+                  <p style={{ fontFamily: C.sans, fontSize: "0.75rem", color: C.red, textAlign: "center", margin: "8px 0 0" }}>
+                    Account verification required to submit proposals
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Privacy protection notice */}
+            <div style={{ background: C.orangeBg, border: `1px solid ${C.orangeBdr}`, borderRadius: 10, padding: "14px 18px" }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#C2410C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}>
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+                <div>
+                  <p style={{ fontFamily: C.sans, fontSize: "0.82rem", fontWeight: 700, color: "#9A3412", margin: "0 0 3px" }}>
+                    Homeowner Privacy Protected
+                  </p>
+                  <p style={{ fontFamily: C.sans, fontSize: "0.78rem", color: "#B45309", margin: 0, lineHeight: 1.55 }}>
+                    Full address, homeowner name, phone, and email are only unlocked after you are selected as the winning agent and your $395 success fee is paid.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Sidebar ────────────────────────────────────────────────── */}
+          <div style={{ flex: "0 0 290px", width: isMobile ? "100%" : 290, display: "flex", flexDirection: "column", gap: 14 }}>
+
+            {/* Property Snapshot */}
+            <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "20px 22px", boxShadow: C.shadow }}>
+              <h2 style={{ fontFamily: C.sans, fontSize: "0.875rem", fontWeight: 700, color: C.ink, margin: "0 0 16px" }}>
+                Property Snapshot
+              </h2>
+              <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+                {snapItems.map(({ icon, label, highlight }) => (
+                  <div key={label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: "1rem", width: 22, textAlign: "center", flexShrink: 0 }}>{icon}</span>
+                    <span style={{
+                      fontFamily: C.sans, fontSize: "0.875rem",
+                      color: highlight ? C.orange : C.ink,
+                      fontWeight: highlight ? 700 : 400,
+                    }}>{label}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Deadline */}
+              <div style={{ borderTop: `1px solid ${C.border}`, marginTop: 16, paddingTop: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
+                  <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={C.sub} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                  </svg>
+                  <span style={{ fontFamily: C.sans, fontSize: "0.72rem", fontWeight: 600, color: C.sub, textTransform: "uppercase", letterSpacing: "0.06em" }}>Proposal Deadline</span>
+                </div>
+                <p style={{ fontFamily: C.sans, fontSize: "0.875rem", color: C.ink, fontWeight: 600, margin: "0 0 2px" }}>{dl.date}</p>
+                <p style={{ fontFamily: C.sans, fontSize: "0.8rem", color: C.sub, margin: 0 }}>{dl.time}</p>
+              </div>
+
+              {/* Proposal count */}
+              <div style={{ borderTop: `1px solid ${C.border}`, marginTop: 12, paddingTop: 12 }}>
+                <p style={{ fontFamily: C.sans, fontSize: "0.72rem", fontWeight: 600, color: C.sub, textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 5px" }}>
+                  Proposals Received
+                </p>
+                <p style={{ fontFamily: C.mono, fontSize: "1.125rem", fontWeight: 700, color: propCount >= 8 ? C.red : C.ink, margin: 0 }}>
+                  {propCount} <span style={{ fontFamily: C.sans, fontSize: "0.8rem", fontWeight: 400, color: C.sub }}>of 10</span>
+                </p>
+                {propCount >= 8 && (
+                  <p style={{ fontFamily: C.sans, fontSize: "0.72rem", color: C.red, margin: "3px 0 0" }}>Filling fast — limited spots remain</p>
+                )}
+              </div>
+            </div>
+
+            {/* Submit CTA (desktop only) */}
+            {!isMobile && (
+              <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "20px 22px", boxShadow: C.shadow }}>
+                {myProposal && (
+                  <div style={{ background: C.greenBg, border: `1px solid ${C.greenBdr}`, borderRadius: 8, padding: "10px 14px", marginBottom: 14 }}>
+                    <p style={{ fontFamily: C.sans, fontSize: "0.82rem", fontWeight: 600, color: "#065F46", margin: "0 0 2px" }}>
+                      ✓ Proposal Submitted
+                    </p>
+                    <p style={{ fontFamily: C.sans, fontSize: "0.75rem", color: "#047857", margin: 0 }}>
+                      Commission: {(Number(myProposal.commissionBps) / 100).toFixed(2)}%
+                    </p>
+                  </div>
+                )}
+                <SubmitButton label={myProposal ? "Update Your Proposal" : "Submit Your Proposal"} />
+                <p style={{ fontFamily: C.sans, fontSize: "0.73rem", color: C.sub, textAlign: "center", margin: "10px 0 0", lineHeight: 1.55 }}>
+                  Stand out with a personalized proposal. Homeowners compare all proposals side by side.
+                </p>
+                {!isVerified && (
+                  <p style={{ fontFamily: C.sans, fontSize: "0.73rem", color: C.red, textAlign: "center", margin: "8px 0 0" }}>
+                    Account verification required to submit proposals
+                  </p>
+                )}
+                {!biddingOpen && (
+                  <p style={{ fontFamily: C.sans, fontSize: "0.73rem", color: C.sub, textAlign: "center", margin: "8px 0 0" }}>
+                    Bidding is closed for this listing
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Locked info panel */}
+            <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "18px 22px", boxShadow: C.shadow }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 14 }}>
+                <Lock />
+                <h3 style={{ fontFamily: C.sans, fontSize: "0.78rem", fontWeight: 700, color: C.ink, margin: 0, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Unlocked After Winning
+                </h3>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+                {LOCKED_ITEMS.map(item => (
+                  <div key={item} style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                    <Lock />
+                    <span style={{ fontFamily: C.sans, fontSize: "0.8rem", color: C.sub }}>{item}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${C.border}` }}>
+                <p style={{ fontFamily: C.sans, fontSize: "0.72rem", color: C.muted, margin: 0, lineHeight: 1.55, textAlign: "center" }}>
+                  Win the opportunity, pay the $395 success fee, and all homeowner details are yours instantly.
                 </p>
               </div>
             </div>

@@ -3,15 +3,17 @@ import { useParams } from "react-router-dom";
 import { getAgentProfile, getReviews, type AgentReview } from "../services/agent";
 import { useBreakpoint } from "../hooks/useBreakpoint";
 
-const S = {
-  ink: "#0E0E0C", paper: "#F4F1EB", rule: "#C8C3B8", rust: "#C94C2E",
-  inkLight: "#7A7268", serif: "'Playfair Display', Georgia, serif",
-  mono: "'IBM Plex Mono', monospace", sans: "'IBM Plex Sans', sans-serif",
+const C = {
+  bg: "#F3F4F6", white: "#FFFFFF", text: "#111827", sub: "#6B7280",
+  border: "#E5E7EB", primary: "#2563EB", green: "#16A34A",
+  shadow: "0 1px 3px rgba(0,0,0,0.10)",
+  sans: "'Inter','IBM Plex Sans',system-ui,sans-serif",
+  mono: "'IBM Plex Mono',monospace",
 };
 
 function Stars({ rating }: { rating: number }) {
   return (
-    <span aria-label={`${rating} out of 5 stars`} style={{ color: S.rust, fontSize: "1rem", letterSpacing: 2 }}>
+    <span aria-label={`${rating} out of 5 stars`} style={{ color: "#F59E0B", fontSize: "1rem", letterSpacing: 2 }}>
       {"★".repeat(rating)}{"☆".repeat(5 - rating)}
     </span>
   );
@@ -43,49 +45,61 @@ export default function AgentProfilePage() {
 
   const avg = avgRating(reviews);
 
+  const LBL = { fontFamily: C.mono, fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase" as const, color: C.sub };
+
   return (
-    <div style={{ background: S.paper, minHeight: "100vh" }}>
-      <nav style={{ borderBottom: `1px solid ${S.rule}`, padding: isMobile ? "12px 16px" : "16px 40px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <a href="/" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}><img src="/bid_to_list_logo.png" alt="BidtoList" style={{ height: 36, width: "auto", display: "block" }} /></a>
-        <a href="/agents/browse" style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", color: S.inkLight, textDecoration: "none" }}>Browse Listings</a>
+    <div style={{ background: C.bg, minHeight: "100vh" }}>
+      <nav style={{
+        background: C.white, borderBottom: `1px solid ${C.border}`,
+        padding: isMobile ? "14px 20px" : "0 48px",
+        height: isMobile ? "auto" : 64,
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        position: "sticky", top: 0, zIndex: 100,
+        boxShadow: "0 1px 8px rgba(0,0,0,0.06)",
+      }}>
+        <a href="/" style={{ textDecoration: "none" }}>
+          <img src="/logo.png" alt="BidToList" style={{ height: 36, display: "block" }} />
+        </a>
+        <a href="/agents/browse" style={{ fontFamily: C.sans, fontSize: "0.875rem", color: C.sub, textDecoration: "none" }}>
+          Browse Listings
+        </a>
       </nav>
 
-      <div style={{ maxWidth: 720, margin: "0 auto", padding: isMobile ? "32px 16px" : "60px 40px" }}>
+      <div style={{ maxWidth: 720, margin: "0 auto", padding: isMobile ? "28px 16px" : "48px 24px" }}>
 
         {loading && (
-          <p style={{ fontFamily: S.mono, fontSize: "0.75rem", color: S.inkLight }}>Loading…</p>
+          <p style={{ fontFamily: C.mono, fontSize: "0.75rem", color: C.sub }}>Loading…</p>
         )}
 
         {!loading && !profile && (
-          <div style={{ border: `1px solid ${S.rule}`, padding: 40, textAlign: "center" }}>
-            <p style={{ fontFamily: S.sans, color: S.inkLight }}>Agent profile not found.</p>
+          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: 40, textAlign: "center", boxShadow: C.shadow }}>
+            <p style={{ fontFamily: C.sans, color: C.sub }}>Agent profile not found.</p>
           </div>
         )}
 
         {!loading && profile && (
           <>
-            {/* Profile card */}
-            <div style={{ border: `1px solid ${S.rule}`, padding: isMobile ? "24px 16px" : "32px 40px", marginBottom: 40 }}>
+            <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: isMobile ? "24px 16px" : "32px 40px", marginBottom: 24, boxShadow: C.shadow }}>
               <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", gap: 16, marginBottom: 20 }}>
                 <div>
-                  <h1 style={{ fontFamily: S.serif, fontSize: "clamp(1.4rem, 5vw, 1.8rem)", fontWeight: 900, marginBottom: 4 }}>
+                  <h1 style={{ fontFamily: C.sans, fontSize: "clamp(1.3rem,4vw,1.6rem)", fontWeight: 700, color: C.text, marginBottom: 4 }}>
                     {profile.name}
                   </h1>
-                  <p style={{ fontFamily: S.sans, color: S.inkLight, marginBottom: 4 }}>{profile.brokerage}</p>
-                  <p style={{ fontFamily: S.mono, fontSize: "0.7rem", color: S.inkLight, letterSpacing: "0.06em" }}>
+                  <p style={{ fontFamily: C.sans, color: C.sub, marginBottom: 4 }}>{profile.brokerage}</p>
+                  <p style={{ fontFamily: C.mono, fontSize: "0.7rem", color: C.sub, letterSpacing: "0.06em" }}>
                     License: {profile.licenseNumber} · {profile.county} County
                   </p>
                 </div>
                 <div style={{ textAlign: isMobile ? "left" : "right", flexShrink: 0 }}>
                   {profile.isVerified && (
-                    <span style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#2E7D32", border: "1px solid #2E7D32", padding: "4px 8px", display: "inline-block", marginBottom: 8 }}>
+                    <span style={{ ...LBL, color: C.green, border: `1px solid ${C.green}`, padding: "4px 8px", borderRadius: 4, display: "inline-block", marginBottom: 8 }}>
                       Verified
                     </span>
                   )}
                   {reviews.length > 0 && (
                     <div style={{ marginTop: profile.isVerified ? 8 : 0 }}>
                       <Stars rating={Math.round(avg)} />
-                      <p style={{ fontFamily: S.mono, fontSize: "0.65rem", color: S.inkLight, letterSpacing: "0.06em", marginTop: 2 }}>
+                      <p style={{ fontFamily: C.mono, fontSize: "0.65rem", color: C.sub, letterSpacing: "0.06em", marginTop: 2 }}>
                         {avg.toFixed(1)} · {reviews.length} review{reviews.length !== 1 ? "s" : ""}
                       </p>
                     </div>
@@ -94,7 +108,7 @@ export default function AgentProfilePage() {
               </div>
 
               {profile.bio && (
-                <p style={{ fontFamily: S.sans, fontSize: "0.9rem", lineHeight: 1.7, color: S.ink, marginBottom: 20 }}>{profile.bio}</p>
+                <p style={{ fontFamily: C.sans, fontSize: "0.9rem", lineHeight: 1.7, color: C.text, marginBottom: 20 }}>{profile.bio}</p>
               )}
 
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3, 1fr)", gap: 12 }}>
@@ -103,36 +117,35 @@ export default function AgentProfilePage() {
                   { label: "Listings (12 mo)", value: profile.listingsLast12Months ?? "—" },
                   { label: "Counties", value: profile.county },
                 ].map(({ label, value }) => (
-                  <div key={label} style={{ border: `1px solid ${S.rule}`, padding: "12px 16px" }}>
-                    <p style={{ fontFamily: S.mono, fontSize: "0.6rem", letterSpacing: "0.1em", textTransform: "uppercase", color: S.inkLight, marginBottom: 4 }}>{label}</p>
-                    <p style={{ fontFamily: S.serif, fontSize: "1.1rem", fontWeight: 700 }}>{String(value)}</p>
+                  <div key={label} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px 16px" }}>
+                    <p style={{ ...LBL, display: "block", marginBottom: 4 }}>{label}</p>
+                    <p style={{ fontFamily: C.sans, fontSize: "1.1rem", fontWeight: 700, color: C.text }}>{String(value)}</p>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Reviews */}
             <section>
-              <p style={{ fontFamily: S.mono, fontSize: "0.65rem", letterSpacing: "0.12em", textTransform: "uppercase", color: S.inkLight, marginBottom: 16 }}>
+              <p style={{ ...LBL, display: "block", marginBottom: 16 }}>
                 Homeowner Reviews ({reviews.length})
               </p>
 
               {reviews.length === 0 && (
-                <div style={{ border: `1px solid ${S.rule}`, padding: 24, textAlign: "center" }}>
-                  <p style={{ fontFamily: S.sans, color: S.inkLight, fontSize: "0.9rem" }}>No reviews yet.</p>
+                <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: 24, textAlign: "center", boxShadow: C.shadow }}>
+                  <p style={{ fontFamily: C.sans, color: C.sub, fontSize: "0.9rem" }}>No reviews yet.</p>
                 </div>
               )}
 
               {reviews.map((r, i) => (
-                <div key={r.id ?? i} style={{ border: `1px solid ${S.rule}`, padding: isMobile ? "16px" : "20px 24px", marginBottom: 8 }}>
+                <div key={r.id ?? i} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, padding: isMobile ? 16 : "20px 24px", marginBottom: 8, boxShadow: C.shadow }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                     <Stars rating={Number(r.rating)} />
-                    <span style={{ fontFamily: S.mono, fontSize: "0.65rem", color: S.inkLight, letterSpacing: "0.06em" }}>
+                    <span style={{ fontFamily: C.mono, fontSize: "0.65rem", color: C.sub, letterSpacing: "0.06em" }}>
                       {new Date(Number(r.createdAt) / 1_000_000).toLocaleDateString()}
                     </span>
                   </div>
                   {r.comment && (
-                    <p style={{ fontFamily: S.sans, fontSize: "0.9rem", color: S.ink, lineHeight: 1.6 }}>{r.comment}</p>
+                    <p style={{ fontFamily: C.sans, fontSize: "0.9rem", color: C.text, lineHeight: 1.6 }}>{r.comment}</p>
                   )}
                 </div>
               ))}

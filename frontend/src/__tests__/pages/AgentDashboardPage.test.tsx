@@ -5,17 +5,21 @@ import AgentDashboardPage from "../../pages/AgentDashboardPage";
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
+const mockNavigate = vi.fn();
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual("react-router-dom");
+  return { ...actual, useNavigate: () => mockNavigate };
+});
+
 vi.mock("../../services/listing", () => ({
   getMyProposals: vi.fn(),
 }));
 vi.mock("../../services/fee", () => ({
   getMyFees: vi.fn(),
 }));
-vi.mock("react-hot-toast", () => ({ default: { success: vi.fn(), error: vi.fn() } }));
 
 import * as listingService from "../../services/listing";
 import * as feeService from "../../services/fee";
-import toast from "react-hot-toast";
 
 const mockGetMyProposals = listingService.getMyProposals as ReturnType<typeof vi.fn>;
 const mockGetMyFees      = feeService.getMyFees as ReturnType<typeof vi.fn>;
@@ -114,12 +118,7 @@ describe("AgentDashboardPage", () => {
     });
   });
 
-  it("clicking Pay Now calls Stripe server and shows error toast when mock mode", async () => {
-    const mockFetch = vi.fn().mockResolvedValue({
-      json: () => Promise.resolve({ url: null, mock: true }),
-    });
-    vi.stubGlobal("fetch", mockFetch);
-
+  it("clicking Pay Now navigates to the listing award page", async () => {
     mockGetMyProposals.mockResolvedValue([ACCEPTED]);
     mockGetMyFees.mockResolvedValue([FEE_OWED]);
     renderPage();
@@ -127,8 +126,9 @@ describe("AgentDashboardPage", () => {
     await waitFor(() => expect(screen.getByTestId("pay-now-PROP_1")).toBeInTheDocument());
     fireEvent.click(screen.getByTestId("pay-now-PROP_1"));
 
-    await waitFor(() => expect(toast.error).toHaveBeenCalled());
-    vi.unstubAllGlobals();
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith("/agents/listing-award/PROP_1")
+    );
   });
 
   it("shows Pending section for pending proposal", async () => {

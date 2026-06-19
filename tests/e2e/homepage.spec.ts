@@ -8,59 +8,59 @@ test.describe("HomePage", () => {
 
   test("shows hero heading", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { level: 1 }).first()).toContainText(/listings/i);
+    await expect(page.getByRole("heading", { level: 1 }).first()).toContainText(/let them compete/i);
   });
 
-  test("shows Get Started and How It Works hero CTAs", async ({ page }) => {
+  test("shows Post Your Home Free and See How It Works hero CTAs", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("link", { name: /get started/i }).first()).toBeVisible();
-    await expect(page.getByRole("link", { name: /how it works/i }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: /post your home free/i }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: /see how it works/i }).first()).toBeVisible();
   });
 
-  test("shows how BidToList works section heading", async ({ page }) => {
+  test("shows How It Works section heading", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: /how bidtolist works/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /how it works/i })).toBeVisible();
   });
 
-  test("shows Get Started CTA link in hero", async ({ page }) => {
+  test("shows Post Your Home Free CTA link in hero", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("link", { name: /get started/i }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: /post your home free/i }).first()).toBeVisible();
   });
 
-  test("shows Best Bid Wins step", async ({ page }) => {
+  test("shows Choose the Best Fit step", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText(/best bid wins/i).first()).toBeVisible();
+    await expect(page.getByText(/choose the best fit/i).first()).toBeVisible();
   });
 
-  test("shows Trusted by Agents section", async ({ page }) => {
+  test("shows Why Homeowners Use BidToList section", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText(/trusted by agents/i)).toBeVisible();
+    await expect(page.getByText(/why homeowners use bidtolist/i)).toBeVisible();
   });
 
-  test("shows Built for Realtors copy", async ({ page }) => {
+  test("shows The BidToList Way in comparison table", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText(/built for realtors/i).first()).toBeVisible();
+    await expect(page.getByText(/the bidtolist way/i).first()).toBeVisible();
   });
 
-  test("shows Keller Williams in trust band", async ({ page }) => {
+  test("shows Pelican Bay in testimonials", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText(/keller williams/i)).toBeVisible();
+    await expect(page.getByText(/pelican bay/i)).toBeVisible();
   });
 
-  test("shows Agents Bid step", async ({ page }) => {
+  test("shows Agents Compete step", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText(/agents bid/i)).toBeVisible();
+    await expect(page.getByText(/agents compete/i).first()).toBeVisible();
   });
 
-  test("Get Started CTA links to /signup", async ({ page }) => {
+  test("Post Your Home Free CTA links to /login", async ({ page }) => {
     await page.goto("/");
-    const href = await page.getByRole("link", { name: /get started/i }).first().getAttribute("href");
-    expect(href).toContain("/signup");
+    const href = await page.getByRole("link", { name: /post your home free/i }).first().getAttribute("href");
+    expect(href).toContain("/login");
   });
 
-  test("Sign Up nav link navigates to /signup", async ({ page }) => {
+  test("Log In button navigates to /login", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("link", { name: /sign up/i }).click();
-    await expect(page).toHaveURL(/\/signup/);
+    await page.getByRole("button", { name: /log in/i }).click();
+    await expect(page).toHaveURL(/\/login/);
   });
 });

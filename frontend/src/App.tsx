@@ -13,12 +13,16 @@ import AdminPage from "./pages/AdminPage";
 import AgentProfilePage from "./pages/AgentProfilePage";
 import AgentListingPage from "./pages/AgentListingPage";
 import FaqPage from "./pages/FaqPage";
+import AgentLandingPage from "./pages/AgentLandingPage";
+import LoginPage from "./pages/LoginPage";
+import ListingAwardPage from "./pages/ListingAwardPage";
 
 export default function App() {
   return (
     <AuthProvider>
       <Routes>
         <Route path="/"                          element={<HomePage />} />
+        <Route path="/login"                     element={<LoginPage />} />
         <Route path="/signup"                    element={<SignUpPage />} />
         <Route path="/post"                      element={<PostListingPage />} />
         <Route path="/my-bids"                   element={<MyBidsPage />} />
@@ -31,6 +35,8 @@ export default function App() {
         <Route path="/agents/dashboard"           element={<AgentDashboardPage />} />
         <Route path="/agents/profile/:agentId"   element={<AgentProfilePage />} />
         <Route path="/faq"                        element={<FaqPage />} />
+        <Route path="/for-agents"                element={<AgentLandingPage />} />
+        <Route path="/agents/listing-award/:proposalId" element={<ListingAwardPage />} />
       </Routes>
     </AuthProvider>
   );

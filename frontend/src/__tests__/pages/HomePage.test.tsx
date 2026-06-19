@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import HomePage from "../../pages/HomePage";
 
@@ -32,49 +32,77 @@ describe("HomePage", () => {
     expect(screen.getAllByText(/bidtolist/i).length).toBeGreaterThan(0);
   });
 
-  it("renders headline value prop", () => {
+  it("renders hero headline", () => {
     renderPage();
     const h1s = screen.getAllByRole("heading", { level: 1 });
     expect(h1s.length).toBeGreaterThanOrEqual(1);
     const combined = h1s.map(h => h.textContent ?? "").join(" ");
-    expect(combined).toMatch(/listings.*competition/i);
+    expect(combined).toMatch(/agents.*compete|don't interview/i);
   });
 
-  it("renders hero Get Started CTA", () => {
+  it("renders Post Your Home Free CTA", () => {
     renderPage();
-    expect(screen.getAllByRole("link", { name: /get started/i }).length).toBeGreaterThanOrEqual(1);
+    const links = screen.getAllByRole("link", { name: /post your home free/i });
+    expect(links.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renders hero CTAs for homeowners and agents", () => {
+  it("renders How It Works section with three steps", () => {
     renderPage();
-    expect(screen.getAllByRole("link", { name: /get started/i }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole("link", { name: /learn more/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/post your property/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/agents compete/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/choose the best fit/i)).toBeInTheDocument();
   });
 
-  it("renders how it works section with steps", () => {
+  it("renders results statistics bar", () => {
     renderPage();
-    expect(screen.getByText(/new listing added/i)).toBeInTheDocument();
-    expect(screen.getByText(/agents bid/i)).toBeInTheDocument();
-    expect(screen.getByText(/best bid wins/i)).toBeInTheDocument();
+    expect(screen.getByText(/\$5,000\+/)).toBeInTheDocument();
+    expect(screen.getAllByText(/100%/).length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renders trust band for realtors", () => {
+  it("renders comparison section", () => {
     renderPage();
-    expect(screen.getByText(/built for realtors/i)).toBeInTheDocument();
+    expect(screen.getByText(/find the best agent/i)).toBeInTheDocument();
+    expect(screen.getByText(/traditional way/i)).toBeInTheDocument();
+    expect(screen.getByText(/bidtolist way/i)).toBeInTheDocument();
   });
 
-  it("shows brokerage names for agents", () => {
+  it("renders testimonials section", () => {
     renderPage();
-    expect(screen.getByText(/trusted by agents/i)).toBeInTheDocument();
-    expect(screen.getByText(/keller williams/i)).toBeInTheDocument();
+    expect(screen.getByText(/what homeowners are saying/i)).toBeInTheDocument();
+    expect(screen.getByText(/pelican bay/i)).toBeInTheDocument();
   });
 
-  it("shows Dashboard button when authenticated agent", () => {
+  it("renders FAQ section with accordion items", () => {
+    renderPage();
+    expect(screen.getByText(/frequently asked questions/i)).toBeInTheDocument();
+    expect(screen.getByText(/will i be flooded with calls/i)).toBeInTheDocument();
+  });
+
+  it("toggles FAQ accordion open and closed", () => {
+    renderPage();
+    const faqBtn = screen.getByText(/will i be flooded with calls/i).closest("button")!;
+    fireEvent.click(faqBtn);
+    expect(screen.getByText(/agents submit proposals through our platform/i)).toBeInTheDocument();
+    fireEvent.click(faqBtn);
+    expect(screen.queryByText(/agents submit proposals through our platform/i)).not.toBeInTheDocument();
+  });
+
+  it("renders For Agents nav link", () => {
+    renderPage();
+    expect(screen.getAllByRole("link", { name: /for agents/i }).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("shows Dashboard button when authenticated", () => {
     mockUseAuth.mockReturnValue({
       isAuthenticated: true, principal: "abc", role: "agent",
       isLoading: false, login: vi.fn(), loginWithRole: vi.fn(), logout: vi.fn(),
     });
     renderPage();
     expect(screen.getByRole("button", { name: /dashboard/i })).toBeInTheDocument();
+  });
+
+  it("shows Log In button when unauthenticated", () => {
+    renderPage();
+    expect(screen.getByRole("button", { name: /log in/i })).toBeInTheDocument();
   });
 });

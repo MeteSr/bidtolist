@@ -77,7 +77,7 @@ beforeEach(() => {
 describe("BrowseListingsPage — listings display", () => {
   it("renders page heading", async () => {
     renderPage();
-    expect(screen.getByRole("heading", { name: /open listings/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /find your next winning listing/i })).toBeInTheDocument();
   });
 
   it("renders listing city and county", async () => {
@@ -88,11 +88,11 @@ describe("BrowseListingsPage — listings display", () => {
     });
   });
 
-  it("shows proposal count out of 10 for each listing", async () => {
+  it("shows proposal count for each listing", async () => {
     renderPage();
     await waitFor(() => {
-      expect(screen.getByText(/3 \/ 10/)).toBeInTheDocument();
-      expect(screen.getByText(/7 \/ 10/)).toBeInTheDocument();
+      expect(screen.getByText(/3 proposals/i)).toBeInTheDocument();
+      expect(screen.getByText(/7 proposals/i)).toBeInTheDocument();
     });
   });
 
@@ -100,7 +100,7 @@ describe("BrowseListingsPage — listings display", () => {
     mockGetOpenBidRequestsForCities.mockResolvedValue([]);
     renderPage();
     await waitFor(() => {
-      expect(screen.getByText(/no open listings/i)).toBeInTheDocument();
+      expect(screen.getByText(/no opportunities right now/i)).toBeInTheDocument();
     });
   });
 
@@ -155,21 +155,23 @@ describe("BrowseListingsPage — county filter", () => {
   });
 });
 
-describe("BrowseListingsPage — verified agent gate", () => {
-  it("enables Submit Proposal button for verified agent", async () => {
+describe("BrowseListingsPage — agent gate", () => {
+  it("shows View Details button for verified agent", async () => {
     mockGetMyAgentProfile.mockResolvedValue({ isVerified: true, serviceCities: ["ormond beach", "deltona"] } as any);
     renderPage();
-    await waitFor(() => screen.getAllByRole("button", { name: /submit proposal/i }));
-    const btns = screen.getAllByRole("button", { name: /submit proposal/i });
+    await waitFor(() => screen.getAllByRole("button", { name: /view details/i }));
+    const btns = screen.getAllByRole("button", { name: /view details/i });
     btns.forEach(btn => expect(btn).not.toBeDisabled());
   });
 
-  it("disables Submit Proposal button for unverified agent", async () => {
+  it("shows verification pending banner for unverified agent, View Details still enabled", async () => {
     mockGetMyAgentProfile.mockResolvedValue({ isVerified: false, serviceCities: ["ormond beach", "deltona"] } as any);
     renderPage();
-    await waitFor(() => screen.getAllByRole("button", { name: /submit proposal/i }));
-    const btns = screen.getAllByRole("button", { name: /submit proposal/i });
-    btns.forEach(btn => expect(btn).toBeDisabled());
+    await waitFor(() => screen.getByText(/verification pending/i));
+    expect(screen.getByText(/verification pending/i)).toBeInTheDocument();
+    await waitFor(() => screen.getAllByRole("button", { name: /view details/i }));
+    const btns = screen.getAllByRole("button", { name: /view details/i });
+    btns.forEach(btn => expect(btn).not.toBeDisabled());
   });
 
   it("shows tooltip/label explaining disabled state for unverified agent", async () => {
@@ -179,24 +181,23 @@ describe("BrowseListingsPage — verified agent gate", () => {
     expect(screen.getByText(/verification pending/i)).toBeInTheDocument();
   });
 
-  it("disables Submit Proposal when not authenticated", async () => {
+  it("View Details always enabled when not authenticated", async () => {
     mockUseAuth.mockReturnValue({
       isAuthenticated: false, principal: null, role: null,
       isLoading: false, login: vi.fn(), logout: vi.fn(),
     });
-    // Unauthenticated path uses getOpenBidRequests directly
     mockGetOpenBidRequests.mockResolvedValue(MOCK_LISTINGS as any);
     renderPage();
-    await waitFor(() => screen.getAllByRole("button", { name: /submit proposal/i }));
-    const btns = screen.getAllByRole("button", { name: /submit proposal/i });
-    btns.forEach(btn => expect(btn).toBeDisabled());
+    await waitFor(() => screen.getAllByRole("button", { name: /view details/i }));
+    const btns = screen.getAllByRole("button", { name: /view details/i });
+    btns.forEach(btn => expect(btn).not.toBeDisabled());
   });
 
-  it("navigates to proposal form when verified agent clicks Submit Proposal", async () => {
+  it("navigates to listing detail when clicking View Details", async () => {
     const user = userEvent.setup();
     renderPage();
-    await waitFor(() => screen.getAllByRole("button", { name: /submit proposal/i }));
-    await user.click(screen.getAllByRole("button", { name: /submit proposal/i })[0]);
-    expect(mockNavigate).toHaveBeenCalledWith("/agents/propose/BID_1");
+    await waitFor(() => screen.getAllByRole("button", { name: /view details/i }));
+    await user.click(screen.getAllByRole("button", { name: /view details/i })[0]);
+    expect(mockNavigate).toHaveBeenCalledWith("/agents/listings/BID_1");
   });
 });

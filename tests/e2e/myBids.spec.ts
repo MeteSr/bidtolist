@@ -22,11 +22,11 @@ test.describe("MyBidsPage", () => {
     await expect(page.getByText(/no active listings yet/i)).toBeVisible();
   });
 
-  test("shows request address for open bid", async ({ page }) => {
+  test("shows city and county for open bid", async ({ page }) => {
     await injectOpenRequest(page);
     await page.goto("/my-bids");
-    await expect(page.getByText(/123 Oak St/i)).toBeVisible();
-    await expect(page.getByText(/volusia/i)).toBeVisible();
+    await expect(page.getByText(/daytona beach/i).first()).toBeVisible();
+    await expect(page.getByText(/volusia/i).first()).toBeVisible();
   });
 
   test("shows countdown for open bid window", async ({ page }) => {
@@ -39,7 +39,7 @@ test.describe("MyBidsPage", () => {
   test("shows bids sealed message for open bid", async ({ page }) => {
     await injectOpenRequest(page);
     await page.goto("/my-bids");
-    await expect(page.getByText(/bids are sealed until the deadline/i)).toBeVisible();
+    await expect(page.getByText(/proposals are sealed until bidding closes/i)).toBeVisible();
   });
 
   test("shows no-proposals message when deadline has passed", async ({ page }) => {
@@ -52,9 +52,8 @@ test.describe("MyBidsPage", () => {
     await injectPastRequest(page);
     await injectProposal(page);
     await page.goto("/my-bids");
-    // Proposals render inline — no reveal click needed
-    await expect(page.getByText(/jane smith/i).first()).toBeVisible();
-    await expect(page.getByText(/keller williams/i).first()).toBeVisible();
+    // Proposals render inline — agent identity anonymous until selection
+    await expect(page.getByText(/agent #1/i).first()).toBeVisible();
   });
 
   test("shows commission percentage in proposal", async ({ page }) => {
@@ -70,11 +69,11 @@ test.describe("MyBidsPage", () => {
     await expect(page.getByText(/no proposals received/i)).toBeVisible();
   });
 
-  test("shows Select Agent button for pending proposal", async ({ page }) => {
+  test("shows Select button for pending proposal", async ({ page }) => {
     await injectPastRequest(page);
     await injectProposal(page);
     await page.goto("/my-bids");
-    await expect(page.getByRole("button", { name: /select agent/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^select$/i })).toBeVisible();
   });
 
   test("shows review form for accepted proposal", async ({ page }) => {

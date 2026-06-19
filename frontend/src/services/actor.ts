@@ -2,6 +2,8 @@ import { AuthClient } from "@icp-sdk/auth/client";
 import { HttpAgent } from "@icp-sdk/core/agent";
 import { Ed25519KeyIdentity } from "@icp-sdk/core/identity";
 
+export type OpenIdProvider = "google" | "apple" | "microsoft";
+
 const DFX_NETWORK = (process.env as any).DFX_NETWORK || "local";
 const IS_LOCAL    = DFX_NETWORK === "local";
 
@@ -14,10 +16,13 @@ export const II_URL = IS_LOCAL
 let _authClient: AuthClient | null = null;
 let _agent:      HttpAgent | null  = null;
 
-export function getAuthClient(): AuthClient {
+export function getAuthClient(openIdProvider?: OpenIdProvider): AuthClient {
   if (!_authClient) {
     // v6: synchronous constructor; identityProvider is set at creation time
-    _authClient = new AuthClient({ identityProvider: II_URL });
+    _authClient = new AuthClient({
+      identityProvider: II_URL,
+      ...(openIdProvider ? { openIdProvider } : {}),
+    });
   }
   return _authClient;
 }
@@ -62,9 +67,12 @@ export function setAgentForTesting(agent: HttpAgent) {
 
 // ── Auth helpers ──────────────────────────────────────────────────────────────
 
-export async function login(): Promise<void> {
-  const client = getAuthClient();
-  // v6: signIn() opens the II popup; replaces the old client.login({onSuccess})
+export async function login(openIdProvider?: OpenIdProvider): Promise<void> {
+  // Reset so a fresh AuthClient is created with the chosen provider.
+  // openIdProvider tells II to show Google / Apple / Microsoft one-click flow
+  // and automatically creates an II anchor linked to that account.
+  _authClient = null;
+  const client = getAuthClient(openIdProvider);
   try {
     await client.signIn({ maxTimeToLive: BigInt(8 * 60 * 60 * 1_000_000_000) });
   } catch (err) {
