@@ -170,6 +170,9 @@ persistent actor Listing {
   /// requestId → true while a submitProposal await is in flight; transient so it clears on upgrade
   private transient let inFlightProposals = Map.empty<Text, Bool>();
   private var notificationCounter : Nat = 0;
+  // Kept for stable memory layout compatibility — no longer used (heartbeat removed).
+  private var heartbeatTick       : Nat = 0;
+  private let CASCADE_CHECK_INTERVAL : Nat = 60;
 
   // ─── Rate Limit ──────────────────────────────────────────────────────────────
 
