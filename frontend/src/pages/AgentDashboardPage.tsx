@@ -131,7 +131,7 @@ export default function AgentDashboardPage() {
                   {(feeStatus === "owed" || feeStatus === "invoiced") && (
                     <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "center", gap: 12, background: "#FFF7ED", border: "1px solid #FED7AA", borderRadius: 8, padding: "12px 16px" }}>
                       <p style={{ fontFamily: C.mono, fontSize: "0.7rem", letterSpacing: "0.08em", color: C.text, flex: 1 }}>
-                        PLATFORM FEE: $295.00
+                        PLATFORM FEE: $395.00
                         {feeStatus === "invoiced" ? " — Invoice sent" : " — Due now"}
                       </p>
                       <button
@@ -148,7 +148,7 @@ export default function AgentDashboardPage() {
                     <>
                       <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 8, padding: "12px 16px", marginBottom: 12 }}>
                         <p style={{ fontFamily: C.mono, fontSize: "0.7rem", letterSpacing: "0.08em", color: C.green }}>
-                          PLATFORM FEE: $295.00 — PAID
+                          PLATFORM FEE: $395.00 — PAID
                         </p>
                       </div>
 

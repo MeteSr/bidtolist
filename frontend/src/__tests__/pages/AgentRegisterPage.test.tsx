@@ -5,6 +5,12 @@ import AgentRegisterPage from "../../pages/AgentRegisterPage";
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
+const mockNavigate = vi.fn();
+vi.mock("react-router-dom", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-router-dom")>();
+  return { ...actual, useNavigate: () => mockNavigate };
+});
+
 vi.mock("../../services/agent", () => ({
   registerAgent: vi.fn(),
   getMyAgentProfile: vi.fn(),
@@ -75,6 +81,7 @@ async function addServiceCity(city = "Daytona Beach") {
 describe("AgentRegisterPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockNavigate.mockReset();
     mockGetProfile.mockResolvedValue(null);
     mockRegister.mockResolvedValue({ ok: PENDING_PROFILE });
     mockUpdate.mockResolvedValue({ ok: PENDING_PROFILE });
@@ -88,21 +95,10 @@ describe("AgentRegisterPage", () => {
     expect(screen.getByText("Loading…")).toBeTruthy();
   });
 
-  it("shows form with sign-in prompt when unauthenticated", async () => {
+  it("redirects to /login when not authenticated", async () => {
     authAs({ isAuthenticated: false });
     render(<AgentRegisterPage />);
-    await waitFor(() => expect(screen.getByText("Agent Sign Up")).toBeTruthy());
-    expect(screen.getByText(/sign in with Internet Identity/i)).toBeTruthy();
-    expect(screen.getByRole("button", { name: /sign in/i })).toBeTruthy();
-  });
-
-  it("calls login() when the Sign In button is clicked", async () => {
-    const login = vi.fn();
-    authAs({ isAuthenticated: false, login });
-    render(<AgentRegisterPage />);
-    await waitFor(() => screen.getByRole("button", { name: /sign in/i }));
-    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
-    expect(login).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/login"));
   });
 
   it("shows registration form when authenticated and no profile exists", async () => {
@@ -182,14 +178,6 @@ describe("AgentRegisterPage", () => {
   });
 
   // ── Submit disabled states ────────────────────────────────────────────────────
-
-  it("submit button is disabled when unauthenticated", async () => {
-    authAs({ isAuthenticated: false });
-    render(<AgentRegisterPage />);
-    await waitFor(() => screen.getByText("Agent Sign Up"));
-    const btn = screen.getByRole("button", { name: /create agent profile/i }) as HTMLButtonElement;
-    expect(btn.disabled).toBe(true);
-  });
 
   it("submit button is disabled when authenticated but no files selected", async () => {
     authAs();

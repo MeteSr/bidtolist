@@ -79,7 +79,7 @@ export default function SignUpPage() {
       icon:   "🏆",
       label:  "For Real Estate Agents",
       title:  "Win listings on merit.",
-      body:   "Browse verified homeowner requests and submit proposals. Pay only $295 when your bid is accepted — no monthly fees, ever.",
+      body:   "Browse verified homeowner requests and submit proposals. Pay only $395 when your bid is accepted — no monthly fees, ever.",
       cta:    "Join as an Agent",
       accent: S.blue,
       pale:   S.blueLight,

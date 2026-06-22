@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { registerAgent, getMyAgentProfile, updateAgentProfile } from "../services/agent";
 import { useAuth } from "../contexts/AuthContext";
@@ -300,7 +301,8 @@ function CircularProgress({ value, total }: { value: number; total: number }) {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function AgentRegisterPage() {
-  const { isAuthenticated, login, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const { isMobile } = useBreakpoint();
   const [pageState, setPageState] = useState<PageState>("loading");
   const [profile, setProfile]     = useState<any>(null);
@@ -312,7 +314,7 @@ export default function AgentRegisterPage() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!isAuthenticated) { setPageState("form"); return; }
+    if (!isAuthenticated) { navigate("/login"); return; }
     getMyAgentProfile().then(p => {
       if (!p) { setPageState("form"); return; }
       setProfile(p);
@@ -352,7 +354,6 @@ export default function AgentRegisterPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!isAuthenticated) { await login(); return; }
     if (!photoIdFile || !licenseFile) return;
     if (serviceCities.length === 0) { toast.error("Add at least one service city."); return; }
     setSaving(true);
@@ -408,7 +409,7 @@ export default function AgentRegisterPage() {
   }
 
   const docsDone      = (photoIdFile ? 1 : 0) + (licenseFile ? 1 : 0);
-  const submitDisabled = saving || !isAuthenticated || !photoIdFile || !licenseFile;
+  const submitDisabled = saving || !photoIdFile || !licenseFile;
 
   // ── Loading ──────────────────────────────────────────────────────────────────
 
@@ -674,21 +675,9 @@ export default function AgentRegisterPage() {
             Verify Your Credentials
           </h1>
           <p style={{ fontFamily: P.sans, fontSize: "0.95rem", color: P.sub, marginBottom: 32, lineHeight: 1.6 }}>
-            Free to join. $295 fee only when your bid is accepted.
+            Free to join. $395 fee only when your bid is accepted.
           </p>
 
-          {/* Unauthenticated banner */}
-          {!isAuthenticated && (
-            <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", padding: 20, marginBottom: 28 }}>
-              <p style={{ fontFamily: P.sans, fontSize: "0.9rem", marginBottom: 12, color: P.charcoal }}>
-                You must sign in with Internet Identity before registering.
-              </p>
-              <button onClick={() => login()}
-                style={{ background: P.navy, border: "none", color: P.white, fontFamily: P.sans, fontSize: "0.875rem", fontWeight: 600, padding: "10px 20px", cursor: "pointer" }}>
-                Sign In
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Form */}

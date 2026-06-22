@@ -116,7 +116,7 @@ export default function ProposalFormPage() {
           Submit Proposal
         </h1>
         <p style={{ fontFamily: C.sans, fontSize: "0.95rem", color: C.sub, marginBottom: 32, lineHeight: 1.6 }}>
-          Your proposal is sealed until the homeowner's deadline. $295 fee only if accepted.
+          Your proposal is sealed until the homeowner's deadline. $395 fee only if accepted.
         </p>
 
         {verifiedState === "loading" && (

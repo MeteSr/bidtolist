@@ -149,13 +149,13 @@ const FAQS = [
 ];
 
 export default function AgentLandingPage() {
-  const { isAuthenticated, login } = useAuth();
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { isMobile } = useBreakpoint();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  async function handleSignIn() {
-    if (!isAuthenticated) await login();
+  function handleSignIn() {
+    if (!isAuthenticated) { navigate("/login"); return; }
     navigate("/agents/dashboard");
   }
 
@@ -224,17 +224,12 @@ export default function AgentLandingPage() {
               Dashboard →
             </button>
           ) : (
-            <>
-              <button
-                onClick={handleSignIn}
-                style={{ background: "none", border: `1.5px solid ${C.navy}`, color: C.navy, fontFamily: C.sans, fontSize: "0.875rem", fontWeight: 600, padding: "8px 18px", borderRadius: 10, cursor: "pointer" }}
-              >
-                Log In
-              </button>
-              <a href="/agents/register" style={{ ...primaryBtn, padding: "9px 18px", fontSize: "0.875rem" }}>
-                Become a BidToList Agent
-              </a>
-            </>
+            <button
+              onClick={handleSignIn}
+              style={{ background: "none", border: `1.5px solid ${C.navy}`, color: C.navy, fontFamily: C.sans, fontSize: "0.875rem", fontWeight: 600, padding: "8px 18px", borderRadius: 10, cursor: "pointer" }}
+            >
+              Log In
+            </button>
           )}
         </div>
       </nav>

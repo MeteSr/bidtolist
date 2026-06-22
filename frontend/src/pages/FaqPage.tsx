@@ -52,10 +52,10 @@ const FAQS: { section: string; accent: string; pale: string; items: { q: string;
     items: [
       {
         q: "How much does it cost to register as an agent?",
-        a: "Registration is free. You only pay a flat $295 win fee when a homeowner accepts your proposal. There are no monthly subscriptions, no per-bid charges, and no hidden fees.",
+        a: "Registration is free. You only pay a flat $395 win fee when a homeowner accepts your proposal. There are no monthly subscriptions, no per-bid charges, and no hidden fees.",
       },
       {
-        q: "When exactly is the $295 win fee charged?",
+        q: "When exactly is the $395 win fee charged?",
         a: "The fee is charged when a homeowner selects your proposal. You'll be prompted to complete payment through our secure checkout before the homeowner's contact details are released to you.",
       },
       {
