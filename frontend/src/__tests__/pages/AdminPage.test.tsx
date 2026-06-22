@@ -55,12 +55,12 @@ const PENDING_HOMEOWNER = {
 const FEE_OWED: any = {
   id: "FEE_1", requestId: "BID_1", proposalId: "PROP_1",
   agentId: "principal-1", homeownerId: "principal-2",
-  amountCents: BigInt(29500), status: { Owed: null },
+  amountCents: BigInt(39500), status: { Owed: null },
   createdAt: BigInt(Date.now() * 1_000_000), updatedAt: BigInt(0),
 };
 const FEE_PAID: any = {
   ...FEE_OWED, id: "FEE_2", proposalId: "PROP_2",
-  amountCents: BigInt(29500), status: { Paid: null },
+  amountCents: BigInt(39500), status: { Paid: null },
 };
 
 function renderPage() {
@@ -209,7 +209,7 @@ describe("AdminPage", () => {
     mockGetAllFees.mockResolvedValue([FEE_OWED]);
     renderPage();
     await waitFor(() => {
-      expect(screen.getByTestId("fee-stat-owed")).toHaveTextContent("$295.00");
+      expect(screen.getByTestId("fee-stat-owed")).toHaveTextContent("$395.00");
     });
   });
 
@@ -217,7 +217,7 @@ describe("AdminPage", () => {
     mockGetAllFees.mockResolvedValue([FEE_PAID]);
     renderPage();
     await waitFor(() => {
-      expect(screen.getByTestId("fee-stat-paid")).toHaveTextContent("$295.00");
+      expect(screen.getByTestId("fee-stat-paid")).toHaveTextContent("$395.00");
     });
   });
 

@@ -72,12 +72,12 @@ describe("AgentDashboardPage", () => {
     });
   });
 
-  it("shows Won section with $295 fee notice for accepted proposal", async () => {
+  it("shows Won section with $395 fee notice for accepted proposal", async () => {
     mockGetMyProposals.mockResolvedValue([ACCEPTED]);
     renderPage();
     await waitFor(() => {
       expect(screen.getByText(/won/i)).toBeInTheDocument();
-      expect(screen.getAllByText(/\$295/).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/\$395/).length).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -114,7 +114,7 @@ describe("AgentDashboardPage", () => {
     mockGetMyFees.mockResolvedValue([paidFee]);
     renderPage();
     await waitFor(() => {
-      expect(screen.getByText(/PLATFORM FEE: \$295\.00 — PAID/i)).toBeInTheDocument();
+      expect(screen.getByText(/PLATFORM FEE: \$395\.00 — PAID/i)).toBeInTheDocument();
     });
   });
 

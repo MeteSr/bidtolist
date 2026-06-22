@@ -280,21 +280,16 @@ export default function HomePage() {
               Dashboard →
             </button>
           ) : (
-            <>
-              <button
-                onClick={handleSignIn}
-                style={{
-                  background: "none", border: `1.5px solid ${C.navy}`,
-                  color: C.navy, fontFamily: C.sans, fontSize: "0.875rem",
-                  fontWeight: 600, padding: "8px 18px", borderRadius: 10, cursor: "pointer",
-                }}
-              >
-                Log In
-              </button>
-              <a href="/login" style={{ ...primaryBtn, padding: "9px 18px", fontSize: "0.875rem" }}>
-                Post Your Home Free
-              </a>
-            </>
+            <button
+              onClick={handleSignIn}
+              style={{
+                background: "none", border: `1.5px solid ${C.navy}`,
+                color: C.navy, fontFamily: C.sans, fontSize: "0.875rem",
+                fontWeight: 600, padding: "8px 18px", borderRadius: 10, cursor: "pointer",
+              }}
+            >
+              Log In
+            </button>
           )}
         </div>
       </nav>
