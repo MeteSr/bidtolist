@@ -11,6 +11,8 @@
 
 import Array    "mo:core/Array";
 import Char     "mo:core/Char";
+import Debug    "mo:core/Debug";
+import Error    "mo:core/Error";
 import Map      "mo:core/Map";
 import Int      "mo:core/Int";
 import Iter     "mo:core/Iter";
@@ -519,7 +521,7 @@ persistent actor Listing {
       // Verify agent if agent canister is wired
       if (agentCanisterId != "") {
         let agentActor = actor(agentCanisterId) : actor {
-          isVerifiedAgent : (Principal) -> async Bool;
+          isVerifiedAgent : query (Principal) -> async Bool;
         };
         let verified = await agentActor.isVerifiedAgent(msg.caller);
         if (not verified) break exit (#err(#NotAuthorized));
@@ -701,7 +703,8 @@ persistent actor Listing {
             let feeActor = actor(feeCanisterId) : actor {
               recordFeeOwed : (Text, Text, Principal, Principal, Nat) -> async ();
             };
-            ignore feeActor.recordFeeOwed(requestId, nextId, backup.agentId, req.homeowner, platformFeeCents);
+            try { ignore await feeActor.recordFeeOwed(requestId, nextId, backup.agentId, req.homeowner, platformFeeCents) }
+            catch (e) { Debug.print("FeeOwedFailed cascade requestId=" # requestId # " err=" # Error.message(e)) };
           };
         };
       };
@@ -787,14 +790,13 @@ persistent actor Listing {
               feePaid = false;
             });
 
-            // Record platform fee in the fee canister (fire-and-forget — don't block on failure)
+            // Record platform fee in the fee canister — log on failure so ops can replay.
             if (feeCanisterId != "") {
               let feeActor = actor(feeCanisterId) : actor {
                 recordFeeOwed : (Text, Text, Principal, Principal, Nat) -> async ();
               };
-              ignore feeActor.recordFeeOwed(
-                req.id, winner.id, winner.agentId, req.homeowner, platformFeeCents
-              );
+              try { ignore await feeActor.recordFeeOwed(req.id, winner.id, winner.agentId, req.homeowner, platformFeeCents) }
+              catch (e) { Debug.print("FeeOwedFailed requestId=" # req.id # " err=" # Error.message(e)) };
             };
 
             // Start cascade: winner has 12 h to pay before backups are offered.

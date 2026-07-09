@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/compress-images.mjs",
     "build": "tsc && vite build",
     "build:ssg": "npm run build && node scripts/prerender.mjs && npm run gen:sitemap",
     "gen:sitemap": "node scripts/gen-sitemap.mjs",
@@ -36,6 +37,7 @@
     "@vitejs/plugin-react": "^6.0.1",
     "@vitest/coverage-v8": "^4.0.0",
     "jsdom": "^29.0.1",
+    "sharp": "^0.35.3",
     "typescript": "^6.0.2",
     "vite": "^8.0.9",
     "vitest": "^4.0.0"

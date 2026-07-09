@@ -1,6 +1,8 @@
 [
   {
     "match": "**/*",
+    "enable_aliasing": true,
+    "allow_raw_access": false,
     "headers": {
       "X-Frame-Options": "DENY",
       "X-Content-Type-Options": "nosniff",
