@@ -9,6 +9,8 @@
  */
 
 import Array     "mo:core/Array";
+import Debug     "mo:core/Debug";
+import Error     "mo:core/Error";
 import Map       "mo:core/Map";
 import Iter      "mo:core/Iter";
 import Nat       "mo:core/Nat";
@@ -155,7 +157,8 @@ persistent actor Fee {
           let listingActor = actor(listingCanisterId) : actor {
             markListingFeePaid : (Text) -> async Result.Result<(), { #NotFound; #NotAuthorized; #InvalidInput: Text; #AlreadyCancelled; #DeadlinePassed }>;
           };
-          ignore listingActor.markListingFeePaid(record.requestId);
+          try { ignore await listingActor.markListingFeePaid(record.requestId) }
+          catch (e) { Debug.print("MarkFeePaidFailed requestId=" # record.requestId # " err=" # Error.message(e)) };
         };
         #ok(record)
       };
